@@ -1,0 +1,258 @@
+-- ==========================================================================
+-- SSMS - File : 09_boarding_module.sql
+-- Module      : 2.10 Boarding Management
+-- Depends on  : 00 - 03 (schools, students, houses, staff)
+-- Note        : exeat verification columns are filled by the gate module.
+-- ==========================================================================
+
+USE ssms;
+SET NAMES utf8mb4;
+
+-- --------------------------------------------------------------------------
+-- Dormitory Management
+-- --------------------------------------------------------------------------
+CREATE TABLE dormitories (
+  id                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id           INT UNSIGNED NOT NULL,
+  name                VARCHAR(100) NOT NULL,
+  dormitory_type      ENUM('boys','girls','mixed','staff') NOT NULL,
+  house_id            INT UNSIGNED,
+  warden_staff_id     INT UNSIGNED,
+  assistant_warden_staff_id INT UNSIGNED,
+  capacity            SMALLINT NOT NULL DEFAULT 0,
+  occupied_beds       SMALLINT NOT NULL DEFAULT 0,
+  total_rooms         SMALLINT NOT NULL DEFAULT 0,
+  location            VARCHAR(120),
+  status              ENUM('operational','full_under_maintenance','closed') NOT NULL DEFAULT 'operational',
+  notes               VARCHAR(255),
+  created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_dormitory (school_id,name),
+  CONSTRAINT fk_dorm_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_dorm_house FOREIGN KEY (house_id) REFERENCES houses (id) ON DELETE SET NULL,
+  CONSTRAINT fk_dorm_warden FOREIGN KEY (warden_staff_id) REFERENCES staff (id) ON DELETE SET NULL,
+  CONSTRAINT fk_dorm_assistant FOREIGN KEY (assistant_warden_staff_id) REFERENCES staff (id) ON DELETE SET NULL
+);
+
+-- --------------------------------------------------------------------------
+-- Room and Bed Management
+-- --------------------------------------------------------------------------
+CREATE TABLE dorm_rooms (
+  id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  dormitory_id  INT UNSIGNED NOT NULL,
+  room_number   VARCHAR(20)  NOT NULL,
+  floor         VARCHAR(20),
+  capacity      SMALLINT     NOT NULL DEFAULT 4,
+  occupied_beds SMALLINT     NOT NULL DEFAULT 0,
+  room_type     ENUM('normal','prefect','sick_room','store','visitors') NOT NULL DEFAULT 'normal',
+  status        ENUM('available','full','maintenance','closed') NOT NULL DEFAULT 'available',
+  remarks       VARCHAR(255),
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_room_number (dormitory_id,room_number),
+  CONSTRAINT fk_dorm_room FOREIGN KEY (dormitory_id) REFERENCES dormitories (id) ON DELETE CASCADE
+);
+
+CREATE TABLE beds (
+  id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  dorm_room_id      INT UNSIGNED NOT NULL,
+  bed_label    VARCHAR(20)  NOT NULL,
+  bed_type     ENUM('single_bunk','bed_stead','mattress','other') NOT NULL DEFAULT 'single_bunk',
+  status       ENUM('available','occupied','under_repair','reserved','out_of_use') NOT NULL DEFAULT 'available',
+  last_occupied_student_id INT UNSIGNED,
+  remarks      VARCHAR(255),
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_bed_label (dorm_room_id,bed_label),
+  KEY idx_bed_status (status),
+  CONSTRAINT fk_bed_dorm_room FOREIGN KEY (dorm_room_id) REFERENCES dorm_rooms (id) ON DELETE CASCADE,
+  CONSTRAINT fk_bed_student FOREIGN KEY (last_occupied_student_id) REFERENCES students (id) ON DELETE SET NULL
+);
+
+-- --------------------------------------------------------------------------
+-- Boarding Registration
+-- --------------------------------------------------------------------------
+CREATE TABLE boarding_registrations (
+  id                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  student_id        INT UNSIGNED NOT NULL,
+  academic_year_id  INT UNSIGNED NOT NULL,
+  term_id           INT UNSIGNED NOT NULL,
+  dormitory_id      INT UNSIGNED,
+  items_received    TEXT,
+  emergency_contact VARCHAR(255),
+  status            ENUM('registered','checked_in','checked_out','cancelled','transferred') NOT NULL DEFAULT 'registered',
+  registered_by     INT UNSIGNED,
+  registered_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  checked_in_at     DATETIME,
+  checked_out_at    DATETIME,
+  notes             VARCHAR(255),
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_boarding_registration (student_id,academic_year_id,term_id),
+  KEY idx_boarding_dorm (dormitory_id,status),
+  CONSTRAINT fk_boarding_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+  CONSTRAINT fk_boarding_year FOREIGN KEY (academic_year_id) REFERENCES academic_years (id) ON DELETE CASCADE,
+  CONSTRAINT fk_boarding_term FOREIGN KEY (term_id) REFERENCES terms (id) ON DELETE CASCADE,
+  CONSTRAINT fk_boarding_dorm FOREIGN KEY (dormitory_id) REFERENCES dormitories (id) ON DELETE SET NULL
+);
+
+-- --------------------------------------------------------------------------
+-- Student Bed Allocation
+-- --------------------------------------------------------------------------
+CREATE TABLE bed_allocations (
+  id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  student_id       INT UNSIGNED NOT NULL,
+  bed_id           INT UNSIGNED NOT NULL,
+  dorm_room_id          INT UNSIGNED NOT NULL,
+  dormitory_id     INT UNSIGNED NOT NULL,
+  academic_year_id INT UNSIGNED NOT NULL,
+  term_id          INT UNSIGNED,
+  allocation_date  DATE NOT NULL,
+  released_date    DATE,
+  release_reason   VARCHAR(255),
+  status           ENUM('active','released','transferred') NOT NULL DEFAULT 'active',
+  allocated_by     INT UNSIGNED,
+  approved_by      INT UNSIGNED,
+  created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_bed_alloc_student (student_id,status),
+  KEY idx_bed_alloc_bed (bed_id,status),
+  KEY idx_bed_alloc_dorm (dormitory_id,status),
+  CONSTRAINT fk_bed_alloc_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+  CONSTRAINT fk_bed_alloc_bed FOREIGN KEY (bed_id) REFERENCES beds (id) ON DELETE RESTRICT,
+  CONSTRAINT fk_bed_alloc_room FOREIGN KEY (dorm_room_id) REFERENCES dorm_rooms (id) ON DELETE RESTRICT,
+  CONSTRAINT fk_bed_alloc_dorm FOREIGN KEY (dormitory_id) REFERENCES dormitories (id) ON DELETE RESTRICT,
+  CONSTRAINT fk_bed_alloc_year FOREIGN KEY (academic_year_id) REFERENCES academic_years (id) ON DELETE CASCADE,
+  CONSTRAINT fk_bed_alloc_term FOREIGN KEY (term_id) REFERENCES terms (id) ON DELETE CASCADE
+);
+
+-- --------------------------------------------------------------------------
+-- Room Transfers
+-- --------------------------------------------------------------------------
+CREATE TABLE room_transfers (
+  id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  student_id     INT UNSIGNED NOT NULL,
+  from_bed_id    INT UNSIGNED,
+  from_room_id   INT UNSIGNED,
+  from_dorm_id   INT UNSIGNED,
+  to_bed_id      INT UNSIGNED,
+  to_room_id     INT UNSIGNED,
+  to_dorm_id     INT UNSIGNED,
+  reason         VARCHAR(255),
+  transfer_date  DATE NOT NULL,
+  approved_by    INT UNSIGNED,
+  approved_at    DATETIME,
+  created_by     INT UNSIGNED,
+  created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_transfer_student (student_id,transfer_date),
+  CONSTRAINT fk_rt_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+  CONSTRAINT fk_rt_from_bed FOREIGN KEY (from_bed_id) REFERENCES beds (id) ON DELETE SET NULL,
+  CONSTRAINT fk_rt_from_dorm_room FOREIGN KEY (from_room_id) REFERENCES dorm_rooms (id) ON DELETE SET NULL,
+  CONSTRAINT fk_rt_from_dorm FOREIGN KEY (from_dorm_id) REFERENCES dormitories (id) ON DELETE SET NULL,
+  CONSTRAINT fk_rt_to_bed FOREIGN KEY (to_bed_id) REFERENCES beds (id) ON DELETE SET NULL,
+  CONSTRAINT fk_rt_to_dorm_room FOREIGN KEY (to_room_id) REFERENCES dorm_rooms (id) ON DELETE SET NULL,
+  CONSTRAINT fk_rt_to_dorm FOREIGN KEY (to_dorm_id) REFERENCES dormitories (id) ON DELETE SET NULL
+);
+
+-- --------------------------------------------------------------------------
+-- Boarding Attendance (roll calls)
+-- --------------------------------------------------------------------------
+CREATE TABLE boarding_roll_calls (
+  id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  dormitory_id  INT UNSIGNED NOT NULL,
+  call_date     DATE NOT NULL,
+  call_slot     ENUM('morning','afternoon','evening','night') NOT NULL DEFAULT 'evening',
+  expected_count SMALLINT NOT NULL DEFAULT 0,
+  present_count  SMALLINT NOT NULL DEFAULT 0,
+  absent_count   SMALLINT NOT NULL DEFAULT 0,
+  conducted_by  INT UNSIGNED,
+  conducted_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  status        ENUM('in_progress','completed','corrected') NOT NULL DEFAULT 'in_progress',
+  notes         VARCHAR(255),
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_roll_call (dormitory_id,call_date,call_slot),
+  CONSTRAINT fk_roll_call_dorm FOREIGN KEY (dormitory_id) REFERENCES dormitories (id) ON DELETE CASCADE
+);
+
+CREATE TABLE roll_call_entries (
+  id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  roll_call_id  INT UNSIGNED NOT NULL,
+  student_id    INT UNSIGNED NOT NULL,
+  bed_id        INT UNSIGNED,
+  is_present    TINYINT(1) NOT NULL DEFAULT 1,
+  reason        VARCHAR(255),
+  followed_up   TINYINT(1) NOT NULL DEFAULT 0,
+  notes         VARCHAR(255),
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_roll_entry (roll_call_id,student_id),
+  CONSTRAINT fk_roll_entry_call FOREIGN KEY (roll_call_id) REFERENCES boarding_roll_calls (id) ON DELETE CASCADE,
+  CONSTRAINT fk_roll_entry_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+  CONSTRAINT fk_roll_entry_bed FOREIGN KEY (bed_id) REFERENCES beds (id) ON DELETE SET NULL
+);
+
+-- --------------------------------------------------------------------------
+-- Exeat and Leave-out Management
+-- --------------------------------------------------------------------------
+CREATE TABLE exeats (
+  id                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  student_id         INT UNSIGNED NOT NULL,
+  exeat_number       VARCHAR(40),
+  request_date       DATE NOT NULL,
+  out_date           DATE NOT NULL,
+  expected_return    DATETIME NOT NULL,
+  actual_return      DATETIME,
+  reason             VARCHAR(255) NOT NULL,
+  destination        VARCHAR(255),
+  accompanied_by     VARCHAR(140),
+  guardian_notified  TINYINT(1) NOT NULL DEFAULT 0,
+  guardian_id        INT UNSIGNED,
+  requested_by       INT UNSIGNED,
+  approved_by        INT UNSIGNED,
+  approved_at        DATETIME,
+  status             ENUM('requested','approved','rejected','out_returned','out_overdue','cancelled') NOT NULL DEFAULT 'requested',
+  rejection_reason   VARCHAR(255),
+  gate_out_verified_at  DATETIME,
+  gate_out_verified_by  INT UNSIGNED,
+  gate_in_verified_at   DATETIME,
+  gate_in_verified_by   INT UNSIGNED,
+  notes              VARCHAR(255),
+  created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_exeat_number (exeat_number),
+  KEY idx_exeat_student (student_id,status),
+  KEY idx_exeat_dates (out_date,status),
+  CONSTRAINT fk_exeat_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+  CONSTRAINT fk_exeat_guardian FOREIGN KEY (guardian_id) REFERENCES guardians (id) ON DELETE SET NULL
+);
+
+-- --------------------------------------------------------------------------
+-- Maintenance Requests (dormitory faults)
+-- --------------------------------------------------------------------------
+CREATE TABLE maintenance_requests (
+  id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id     INT UNSIGNED NOT NULL,
+  dormitory_id  INT UNSIGNED,
+  dorm_room_id       INT UNSIGNED,
+  asset_item_id INT UNSIGNED,
+  request_number VARCHAR(40),
+  item_type     ENUM('bed','window','door','light','plumbing','roof','furniture','other') NOT NULL,
+  title         VARCHAR(160) NOT NULL,
+  description   TEXT,
+  priority      ENUM('low','normal','high','urgent') NOT NULL DEFAULT 'normal',
+  reported_by   INT UNSIGNED,
+  reported_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  assigned_to   INT UNSIGNED,
+  status        ENUM('reported','assigned','in_progress','on_hold','completed','cancelled') NOT NULL DEFAULT 'reported',
+  completed_at  DATETIME,
+  cost          DECIMAL(12,2),
+  verified_by   INT UNSIGNED,
+  remarks       VARCHAR(255),
+  updated_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_maintenance_status (status,priority),
+  CONSTRAINT fk_maint_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_maint_dorm FOREIGN KEY (dormitory_id) REFERENCES dormitories (id) ON DELETE CASCADE,
+  CONSTRAINT fk_maint_dorm_room FOREIGN KEY (dorm_room_id) REFERENCES dorm_rooms (id) ON DELETE CASCADE
+);
+

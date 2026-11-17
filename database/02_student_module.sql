@@ -1,0 +1,339 @@
+
+USE ssms;
+SET NAMES utf8mb4;
+
+-- Student Admission (applications intake)
+CREATE TABLE admission_applications (
+  id                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id          INT UNSIGNED NOT NULL,
+  academic_year_id   INT UNSIGNED NOT NULL,
+  term_id            INT UNSIGNED,
+  application_number VARCHAR(40),
+  first_name         VARCHAR(60) NOT NULL,
+  middle_name        VARCHAR(60),
+  last_name          VARCHAR(60) NOT NULL,
+  gender             ENUM('male','female') NOT NULL,
+  date_of_birth      DATE,
+  previous_school    VARCHAR(160),
+  previous_result    VARCHAR(120),
+  applied_class_id   INT UNSIGNED,
+  guardian_name      VARCHAR(140),
+  guardian_phone     VARCHAR(40),
+  guardian_email     VARCHAR(120),
+  source             ENUM('walk_in','website','transfer','recommendation','other') DEFAULT 'walk_in',
+  status             ENUM('pending','admitted','rejected','waitlisted','withdrawn') NOT NULL DEFAULT 'pending',
+  decided_by         INT UNSIGNED,
+  decided_at         DATETIME,
+  decision_notes     VARCHAR(255),
+  admission_number   VARCHAR(40),
+  admission_letter_path VARCHAR(255),
+  student_id         INT UNSIGNED,
+  notes              TEXT,
+  created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_application_number (school_id,application_number),
+  KEY idx_application_status (school_id,academic_year_id,status),
+  CONSTRAINT fk_admission_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_admission_year FOREIGN KEY (academic_year_id) REFERENCES academic_years (id) ON DELETE RESTRICT,
+  CONSTRAINT fk_admission_term FOREIGN KEY (term_id) REFERENCES terms (id) ON DELETE SET NULL,
+  CONSTRAINT fk_admission_class FOREIGN KEY (applied_class_id) REFERENCES classes (id) ON DELETE SET NULL
+);
+
+
+-- Student Registration / Student Profiles
+
+CREATE TABLE students (
+  id                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id           INT UNSIGNED NOT NULL,
+  admission_number    VARCHAR(40)  NOT NULL,
+  registration_number VARCHAR(40),
+  uneb_lin            VARCHAR(40),
+  nin                 VARCHAR(40),
+  user_id             INT UNSIGNED,
+  first_name          VARCHAR(60)  NOT NULL,
+  middle_name         VARCHAR(60),
+  last_name           VARCHAR(60)  NOT NULL,
+  gender              ENUM('male','female') NOT NULL,
+  date_of_birth       DATE,
+  place_of_birth      VARCHAR(120),
+  nationality         VARCHAR(60)  NOT NULL DEFAULT 'Ugandan',
+  religion            VARCHAR(60),
+  next_of_kin         VARCHAR(140),
+  previous_school     VARCHAR(160),
+  previous_result     VARCHAR(120),
+  special_needs       TINYINT(1)   NOT NULL DEFAULT 0,
+  special_needs_notes VARCHAR(255),
+  photo_path          VARCHAR(255),
+  student_type        ENUM('day','boarding') NOT NULL DEFAULT 'day',
+  house_id            INT UNSIGNED,
+  current_class_id    INT UNSIGNED,
+  current_stream_id   INT UNSIGNED,
+  admission_date      DATE,
+  academic_year_id    INT UNSIGNED,
+  status              ENUM('applicant','active','completed','transferred_out','withdrawn','suspended','graduated') NOT NULL DEFAULT 'active',
+  status_reason       VARCHAR(255),
+  leaving_date        DATE,
+  created_by          INT UNSIGNED,
+  created_at          TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at          TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_student_admission (school_id,admission_number),
+  KEY idx_student_class (current_class_id),
+  KEY idx_student_stream (current_stream_id),
+  KEY idx_student_status (school_id,status),
+  KEY idx_student_name (last_name,first_name),
+  CONSTRAINT fk_student_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_student_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL,
+  CONSTRAINT fk_student_class FOREIGN KEY (current_class_id) REFERENCES classes (id) ON DELETE SET NULL,
+  CONSTRAINT fk_student_stream FOREIGN KEY (current_stream_id) REFERENCES streams (id) ON DELETE SET NULL,
+  CONSTRAINT fk_student_house FOREIGN KEY (house_id) REFERENCES houses (id) ON DELETE SET NULL,
+  CONSTRAINT fk_student_year FOREIGN KEY (academic_year_id) REFERENCES academic_years (id) ON DELETE SET NULL
+);
+
+ALTER TABLE admission_applications
+  ADD CONSTRAINT fk_admission_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE SET NULL;
+
+
+-- Parent / Guardian Management
+CREATE TABLE guardians (
+  id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id    INT UNSIGNED NOT NULL,
+  user_id      INT UNSIGNED,
+  first_name   VARCHAR(60)  NOT NULL,
+  last_name    VARCHAR(60)  NOT NULL,
+  full_name    VARCHAR(140),
+  relationship ENUM('father','mother','guardian','sponsor','relative','other') NOT NULL DEFAULT 'guardian',
+  phone        VARCHAR(40),
+  phone_alt    VARCHAR(40),
+  email        VARCHAR(120),
+  occupation   VARCHAR(120),
+  address      VARCHAR(255),
+  district     VARCHAR(80),
+  nin          VARCHAR(40),
+  is_primary   TINYINT(1)   NOT NULL DEFAULT 0,
+  receive_sms  TINYINT(1)   NOT NULL DEFAULT 1,
+  receive_email TINYINT(1)  NOT NULL DEFAULT 1,
+  receive_portal_notifications TINYINT(1) NOT NULL DEFAULT 1,
+  notes        VARCHAR(255),
+  created_at   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_guardian_phone (phone),
+  KEY idx_guardian_name (last_name),
+  CONSTRAINT fk_guardian_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_guardian_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
+);
+
+CREATE TABLE student_guardians (
+  student_id    INT UNSIGNED NOT NULL,
+  guardian_id   INT UNSIGNED NOT NULL,
+  relationship  ENUM('father','mother','guardian','sponsor','relative','other') NOT NULL DEFAULT 'guardian',
+  is_primary    TINYINT(1) NOT NULL DEFAULT 0,
+  lives_with    TINYINT(1) NOT NULL DEFAULT 0,
+  is_fee_payer  TINYINT(1) NOT NULL DEFAULT 0,
+  created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (student_id,guardian_id),
+  KEY idx_sg_guardian (guardian_id),
+  CONSTRAINT fk_sg_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+  CONSTRAINT fk_sg_guardian FOREIGN KEY (guardian_id) REFERENCES guardians (id) ON DELETE CASCADE
+);
+
+ALTER TABLE users
+  ADD CONSTRAINT fk_users_guardian FOREIGN KEY (guardian_id) REFERENCES guardians (id) ON DELETE SET NULL,
+  ADD CONSTRAINT fk_users_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE SET NULL;
+
+
+-- Class and Stream Allocation (history of placements)
+CREATE TABLE student_class_history (
+  id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  student_id       INT UNSIGNED NOT NULL,
+  class_id         INT UNSIGNED NOT NULL,
+  stream_id        INT UNSIGNED,
+  academic_year_id INT UNSIGNED NOT NULL,
+  term_id          INT UNSIGNED,
+  action           ENUM('admission','transfer_in','promotion','repetition','demotion','reallocation','completion') NOT NULL DEFAULT 'admission',
+  is_current       TINYINT(1) NOT NULL DEFAULT 1,
+  effective_date   DATE NOT NULL,
+  notes            VARCHAR(255),
+  created_by       INT UNSIGNED,
+  created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_sch_student (student_id,is_current),
+  KEY idx_sch_class (class_id,academic_year_id),
+  CONSTRAINT fk_sch_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+  CONSTRAINT fk_sch_class FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE RESTRICT,
+  CONSTRAINT fk_sch_stream FOREIGN KEY (stream_id) REFERENCES streams (id) ON DELETE SET NULL,
+  CONSTRAINT fk_sch_year FOREIGN KEY (academic_year_id) REFERENCES academic_years (id) ON DELETE RESTRICT,
+  CONSTRAINT fk_sch_term FOREIGN KEY (term_id) REFERENCES terms (id) ON DELETE SET NULL
+);
+
+
+-- Student Promotion
+CREATE TABLE promotion_batches (
+  id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id        INT UNSIGNED NOT NULL,
+  academic_year_id INT UNSIGNED NOT NULL,
+  name             VARCHAR(120) NOT NULL,
+  from_level       ENUM('S1','S2','S3','S4','S5') NOT NULL,
+  promotion_rules  TEXT,
+  total_processed  SMALLINT NOT NULL DEFAULT 0,
+  status           ENUM('draft','processing','completed','reversed') NOT NULL DEFAULT 'draft',
+  processed_by     INT UNSIGNED,
+  processed_at     DATETIME,
+  created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_promo_batch (school_id,academic_year_id),
+  CONSTRAINT fk_promo_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_promo_year FOREIGN KEY (academic_year_id) REFERENCES academic_years (id) ON DELETE CASCADE
+);
+
+CREATE TABLE promotion_records (
+  id                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  batch_id          INT UNSIGNED,
+  student_id        INT UNSIGNED NOT NULL,
+  academic_year_id  INT UNSIGNED NOT NULL,
+  from_class_id     INT UNSIGNED NOT NULL,
+  to_class_id       INT UNSIGNED,
+  from_stream_id    INT UNSIGNED,
+  to_stream_id      INT UNSIGNED,
+  decision          ENUM('promoted','repeated','completed','deferred','discontinued') NOT NULL,
+  reason            VARCHAR(255),
+  criteria_used     VARCHAR(255),
+  decided_by        INT UNSIGNED,
+  decided_date      DATE NOT NULL,
+  created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_promotion_student (student_id,academic_year_id),
+  KEY idx_promotion_batch (batch_id),
+  CONSTRAINT fk_promotion_batch FOREIGN KEY (batch_id) REFERENCES promotion_batches (id) ON DELETE SET NULL,
+  CONSTRAINT fk_promotion_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+  CONSTRAINT fk_promotion_year FOREIGN KEY (academic_year_id) REFERENCES academic_years (id) ON DELETE RESTRICT,
+  CONSTRAINT fk_promotion_from_class FOREIGN KEY (from_class_id) REFERENCES classes (id) ON DELETE RESTRICT,
+  CONSTRAINT fk_promotion_to_class FOREIGN KEY (to_class_id) REFERENCES classes (id) ON DELETE SET NULL,
+  CONSTRAINT fk_promotion_from_stream FOREIGN KEY (from_stream_id) REFERENCES streams (id) ON DELETE SET NULL,
+  CONSTRAINT fk_promotion_to_stream FOREIGN KEY (to_stream_id) REFERENCES streams (id) ON DELETE SET NULL
+);
+
+
+-- Student Transfer (in / out)
+CREATE TABLE transfers (
+  id                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  student_id         INT UNSIGNED NOT NULL,
+  direction          ENUM('in','out') NOT NULL,
+  other_school_name  VARCHAR(160) NOT NULL,
+  reason             VARCHAR(255),
+  transfer_date      DATE NOT NULL,
+  previous_class     VARCHAR(40),
+  previous_result    VARCHAR(120),
+  receiving_class_id INT UNSIGNED,
+  letter_path        VARCHAR(255),
+  academic_record_path VARCHAR(255),
+  documents_received TINYINT(1) NOT NULL DEFAULT 0,
+  approved_by        INT UNSIGNED,
+  approved_at        DATETIME,
+  notes              VARCHAR(255),
+  created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_transfer_student (student_id,direction),
+  CONSTRAINT fk_transfer_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+  CONSTRAINT fk_transfer_class FOREIGN KEY (receiving_class_id) REFERENCES classes (id) ON DELETE SET NULL
+);
+
+
+-- Student Discipline
+CREATE TABLE discipline_incidents (
+  id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  student_id       INT UNSIGNED NOT NULL,
+  incident_date    DATE NOT NULL,
+  incident_time    TIME,
+  category         ENUM('late_coming','truancy','disrespect','fighting','theft','vandalism','cheating','substance','uniform','bullying','other') NOT NULL,
+  location         VARCHAR(100),
+  description      TEXT NOT NULL,
+  witness_staff_id INT UNSIGNED,
+  reported_by      INT UNSIGNED,
+  action_taken     VARCHAR(255),
+  sanction         ENUM('none','warning','counselling','community_service','suspension','expulsion','parent_meeting') NOT NULL DEFAULT 'warning',
+  sanction_start   DATE,
+  sanction_end     DATE,
+  parent_notified  TINYINT(1) NOT NULL DEFAULT 0,
+  parent_notified_at DATETIME,
+  status           ENUM('open','under_review','follow_up','closed') NOT NULL DEFAULT 'open',
+  follow_up_date   DATE,
+  follow_up_notes  TEXT,
+  closed_by        INT UNSIGNED,
+  closed_at        DATETIME,
+  created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_discipline_student (student_id,incident_date),
+  KEY idx_discipline_status (status),
+  CONSTRAINT fk_discipline_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
+);
+
+-- Student Documents
+
+CREATE TABLE student_documents (
+  id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  student_id  INT UNSIGNED NOT NULL,
+  doc_type    ENUM('admission_letter','birth_certificate','previous_report','ple_slip','uce_slip','uace_slip','nin','passport_photo','medical_form','transfer_letter','other') NOT NULL DEFAULT 'other',
+  title       VARCHAR(160) NOT NULL,
+  file_path   VARCHAR(255) NOT NULL,
+  file_size   INT UNSIGNED,
+  expiry_date DATE,
+  is_verified TINYINT(1) NOT NULL DEFAULT 0,
+  verified_by INT UNSIGNED,
+  uploaded_by INT UNSIGNED,
+  created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_student_doc (student_id,doc_type),
+  CONSTRAINT fk_student_doc FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
+);
+
+-- --------------------------------------------------------------------------
+-- Student Withdrawal
+-- --------------------------------------------------------------------------
+CREATE TABLE withdrawals (
+  id                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  student_id        INT UNSIGNED NOT NULL,
+  withdrawal_date   DATE NOT NULL,
+  reason            ENUM('personal','academic','financial','health','relocation','misconduct','other') NOT NULL,
+  reason_details    VARCHAR(255),
+  requested_by      VARCHAR(140),
+  approved_by       INT UNSIGNED,
+  approved_at       DATETIME,
+  outstanding_fees  DECIMAL(12,2),
+  documents_issued  VARCHAR(255),
+  remarks           VARCHAR(255),
+  created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_withdrawal (student_id,withdrawal_date),
+  CONSTRAINT fk_withdrawal_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
+);
+
+-- --------------------------------------------------------------------------
+-- Alumni Management
+-- --------------------------------------------------------------------------
+CREATE TABLE alumni (
+  id                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  student_id         INT UNSIGNED NOT NULL,
+  completion_year    SMALLINT NOT NULL,
+  level_completed    ENUM('S4','S6') NOT NULL,
+  current_name       VARCHAR(140),
+  phone              VARCHAR(40),
+  email              VARCHAR(120),
+  current_address    VARCHAR(255),
+  occupation         VARCHAR(120),
+  further_education  VARCHAR(160),
+  achievements       TEXT,
+  testimonial_issued_at DATETIME,
+  is_contactable     TINYINT(1) NOT NULL DEFAULT 1,
+  notes              VARCHAR(255),
+  created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_alumni_student (student_id),
+  KEY idx_alumni_year (completion_year),
+  CONSTRAINT fk_alumni_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
+);
+

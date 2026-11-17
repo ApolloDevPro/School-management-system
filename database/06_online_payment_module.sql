@@ -1,0 +1,171 @@
+-- ==========================================================================
+-- SSMS - File : 06_online_payment_module.sql
+-- Module      : 2.6 Online Payment Integration
+-- Depends on  : 00 - 05 (students, fee_invoices, payments, receipts)
+-- Note        : Provider credentials are stored as encrypted text in
+--               gateway_configs.credential_value and never in code.
+-- ==========================================================================
+
+USE ssms;
+SET NAMES utf8mb4;
+
+-- --------------------------------------------------------------------------
+-- Mobile Money / Bank gateway configuration
+-- --------------------------------------------------------------------------
+CREATE TABLE gateway_configs (
+  id                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id          INT UNSIGNED NOT NULL,
+  provider_code      VARCHAR(40)  NOT NULL,
+  provider_name      VARCHAR(100) NOT NULL,
+  provider_type      ENUM('mobile_money','bank','card','other') NOT NULL DEFAULT 'mobile_money',
+  api_base_url       VARCHAR(255),
+  merchant_id        VARCHAR(120),
+  account_identifier VARCHAR(120),
+  currency           VARCHAR(10)  NOT NULL DEFAULT 'UGX',
+  credential_key     VARCHAR(120),
+  credential_value   VARCHAR(500),
+  environment        ENUM('sandbox','production') NOT NULL DEFAULT 'sandbox',
+  callback_url       VARCHAR(255),
+  is_active          TINYINT(1)   NOT NULL DEFAULT 1,
+  supports_refund    TINYINT(1)   NOT NULL DEFAULT 0,
+  last_health_check  DATETIME,
+  notes              VARCHAR(255),
+  created_at         TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at         TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_gateway_provider (school_id,provider_code),
+  CONSTRAINT fk_gateway_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE
+);
+
+-- --------------------------------------------------------------------------
+-- Payment Reference Generation (one stable reference per student)
+-- --------------------------------------------------------------------------
+CREATE TABLE payment_references (
+  id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id     INT UNSIGNED NOT NULL,
+  student_id    INT UNSIGNED NOT NULL,
+  reference_code VARCHAR(60) NOT NULL,
+  reference_type ENUM('admission_number','custom','invoice_number') NOT NULL DEFAULT 'admission_number',
+  is_active     TINYINT(1) NOT NULL DEFAULT 1,
+  generated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  notes         VARCHAR(255),
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_reference_code (school_id,reference_code),
+  KEY idx_reference_student (student_id,is_active),
+  CONSTRAINT fk_reference_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_reference_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
+);
+
+-- --------------------------------------------------------------------------
+-- Transaction Logs / Automatic Payment Posting
+-- --------------------------------------------------------------------------
+CREATE TABLE gateway_transactions (
+  id                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id          INT UNSIGNED NOT NULL,
+  gateway_config_id  INT UNSIGNED NOT NULL,
+  payment_reference_id INT UNSIGNED,
+  provider_txn_id    VARCHAR(120),
+  invoice_id         INT UNSIGNED,
+  student_id         INT UNSIGNED,
+  amount             DECIMAL(12,2) NOT NULL,
+  currency           VARCHAR(10) NOT NULL DEFAULT 'UGX',
+  payer_msisdn       VARCHAR(40),
+  payer_name         VARCHAR(160),
+  purpose            ENUM('fees','canteen','transport','other') NOT NULL DEFAULT 'fees',
+  status             ENUM('initiated','pending','success','failed','reversed','duplicate','expired') NOT NULL DEFAULT 'initiated',
+  failure_reason     VARCHAR(255),
+  initiated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  confirmed_at       DATETIME,
+  payload_request    JSON,
+  payload_response   JSON,
+  payment_id         INT UNSIGNED,
+  posted_at          DATETIME,
+  receipt_sent_at    DATETIME,
+  receipt_channel    ENUM('sms','email','portal','none'),
+  attempt_count      SMALLINT NOT NULL DEFAULT 1,
+  resolved_by        INT UNSIGNED,
+  resolved_at        DATETIME,
+  resolution_note    VARCHAR(255),
+  updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_provider_txn (gateway_config_id,provider_txn_id),
+  KEY idx_txn_status (status,initiated_at),
+  KEY idx_txn_student (student_id,status),
+  KEY idx_txn_invoice (invoice_id),
+  CONSTRAINT fk_txn_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_txn_gateway FOREIGN KEY (gateway_config_id) REFERENCES gateway_configs (id) ON DELETE RESTRICT,
+  CONSTRAINT fk_txn_reference FOREIGN KEY (payment_reference_id) REFERENCES payment_references (id) ON DELETE SET NULL,
+  CONSTRAINT fk_txn_invoice FOREIGN KEY (invoice_id) REFERENCES fee_invoices (id) ON DELETE SET NULL,
+  CONSTRAINT fk_txn_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE SET NULL,
+  CONSTRAINT fk_txn_payment FOREIGN KEY (payment_id) REFERENCES payments (id) ON DELETE SET NULL
+);
+
+CREATE TABLE gateway_events (
+  id                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  gateway_config_id INT UNSIGNED,
+  event_id          VARCHAR(160),
+  event_type        ENUM('callback','webhook','poll','refund','reversal','health_check','other') NOT NULL,
+  http_method       VARCHAR(10),
+  ip_address        VARCHAR(45),
+  signature         VARCHAR(255),
+  signature_valid   TINYINT(1),
+  payload           JSON NOT NULL,
+  related_txn_id    INT UNSIGNED,
+  processing_status ENUM('received','processed','ignored','error') NOT NULL DEFAULT 'received',
+  error_message     VARCHAR(500),
+  received_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_event_txn (related_txn_id),
+  KEY idx_event_time (received_at),
+  CONSTRAINT fk_event_gateway FOREIGN KEY (gateway_config_id) REFERENCES gateway_configs (id) ON DELETE SET NULL,
+  CONSTRAINT fk_event_txn FOREIGN KEY (related_txn_id) REFERENCES gateway_transactions (id) ON DELETE SET NULL
+);
+
+-- --------------------------------------------------------------------------
+-- Failed and Pending Payment Handling
+-- --------------------------------------------------------------------------
+CREATE TABLE failed_payment_cases (
+  id                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  gateway_txn_id      INT UNSIGNED NOT NULL,
+  school_id           INT UNSIGNED NOT NULL,
+  issue_type          ENUM('not_posted','duplicate','wrong_reference','reversed','amount_mismatch','stuck_pending','parent_complaint','other') NOT NULL,
+  reported_by         INT UNSIGNED,
+  reported_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  description         VARCHAR(500),
+  priority            ENUM('low','normal','high','urgent') NOT NULL DEFAULT 'normal',
+  status              ENUM('open','investigating','resolved','escalated','closed_unresolved') NOT NULL DEFAULT 'open',
+  resolution          VARCHAR(500),
+  resolved_by         INT UNSIGNED,
+  resolved_at         DATETIME,
+  parent_feedback     VARCHAR(255),
+  created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_case_status (status,priority),
+  KEY idx_case_txn (gateway_txn_id),
+  CONSTRAINT fk_case_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_case_txn FOREIGN KEY (gateway_txn_id) REFERENCES gateway_transactions (id) ON DELETE CASCADE
+);
+
+-- --------------------------------------------------------------------------
+-- Bank integration matching (bank statement line -> student payment)
+-- --------------------------------------------------------------------------
+CREATE TABLE bank_payment_matches (
+  id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  bank_txn_id     INT UNSIGNED NOT NULL,
+  payment_id      INT UNSIGNED,
+  student_id      INT UNSIGNED,
+  match_type      ENUM('auto_reference','auto_amount','manual','unmatched') NOT NULL DEFAULT 'auto_reference',
+  confidence      DECIMAL(5,2),
+  matched_by      INT UNSIGNED,
+  matched_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  status          ENUM('suggested','confirmed','rejected','reversed') NOT NULL DEFAULT 'suggested',
+  notes           VARCHAR(255),
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_bank_match (bank_txn_id,payment_id),
+  KEY idx_match_payment (payment_id),
+  CONSTRAINT fk_match_bank_txn FOREIGN KEY (bank_txn_id) REFERENCES bank_transactions (id) ON DELETE CASCADE,
+  CONSTRAINT fk_match_payment FOREIGN KEY (payment_id) REFERENCES payments (id) ON DELETE SET NULL,
+  CONSTRAINT fk_match_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE SET NULL
+);
+

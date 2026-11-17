@@ -1,0 +1,165 @@
+-- ==========================================================================
+-- SSMS - File : 08_library_module.sql
+-- Module      : 2.9 Library Management
+-- Depends on  : 00 - 02 (schools, students, staff, subjects)
+-- ==========================================================================
+
+USE ssms;
+SET NAMES utf8mb4;
+
+-- --------------------------------------------------------------------------
+-- Book Categories
+-- --------------------------------------------------------------------------
+CREATE TABLE book_categories (
+  id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id   INT UNSIGNED NOT NULL,
+  name        VARCHAR(80)  NOT NULL,
+  code        VARCHAR(20),
+  description VARCHAR(255),
+  parent_id   INT UNSIGNED,
+  is_active   TINYINT(1)   NOT NULL DEFAULT 1,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_book_category (school_id,name),
+  CONSTRAINT fk_book_cat_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_book_cat_parent FOREIGN KEY (parent_id) REFERENCES book_categories (id) ON DELETE SET NULL
+);
+
+-- --------------------------------------------------------------------------
+-- Book Registration (bibliographic record)
+-- --------------------------------------------------------------------------
+CREATE TABLE books (
+  id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id      INT UNSIGNED NOT NULL,
+  title          VARCHAR(255) NOT NULL,
+  author         VARCHAR(160),
+  isbn           VARCHAR(30),
+  publisher      VARCHAR(160),
+  edition        VARCHAR(30),
+  publish_year   SMALLINT,
+  category_id    INT UNSIGNED,
+  subject_id     INT UNSIGNED,
+  language       VARCHAR(40)  NOT NULL DEFAULT 'English',
+  shelf_location VARCHAR(60),
+  is_reference_only TINYINT(1) NOT NULL DEFAULT 0,
+  total_copies   SMALLINT     NOT NULL DEFAULT 1,
+  available_copies SMALLINT   NOT NULL DEFAULT 1,
+  lost_copies    SMALLINT     NOT NULL DEFAULT 0,
+  description    VARCHAR(500),
+  status         ENUM('active','withdrawn','lost') NOT NULL DEFAULT 'active',
+  created_by     INT UNSIGNED,
+  created_at     TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at     TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_book_title (title),
+  KEY idx_book_isbn (isbn),
+  KEY idx_book_category (category_id),
+  CONSTRAINT fk_book_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_book_category FOREIGN KEY (category_id) REFERENCES book_categories (id) ON DELETE SET NULL,
+  CONSTRAINT fk_book_subject FOREIGN KEY (subject_id) REFERENCES subjects (id) ON DELETE SET NULL
+);
+
+-- --------------------------------------------------------------------------
+-- Book Inventory (individual copies / accession numbers)
+-- --------------------------------------------------------------------------
+CREATE TABLE book_copies (
+  id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  book_id         INT UNSIGNED NOT NULL,
+  accession_number VARCHAR(40) NOT NULL,
+  barcode         VARCHAR(60),
+  book_condition   ENUM('new','good','worn','damaged','missing_pages') NOT NULL DEFAULT 'good',
+  status          ENUM('available','borrowed','reserved','lost','damaged','withdrawn') NOT NULL DEFAULT 'available',
+  acquired_date   DATE,
+  acquired_cost   DECIMAL(12,2),
+  last_seen_date  DATE,
+  remarks         VARCHAR(255),
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_accession (accession_number),
+  KEY idx_copy_book (book_id,status),
+  CONSTRAINT fk_copy_book FOREIGN KEY (book_id) REFERENCES books (id) ON DELETE CASCADE
+);
+
+-- --------------------------------------------------------------------------
+-- Book Borrowing and Returns
+-- --------------------------------------------------------------------------
+CREATE TABLE borrowings (
+  id                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id         INT UNSIGNED NOT NULL,
+  copy_id           INT UNSIGNED NOT NULL,
+  book_id           INT UNSIGNED NOT NULL,
+  borrower_type     ENUM('student','staff') NOT NULL DEFAULT 'student',
+  student_id        INT UNSIGNED,
+  staff_id          INT UNSIGNED,
+  issue_date        DATE NOT NULL,
+  due_date          DATE NOT NULL,
+  renewal_count     SMALLINT NOT NULL DEFAULT 0,
+  return_date       DATE,
+  condition_on_return ENUM('good','worn','damaged','missing_pages'),
+  returned_to       INT UNSIGNED,
+  status            ENUM('borrowed','returned','overdue','lost','reserved') NOT NULL DEFAULT 'borrowed',
+  issued_by         INT UNSIGNED,
+  notes             VARCHAR(255),
+  created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_borrow_copy (copy_id,status),
+  KEY idx_borrow_student (student_id,status),
+  KEY idx_borrow_due (status,due_date),
+  CONSTRAINT fk_borrow_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_borrow_copy FOREIGN KEY (copy_id) REFERENCES book_copies (id) ON DELETE RESTRICT,
+  CONSTRAINT fk_borrow_book FOREIGN KEY (book_id) REFERENCES books (id) ON DELETE RESTRICT,
+  CONSTRAINT fk_borrow_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE SET NULL,
+  CONSTRAINT fk_borrow_staff FOREIGN KEY (staff_id) REFERENCES staff (id) ON DELETE SET NULL
+);
+
+-- --------------------------------------------------------------------------
+-- Overdue Management (reminders sent to borrowers)
+-- --------------------------------------------------------------------------
+CREATE TABLE library_notices (
+  id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  borrowing_id INT UNSIGNED NOT NULL,
+  notice_type  ENUM('due_soon','overdue','overdue_reminder','fine_notice','recall') NOT NULL,
+  channel      ENUM('sms','email','portal','print','none') NOT NULL DEFAULT 'portal',
+  message      VARCHAR(500),
+  days_overdue SMALLINT,
+  sent_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  sent_by      INT UNSIGNED,
+  status       ENUM('queued','sent','failed','acknowledged') NOT NULL DEFAULT 'sent',
+  PRIMARY KEY (id),
+  KEY idx_lib_notice_borrowing (borrowing_id,notice_type),
+  CONSTRAINT fk_lib_notice_borrowing FOREIGN KEY (borrowing_id) REFERENCES borrowings (id) ON DELETE CASCADE
+);
+
+-- --------------------------------------------------------------------------
+-- Fine Management (overdue, damaged, lost)
+-- --------------------------------------------------------------------------
+CREATE TABLE library_fines (
+  id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id     INT UNSIGNED NOT NULL,
+  borrowing_id  INT UNSIGNED,
+  student_id    INT UNSIGNED,
+  staff_id      INT UNSIGNED,
+  fine_type     ENUM('overdue','damaged','lost','non_return','other') NOT NULL,
+  days_charged  SMALLINT,
+  amount        DECIMAL(12,2) NOT NULL DEFAULT 0,
+  amount_paid   DECIMAL(12,2) NOT NULL DEFAULT 0,
+  reason        VARCHAR(255),
+  status        ENUM('unpaid','part_paid','paid','waived') NOT NULL DEFAULT 'unpaid',
+  added_to_fee_account TINYINT(1) NOT NULL DEFAULT 0,
+  invoice_item_id INT UNSIGNED,
+  payment_id    INT UNSIGNED,
+  waived_by     INT UNSIGNED,
+  waived_reason VARCHAR(255),
+  created_by    INT UNSIGNED,
+  created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_fine_status (status,fine_type),
+  KEY idx_fine_student (student_id),
+  CONSTRAINT fk_fine_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_fine_borrowing FOREIGN KEY (borrowing_id) REFERENCES borrowings (id) ON DELETE SET NULL,
+  CONSTRAINT fk_fine_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+  CONSTRAINT fk_fine_staff FOREIGN KEY (staff_id) REFERENCES staff (id) ON DELETE SET NULL,
+  CONSTRAINT fk_fine_invoice_item FOREIGN KEY (invoice_item_id) REFERENCES fee_invoice_items (id) ON DELETE SET NULL,
+  CONSTRAINT fk_fine_payment FOREIGN KEY (payment_id) REFERENCES payments (id) ON DELETE SET NULL
+);
+

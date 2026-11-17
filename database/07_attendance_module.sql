@@ -1,0 +1,153 @@
+-- ==========================================================================
+-- SSMS - File : 07_attendance_module.sql
+-- Module      : 2.8 Attendance Management (single home for all attendance)
+-- Depends on  : 00 - 04 (students, staff, subjects, terms)
+-- Note        : attendance_notifications.notification_id is linked to the
+--               communication module in 12_communication_module.sql.
+-- ==========================================================================
+
+USE ssms;
+SET NAMES utf8mb4;
+
+-- --------------------------------------------------------------------------
+-- Daily Student Attendance and Subject (lesson) Attendance
+-- --------------------------------------------------------------------------
+CREATE TABLE student_attendance (
+  id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id        INT UNSIGNED NOT NULL,
+  academic_year_id INT UNSIGNED NOT NULL,
+  term_id          INT UNSIGNED NOT NULL,
+  attendance_date  DATE NOT NULL,
+  record_scope     ENUM('daily','lesson') NOT NULL DEFAULT 'daily',
+  class_id         INT UNSIGNED NOT NULL,
+  stream_id        INT UNSIGNED,
+  student_id       INT UNSIGNED NOT NULL,
+  subject_id       INT UNSIGNED,
+  period_number    TINYINT,
+  status           ENUM('present','absent','late','excused','sick','suspended') NOT NULL DEFAULT 'present',
+  minutes_late     SMALLINT,
+  reason           VARCHAR(255),
+  notes            VARCHAR(255),
+  recorded_by      INT UNSIGNED,
+  recorded_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  record_key       VARCHAR(60) GENERATED ALWAYS AS
+    (IF(record_scope = 'daily', 'daily',
+        CONCAT('L', IFNULL(subject_id, 0), 'P', IFNULL(period_number, 0)))) STORED,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_student_attendance (student_id,attendance_date,record_key),
+  KEY idx_attendance_date (class_id,attendance_date),
+  KEY idx_attendance_status (attendance_date,status),
+  KEY idx_attendance_student (student_id,attendance_date),
+  CONSTRAINT fk_attendance_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_attendance_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+  CONSTRAINT fk_attendance_class FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE CASCADE,
+  CONSTRAINT fk_attendance_stream FOREIGN KEY (stream_id) REFERENCES streams (id) ON DELETE CASCADE,
+  CONSTRAINT fk_attendance_subject FOREIGN KEY (subject_id) REFERENCES subjects (id) ON DELETE CASCADE,
+  CONSTRAINT fk_attendance_year FOREIGN KEY (academic_year_id) REFERENCES academic_years (id) ON DELETE CASCADE,
+  CONSTRAINT fk_attendance_term FOREIGN KEY (term_id) REFERENCES terms (id) ON DELETE CASCADE
+);
+
+-- --------------------------------------------------------------------------
+-- Staff Attendance
+-- --------------------------------------------------------------------------
+CREATE TABLE staff_attendance (
+  id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id        INT UNSIGNED NOT NULL,
+  staff_id         INT UNSIGNED NOT NULL,
+  attendance_date  DATE NOT NULL,
+  status           ENUM('present','absent','late','on_leave','duty_off','sick') NOT NULL DEFAULT 'present',
+  time_in          TIME,
+  time_out         TIME,
+  minutes_late     SMALLINT,
+  hours_worked     DECIMAL(5,2),
+  remarks          VARCHAR(255),
+  recorded_by      INT UNSIGNED,
+  recorded_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_staff_attendance (staff_id,attendance_date),
+  KEY idx_staff_att_date (attendance_date,status),
+  CONSTRAINT fk_staff_att_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_staff_att_staff FOREIGN KEY (staff_id) REFERENCES staff (id) ON DELETE CASCADE
+);
+
+-- --------------------------------------------------------------------------
+-- Late Arrival Management
+-- --------------------------------------------------------------------------
+CREATE TABLE late_arrivals (
+  id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id        INT UNSIGNED NOT NULL,
+  person_type      ENUM('student','staff') NOT NULL,
+  student_id       INT UNSIGNED,
+  staff_id         INT UNSIGNED,
+  late_date        DATE NOT NULL,
+  time_arrived     TIME NOT NULL,
+  minutes_late     SMALLINT NOT NULL DEFAULT 0,
+  reason           VARCHAR(255),
+  action_taken     VARCHAR(255),
+  parent_notified  TINYINT(1) NOT NULL DEFAULT 0,
+  recorded_by      INT UNSIGNED,
+  created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_late_date (late_date,person_type),
+  KEY idx_late_student (student_id,late_date),
+  CONSTRAINT fk_late_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_late_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+  CONSTRAINT fk_late_staff FOREIGN KEY (staff_id) REFERENCES staff (id) ON DELETE CASCADE
+);
+
+-- --------------------------------------------------------------------------
+-- Absentee Management (follow-up before dropout)
+-- --------------------------------------------------------------------------
+CREATE TABLE absentee_followups (
+  id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id        INT UNSIGNED NOT NULL,
+  student_id       INT UNSIGNED NOT NULL,
+  first_absent_date DATE NOT NULL,
+  last_absent_date  DATE NOT NULL,
+  consecutive_days SMALLINT NOT NULL DEFAULT 1,
+  absence_pattern  ENUM('once','occasional','frequent','chronic') NOT NULL DEFAULT 'once',
+  action           ENUM('none','sms','phone_call','letter','home_visit','class_meeting') NOT NULL DEFAULT 'sms',
+  action_date      DATE,
+  action_by        INT UNSIGNED,
+  parent_response  VARCHAR(255),
+  status           ENUM('open','in_progress','resolved','escalated','withdrawn') NOT NULL DEFAULT 'open',
+  resolved_at      DATETIME,
+  notes            VARCHAR(255),
+  created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_followup_student (student_id,status),
+  KEY idx_followup_date (status,last_absent_date),
+  CONSTRAINT fk_followup_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_followup_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
+);
+
+-- --------------------------------------------------------------------------
+-- Attendance Notifications
+-- --------------------------------------------------------------------------
+CREATE TABLE attendance_notifications (
+  id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id        INT UNSIGNED NOT NULL,
+  student_id       INT UNSIGNED NOT NULL,
+  guardian_id      INT UNSIGNED,
+  attendance_id    BIGINT UNSIGNED,
+  notification_type ENUM('absent','late','early_leave','pattern') NOT NULL,
+  channel          ENUM('sms','email','portal','call') NOT NULL DEFAULT 'sms',
+  message          VARCHAR(500),
+  notification_id  BIGINT UNSIGNED,
+  sent_at          DATETIME,
+  sent_by          INT UNSIGNED,
+  status           ENUM('queued','sent','failed','read','acknowledged') NOT NULL DEFAULT 'queued',
+  parent_response  VARCHAR(255),
+  error_note       VARCHAR(255),
+  created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_att_notif_student (student_id,status),
+  CONSTRAINT fk_att_notif_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_att_notif_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+  CONSTRAINT fk_att_notif_guardian FOREIGN KEY (guardian_id) REFERENCES guardians (id) ON DELETE SET NULL,
+  CONSTRAINT fk_att_notif_attendance FOREIGN KEY (attendance_id) REFERENCES student_attendance (id) ON DELETE SET NULL
+);
+

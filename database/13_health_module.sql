@@ -1,0 +1,222 @@
+-- ==========================================================================
+-- SSMS - File : 13_health_module.sql
+-- Module      : 2.14 Health and Student Welfare Management
+-- Depends on  : 00 - 02 (schools, students, staff)
+-- Sensitive data: access is restricted by role permissions; sensitive text
+-- columns should be encrypted at application level (Data Protection Act 2019).
+-- ==========================================================================
+
+USE ssms;
+SET NAMES utf8mb4;
+
+-- --------------------------------------------------------------------------
+-- Student Medical Records (one profile per student)
+-- --------------------------------------------------------------------------
+CREATE TABLE medical_records (
+  id                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  student_id         INT UNSIGNED NOT NULL,
+  blood_group        VARCHAR(10),
+  allergies          TEXT,
+  chronic_conditions TEXT,
+  current_medication TEXT,
+  vaccination_status TEXT,
+  last_vaccination_date DATE,
+  immunisation_record TEXT,
+  disability_status  ENUM('none','physical','visual','hearing','intellectual','multiple') NOT NULL DEFAULT 'none',
+  disability_notes   VARCHAR(255),
+  height_cm          DECIMAL(5,1),
+  weight_kg          DECIMAL(5,1),
+  last_checkup_date  DATE,
+  health_insurance   VARCHAR(120),
+  restricted_note    TEXT,
+  is_confidential    TINYINT(1) NOT NULL DEFAULT 0,
+  updated_by         INT UNSIGNED,
+  created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_medical_student (student_id),
+  CONSTRAINT fk_medical_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
+);
+
+-- --------------------------------------------------------------------------
+-- Emergency Contacts
+-- --------------------------------------------------------------------------
+CREATE TABLE emergency_contacts (
+  id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  student_id     INT UNSIGNED NOT NULL,
+  name           VARCHAR(140) NOT NULL,
+  relationship   VARCHAR(60)  NOT NULL,
+  phone          VARCHAR(40)  NOT NULL,
+  alternate_phone VARCHAR(40),
+  address        VARCHAR(255),
+  is_primary     TINYINT(1)   NOT NULL DEFAULT 0,
+  notes          VARCHAR(255),
+  created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_emergency_student (student_id,is_primary),
+  CONSTRAINT fk_emergency_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
+);
+
+-- --------------------------------------------------------------------------
+-- Sick Bay Management
+-- --------------------------------------------------------------------------
+CREATE TABLE sickbay_visits (
+  id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id        INT UNSIGNED NOT NULL,
+  student_id       INT UNSIGNED NOT NULL,
+  visit_date       DATE NOT NULL,
+  time_in          TIME NOT NULL,
+  time_out         TIME,
+  duration_minutes SMALLINT,
+  symptoms         TEXT,
+  temperature_c    DECIMAL(4,1),
+  diagnosis        VARCHAR(500),
+  treatment_given  TEXT,
+  bed_used         VARCHAR(30),
+  seen_by          INT UNSIGNED,
+  follow_up_date   DATE,
+  follow_up_notes  VARCHAR(255),
+  parent_informed  TINYINT(1) NOT NULL DEFAULT 0,
+  parent_informed_at DATETIME,
+  referred_to      ENUM('none','hospital','specialist','parent','clinic') NOT NULL DEFAULT 'none',
+  status           ENUM('in_progress','discharged','referred','admitted') NOT NULL DEFAULT 'discharged',
+  is_outbreak_case TINYINT(1) NOT NULL DEFAULT 0,
+  created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_sickbay_date (visit_date),
+  KEY idx_sickbay_student (student_id,visit_date),
+  CONSTRAINT fk_sickbay_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_sickbay_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
+);
+
+-- --------------------------------------------------------------------------
+-- Medication Records
+-- --------------------------------------------------------------------------
+CREATE TABLE medication_records (
+  id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id        INT UNSIGNED NOT NULL,
+  student_id       INT UNSIGNED NOT NULL,
+  visit_id         BIGINT UNSIGNED,
+  medication_name  VARCHAR(160) NOT NULL,
+  dosage           VARCHAR(80)  NOT NULL,
+  route            ENUM('oral','topical','injection','inhalation','eye_drops','ear_drops','other') NOT NULL DEFAULT 'oral',
+  frequency        VARCHAR(80),
+  reason           VARCHAR(255),
+  administered_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  administered_by  INT UNSIGNED,
+  given_by_request ENUM('self','parent','prescription','nurse') NOT NULL DEFAULT 'nurse',
+  expiry_date      DATE,
+  batch_number     VARCHAR(60),
+  reaction_notes   VARCHAR(255),
+  created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_medication_student (student_id,administered_at),
+  KEY idx_medication_visit (visit_id),
+  CONSTRAINT fk_medication_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_medication_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+  CONSTRAINT fk_medication_visit FOREIGN KEY (visit_id) REFERENCES sickbay_visits (id) ON DELETE SET NULL
+);
+
+-- --------------------------------------------------------------------------
+-- Medical Incident Management
+-- --------------------------------------------------------------------------
+CREATE TABLE medical_incidents (
+  id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id        INT UNSIGNED NOT NULL,
+  student_id       INT UNSIGNED,
+  incident_number  VARCHAR(40),
+  incident_date    DATE NOT NULL,
+  incident_time    TIME,
+  incident_type    ENUM('accident','injury','illness','emergency','food_poisoning','allergic_reaction','death','other') NOT NULL,
+  location         VARCHAR(120),
+  description      TEXT NOT NULL,
+  action_taken     TEXT,
+  witnesses        VARCHAR(255),
+  reported_by      INT UNSIGNED,
+  reported_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  parent_informed  TINYINT(1) NOT NULL DEFAULT 0,
+  parent_informed_at DATETIME,
+  parent_response  VARCHAR(255),
+  referred_to_hospital TINYINT(1) NOT NULL DEFAULT 0,
+  hospital_name    VARCHAR(160),
+  transport_used   VARCHAR(120),
+  incident_cost    DECIMAL(12,2),
+  status           ENUM('reported','investigating','parent_involved','resolved','escalated') NOT NULL DEFAULT 'reported',
+  closed_by        INT UNSIGNED,
+  closed_at        DATETIME,
+  documentation_path VARCHAR(255),
+  created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_incident_date (incident_date,incident_type),
+  KEY idx_incident_student (student_id),
+  CONSTRAINT fk_incident_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_incident_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
+);
+
+-- --------------------------------------------------------------------------
+-- Counselling Management (confidential)
+-- --------------------------------------------------------------------------
+CREATE TABLE counselling_sessions (
+  id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id         INT UNSIGNED NOT NULL,
+  student_id        INT UNSIGNED NOT NULL,
+  session_number    SMALLINT NOT NULL DEFAULT 1,
+  session_date      DATE NOT NULL,
+  session_time      TIME,
+  duration_minutes  SMALLINT,
+  category          ENUM('academic','personal','social','emotional','career','behavioural','crisis','other') NOT NULL,
+  referral_source   ENUM('self','teacher','parent','head_teacher','peer','discipline','other'),
+  concerns          TEXT,
+  observations      TEXT,
+  action_plan       TEXT,
+  resources_shared  VARCHAR(255),
+  counsellor_staff_id INT UNSIGNED NOT NULL,
+  follow_up_date    DATE,
+  parent_involved   TINYINT(1) NOT NULL DEFAULT 0,
+  is_confidential   TINYINT(1) NOT NULL DEFAULT 1,
+  risk_level        ENUM('none','low','medium','high') NOT NULL DEFAULT 'none',
+  status            ENUM('scheduled','held','follow_up','closed','referred') NOT NULL DEFAULT 'held',
+  closed_date       DATE,
+  created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_counselling (student_id,session_number,session_date),
+  KEY idx_counselling_counsellor (counsellor_staff_id,session_date),
+  CONSTRAINT fk_counselling_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_counselling_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+  CONSTRAINT fk_counselling_staff FOREIGN KEY (counsellor_staff_id) REFERENCES staff (id) ON DELETE RESTRICT
+);
+
+-- --------------------------------------------------------------------------
+-- Welfare Records (vulnerable learners and support given)
+-- --------------------------------------------------------------------------
+CREATE TABLE welfare_records (
+  id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id         INT UNSIGNED NOT NULL,
+  student_id        INT UNSIGNED NOT NULL,
+  category          ENUM('orphan','special_needs','bullying','lack_of_basic_needs','abuse','neglect','mental_health','substance','other') NOT NULL,
+  description       TEXT NOT NULL,
+  date_identified   DATE NOT NULL,
+  identified_by     INT UNSIGNED,
+  support_provided  TEXT,
+  support_type      ENUM('counselling','uniform','feeding','scholarship','medical','family_visit','referral','other'),
+  referred_to       VARCHAR(160),
+  external_agency   VARCHAR(160),
+  follow_up_date    DATE,
+  status            ENUM('open','in_progress','supported','closed','referred') NOT NULL DEFAULT 'open',
+  responsible_staff INT UNSIGNED,
+  is_confidential   TINYINT(1) NOT NULL DEFAULT 1,
+  closed_at         DATETIME,
+  notes             TEXT,
+  created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_welfare_student (student_id,status),
+  KEY idx_welfare_category (category,status),
+  CONSTRAINT fk_welfare_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_welfare_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+  CONSTRAINT fk_welfare_staff FOREIGN KEY (responsible_staff) REFERENCES staff (id) ON DELETE SET NULL
+);
+
