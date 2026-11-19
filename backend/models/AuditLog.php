@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Audit trail writes.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class AuditLog extends Model
 {
     protected static string $table = 'audit_logs';

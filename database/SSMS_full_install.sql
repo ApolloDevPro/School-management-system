@@ -5236,12 +5236,8 @@ JOIN (
   UNION ALL SELECT 'storekeeper',
     'inventory','reports,communication',
     'students,administration,transport,canteen,finance'
-  UNION ALL SELECT 'parent',
-    '','communication',
-    'portal,finance,attendance,academics,examinations,cocurricular,library'
-  UNION ALL SELECT 'student',
-    '','communication',
-    'portal,academics,examinations,library,cocurricular,attendance'
+  UNION ALL SELECT 'parent','','','portal'
+  UNION ALL SELECT 'student','','','portal'
 ) m ON m.slug = r.slug
 WHERE r.school_id = @school_id;
 

@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Announcements and notification templates.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class CommunicationModule extends Model
 {
     public static function announcements(int $schoolId, bool $publicOnly = false): array

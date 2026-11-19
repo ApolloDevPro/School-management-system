@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Routes, vehicles, drivers and route sheets.
+ *
+ * Backend controller: receives routed requests, enforces permissions and
+ * renders a view or returns JSON through the base Controller helpers.
+ */
 final class TransportController extends Controller
 {
     public function index(): void

@@ -30,7 +30,10 @@ $section = function (string $title): void { ?>
   </div>
 
   <ul class="sidebar-nav">
-    <?php $section('Main'); $link('dashboard', 'dashboard', 'Dashboard', 'bi-speedometer2'); ?>
+    <?php $section('Main');
+      $portalUser = in_array(Auth::user()['user_type'] ?? '', ['parent', 'student'], true);
+      $link('dashboard', $portalUser ? 'portal' : 'dashboard', 'Dashboard', 'bi-speedometer2');
+    ?>
 
 <?php if (Auth::can('administration', 'view')): ?>
     <?php $section('Administration');

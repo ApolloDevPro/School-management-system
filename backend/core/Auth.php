@@ -1,8 +1,21 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Authentication and the signed-in user's permission snapshot.
+ *
+ * Permissions are loaded once at login and cached in $_SESSION['user']['perms'],
+ * so role changes take effect at the user's next sign-in.
+ */
 final class Auth
 {
+    /**
+     * Verify credentials for a username.
+     *
+     * Usernames are unique per school, so several rows can share a username;
+     * each password is tested until one matches. Returns [ok, message, target]
+     * where target is a route name, 'two_factor', or null on failure.
+     */
     public static function attempt(string $username, string $password): array
     {
         $rows = User::findLoginsByUsername($username);
@@ -50,10 +63,31 @@ final class Auth
         }
 
         self::login($matched);
-        $target = ((int)$matched['must_change_password'] === 1) ? 'change-password' : 'dashboard';
+        if ((int)$matched['must_change_password'] === 1) {
+            $target = 'change-password';
+        } elseif (in_array($matched['user_type'] ?? '', ['parent', 'student'], true)) {
+            $target = 'portal';
+        } else {
+            $target = 'dashboard';
+        }
         return [true, 'Welcome back, ' . $matched['full_name'] . '.', $target];
     }
 
+    /**
+     * Landing route for the signed-in account. Portal users go to the portal
+     * because staff modules are closed to them.
+     */
+    public static function homeRoute(): string
+    {
+        $user = self::user();
+        return ($user && in_array($user['user_type'] ?? '', ['parent', 'student'], true))
+            ? 'portal'
+            : 'dashboard';
+    }
+
+    /**
+     * True when the user has a verified authenticator app enrolled.
+     */
     public static function hasTwoFactor(int $userId): bool
     {
         $row = Database::conn()->prepare(
@@ -63,6 +97,10 @@ final class Auth
         return (bool)$row->fetchColumn();
     }
 
+    /**
+     * Finish a 2FA login after the code was verified, provided the pending
+     * challenge still matches the user and has not expired.
+     */
     public static function completePendingTwoFactor(int $userId): bool
     {
         $pending = $_SESSION['pending_2fa'] ?? null;
@@ -88,6 +126,10 @@ final class Auth
         self::login($user);
     }
 
+    /**
+     * Establish the session: refresh the login record, regenerate the session
+     * id and CSRF token, then snapshot the user and their permissions.
+     */
     private static function login(array $user): void
     {
         User::recordSuccess((int)$user['id']);
@@ -145,6 +187,9 @@ final class Auth
         }
     }
 
+    /**
+     * Permission check against the cached matrix, e.g. can('finance', 'edit').
+     */
     public static function can(string $module, string $action = 'view'): bool
     {
         $user = self::user();
@@ -154,6 +199,9 @@ final class Auth
         return (bool)($user['perms'][$module][$action] ?? false);
     }
 
+    /**
+     * Audit, clear the session and expire its cookie.
+     */
     public static function logout(): void
     {
         if (self::check()) {

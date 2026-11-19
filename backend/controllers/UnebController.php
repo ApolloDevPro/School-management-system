@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * UNEB candidates, CA submissions and scores, and national results.
+ *
+ * Backend controller: receives routed requests, enforces permissions and
+ * renders a view or returns JSON through the base Controller helpers.
+ */
 final class UnebController extends Controller
 {
     public function index(): void

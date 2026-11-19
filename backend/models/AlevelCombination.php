@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * A-Level subject combinations and their subjects.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class AlevelCombination extends Model
 {
     protected static string $table = 'alevel_combinations';

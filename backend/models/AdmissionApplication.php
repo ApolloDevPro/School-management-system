@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Admission applications and their decisions.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class AdmissionApplication extends Model
 {
     protected static string $table = 'admission_applications';

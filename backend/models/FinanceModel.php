@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Fee structures, invoices, payments, receipts, budgets, expenses, petty cash, reconciliation and financial reports.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class FinanceModel extends Model
 {
     private const BULK_INVOICE_LIMIT = 1000;

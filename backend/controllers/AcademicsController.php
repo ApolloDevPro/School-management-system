@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Curriculum, subjects, combinations, allocations, timetables, schemes, homework, syllabus coverage and calendar events.
+ *
+ * Backend controller: receives routed requests, enforces permissions and
+ * renders a view or returns JSON through the base Controller helpers.
+ */
 final class AcademicsController extends Controller
 {
     public function index(): void

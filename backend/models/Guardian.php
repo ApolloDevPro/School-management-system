@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Guardians and their links to students.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class Guardian extends Model
 {
     protected static string $table = 'guardians';

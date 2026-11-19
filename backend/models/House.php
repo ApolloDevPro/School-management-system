@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * School houses.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class House extends Model
 {
     protected static string $table = 'houses';

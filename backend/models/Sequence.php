@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Human-readable document number sequences.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class Sequence extends Model
 {
     protected static string $table = 'sequences';

@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Student records, guardians and placement.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class Student extends Model
 {
     protected static string $table = 'students';

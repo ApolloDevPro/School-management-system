@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Books, borrowings and fines.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class LibraryModule extends Model
 {
     public static function books(int $schoolId): array

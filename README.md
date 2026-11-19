@@ -2,7 +2,7 @@
 
 A self-hosted school management system for Ugandan secondary schools, built with plain PHP 8 and MySQL/MariaDB. It covers the full school day: admissions, students, academics, examinations and UNEB, report cards, fees and accounting, HR and payroll, attendance, boarding, library, transport, inventory, communication, compliance, and a parent/student portal.
 
-The application is a classic server-rendered MVC app. There is no JavaScript framework and no build step. A single front controller (`index.php`) dispatches every request through a custom router, and every module is permission-gated.
+The application is a classic server-rendered MVC app. There is no JavaScript framework and no build step. Every request enters through a small root `index.php`, which loads the real front controller and route table in `backend/index.php`; all server-side code lives under `backend/`, and every module is permission-gated.
 
 ---
 
@@ -109,7 +109,10 @@ The application is a classic server-rendered MVC app. There is no JavaScript fra
 - CSV and PDF export.
 
 ### Portal
-- Parent and student self-service dashboard: fees, results, attendance, notices, consent updates.
+- Parent and student self-service dashboard, confined to the account holder's own records.
+- Parents see each linked child's fee balance and overdue amount, attendance rate, and latest published exam average with class rank. Students see the same for themselves.
+- Published notices and data-consent management.
+- Parent and student accounts cannot open staff modules; any staff route redirects them back to the portal.
 
 ### Support and security
 - Support tickets.
@@ -140,8 +143,8 @@ The seed data creates these 16 roles:
 | Gate Officer | `gate_officer` | Visitors, gate passes, vehicle log |
 | HR Officer | `hr_officer` | Staff records, contracts, leave, payroll prep |
 | Storekeeper | `storekeeper` | Stock, requisitions, purchase orders, assets |
-| Parent | `parent` | Portal access to fees, results, attendance, messages |
-| Student | `student` | Portal access to timetable, homework, results, notices |
+| Parent | `parent` | Portal access to their children's fees, results, attendance, notices and consents |
+| Student | `student` | Portal access to their own fees, results, attendance, notices and consents |
 
 Permissions are per module (`administration`, `students`, `academics`, `examinations`, `uneb`, `finance`, `online_payments`, `hr`, `attendance`, `health`, `library`, `boarding`, `transport`, `inventory`, `communication`, `cocurricular`, `gate`, `canteen`, `compliance`, `reports`, `security`, `portal`) and per action (`view`, `add`, `edit`, `approve`, `print`, `delete`). They are editable on the **Roles & permissions** screen.
 
@@ -218,10 +221,11 @@ Each module file begins with `USE ssms;`, so the database must already exist.
 ### 4. Optional: install Dompdf
 
 ```bash
+cd backend
 composer install
 ```
 
-Without `vendor/`, PDF routes still work but serve a printable HTML page instead of a binary PDF (see [Report cards and PDFs](#report-cards-and-pdfs)).
+`composer.json` lives inside `backend/`, so dependencies install into `backend/vendor/`. A `vendor/` folder at the project root from older installs is still detected. Without Dompdf, PDF routes still work but serve a printable HTML page instead of a binary PDF (see [Report cards and PDFs](#report-cards-and-pdfs)).
 
 ### 5. Open the application
 
@@ -287,7 +291,7 @@ Runtime settings such as the maximum failed login count and password length live
 
 ## Architecture
 
-- **Front controller** — every request enters through `index.php`. Routes look like `index.php?r=students/profile&student_id=4`.
+- **Front controller** — every request enters through the root `index.php`, a one-line bridge to `backend/index.php`, which holds the route table. Routes look like `index.php?r=students/profile&student_id=4`. Apache blocks direct access to `backend/`, so the public entry point stays at the site root.
 - **Router** — `backend/core/Router.php` maps `GET`/`POST` routes to controller actions and attaches metadata such as `auth => true` and `perm => [module, action]`.
 - **Controllers** — extend `Controller`, which provides `render()`, `allowed()`, `respond()` (JSON for AJAX, flash + redirect otherwise) and access to the authenticated user.
 - **Models** — static classes extending `Model`, with small query helpers (`query`, `one`, `scalar`, `execute`) over PDO.
@@ -409,6 +413,7 @@ Send `X-Requested-With: XMLHttpRequest` (or `Accept: application/json`) to recei
 - **Sessions** use HttpOnly and SameSite=Lax cookies, strict mode, a 4-hour lifetime, and are regenerated on login/logout.
 - **Two-factor authentication** supports TOTP authenticator apps, with a 10-minute login challenge and attempt limits.
 - **Permissions** are checked per route and again inside controllers; the sidebar hides modules the user cannot view.
+- **Portal confinement** — parent and student accounts are restricted by the router to the portal, profile, password and logout routes, so staff modules and their school-wide data are unreachable to them.
 - **Audit trail** records sign-ins, failed sign-ins, 2FA events, password events and module changes.
 - **Sensitive paths** are denied by `.htaccess`: `.env`, `backend/`, `database/`, `frontend/`, `backups/`, `composer.*`, SQL dumps and documentation.
 - **Error handling** logs details to the PHP error log and shows a generic 500 page, or JSON for API requests; stack traces are never shown.
@@ -422,16 +427,18 @@ Before going live: set `APP_ENV=production`, use a dedicated database user with 
 
 ```
 school mgt system/
-├── index.php                 Front controller and route table
+├── index.php                 Public entry point; bridges to backend/index.php
 ├── .htaccess                 Rewrite rules and path denials
 ├── .env.example              Environment template (copy to .env)
-├── composer.json             Optional Dompdf dependency
 ├── backend/
+│   ├── index.php             Front controller and route table
 │   ├── config/config.php     .env loader and constants
 │   ├── core/                 Router, Auth, Csrf, Database, Model, helpers
 │   ├── controllers/          One controller per feature area
 │   ├── models/               Static query classes per module
-│   └── lib/                  Pdf, mail, SMS, import/export, scheduler, validator
+│   ├── lib/                  Pdf, mail, SMS, import/export, scheduler, validator
+│   ├── composer.json         Optional Dompdf dependency
+│   └── fix_finance_perms.php Command-line permission diagnostic
 ├── frontend/
 │   ├── layout/               Header, sidebar, footer
 │   └── views/                PHP templates per module
@@ -451,7 +458,7 @@ school mgt system/
 | Login page loops back to login | Session directory not writable or cookies blocked | Check PHP session path and browser cookie settings |
 | 500 on any page | Missing tables or PHP error | Check `C:\xampp\apache\logs\error.log`; re-import the full installer |
 | Reports are empty or crash | Views missing | Run **Support & security → Database setup** to install views |
-| PDF link shows an HTML page | `vendor/` (Dompdf) not installed | Run `composer install`, or print the page to PDF |
+| PDF link shows an HTML page | `vendor/` (Dompdf) not installed | Run `composer install --working-dir=backend`, or print the page to PDF |
 | Backup creation fails | `mysqldump` not on PATH or `backups/` not writable | Add MySQL `bin` to PATH; check folder permissions |
 | Marks entered but no report card | Results not processed, or marks not verified | Verify marks, then **Process results** |
 | Positions are blank | Result summary missing for the student | Process results for the exam |
@@ -472,4 +479,4 @@ school mgt system/
 
 ## License
 
-MIT. See `composer.json`.
+MIT. See `backend/composer.json`.

@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Canteen products, student wallets and deposits.
+ *
+ * Backend controller: receives routed requests, enforces permissions and
+ * renders a view or returns JSON through the base Controller helpers.
+ */
 final class CanteenController extends Controller
 {
     public function index(): void

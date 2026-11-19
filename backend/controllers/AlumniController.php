@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Alumni register and record updates.
+ *
+ * Backend controller: receives routed requests, enforces permissions and
+ * renders a view or returns JSON through the base Controller helpers.
+ */
 final class AlumniController extends Controller
 {
     public function index(): void

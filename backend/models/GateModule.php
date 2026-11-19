@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Visitors and gate passes.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class GateModule extends Model
 {
     public static function visitors(int $schoolId): array

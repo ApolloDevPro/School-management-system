@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Student withdrawals.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class Withdrawal extends Model
 {
     protected static string $table = 'withdrawals';

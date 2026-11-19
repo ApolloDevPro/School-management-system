@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Promotion processing.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class Promotion extends Model
 {
     protected static string $table = 'promotion_batches';

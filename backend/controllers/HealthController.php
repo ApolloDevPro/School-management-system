@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Medical records, sick bay visits and referral forms.
+ *
+ * Backend controller: receives routed requests, enforces permissions and
+ * renders a view or returns JSON through the base Controller helpers.
+ */
 final class HealthController extends Controller
 {
     private const DISABILITIES = ['none', 'physical', 'visual', 'hearing', 'intellectual', 'multiple'];

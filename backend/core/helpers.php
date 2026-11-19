@@ -1,11 +1,25 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Global helpers shared by controllers, models and views.
+ *
+ * Escaping, URL building, redirects, JSON responses, flash messages, CSRF
+ * fields, school context, security headers and the audit trail live here.
+ */
+
+/**
+ * Escape a value for HTML output. Use this for every dynamic string printed
+ * inside a view.
+ */
 function e(mixed $value): string
 {
     return htmlspecialchars((string)($value ?? ''), ENT_QUOTES, 'UTF-8');
 }
 
+/**
+ * Build an application URL for a route, e.g. url('students', ['id' => 4]).
+ */
 function url(string $route = 'dashboard', array $params = []): string
 {
     $url = BASE_URL . '/index.php?r=' . urlencode($route);
@@ -15,23 +29,35 @@ function url(string $route = 'dashboard', array $params = []): string
     return $url;
 }
 
+/**
+ * URL for a file under the project root (css, js, uploads, ...).
+ */
 function asset(string $path): string
 {
     return BASE_URL . '/' . ltrim($path, '/');
 }
 
+/**
+ * Send a redirect and stop the request.
+ */
 function redirect(string $route, array $params = []): never
 {
     header('Location: ' . url($route, $params));
     exit;
 }
 
+/**
+ * True when the caller expects JSON (AJAX header or JSON Accept header).
+ */
 function expects_json(): bool
 {
     return ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest'
         || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json');
 }
 
+/**
+ * Emit a JSON response, security headers included, and stop the request.
+ */
 function json_out(array $data, int $status = 200): never
 {
     http_response_code($status);
@@ -41,11 +67,17 @@ function json_out(array $data, int $status = 200): never
     exit;
 }
 
+/**
+ * Queue a one-time message for the next rendered page.
+ */
 function flash_set(string $type, string $message): void
 {
     $_SESSION['_flash'][] = ['type' => $type, 'message' => $message];
 }
 
+/**
+ * Take and clear all queued flash messages.
+ */
 function flash_all(): array
 {
     $messages = $_SESSION['_flash'] ?? [];
@@ -53,16 +85,25 @@ function flash_all(): array
     return $messages;
 }
 
+/**
+ * Hidden CSRF input for a form.
+ */
 function csrf_field(): string
 {
     return '<input type="hidden" name="_token" value="' . e(Csrf::token()) . '">';
 }
 
+/**
+ * Best-effort client address for audit records.
+ */
 function client_ip(): string
 {
     return $_SERVER['REMOTE_ADDR'] ?? '';
 }
 
+/**
+ * The installation's school row, cached for the request.
+ */
 function school_row(): ?array
 {
     static $row = null;
@@ -72,6 +113,10 @@ function school_row(): ?array
     return $row;
 }
 
+/**
+ * School scope for queries: the signed-in user's school, falling back to the
+ * single school row on public pages (login, install).
+ */
 function school_id(): int
 {
     $user = Auth::user();
@@ -85,6 +130,9 @@ function school_id(): int
     throw new RuntimeException('No school context available. Please configure a school or sign in.');
 }
 
+/**
+ * Effective minimum password length from settings, clamped to 8-64.
+ */
 function password_min_length(): int
 {
     try {
@@ -95,6 +143,9 @@ function password_min_length(): int
     return max(8, min(64, $min));
 }
 
+/**
+ * Name of the active term, or "No active term".
+ */
 function current_term_name(): string
 {
     static $name = null;
@@ -111,6 +162,9 @@ function current_term_name(): string
     return $name;
 }
 
+/**
+ * Baseline response headers, including a CSP that allows the bundled CDNs.
+ */
 function security_headers(): void
 {
     header('X-Content-Type-Options: nosniff');
@@ -127,6 +181,11 @@ function security_headers(): void
     header('Content-Security-Policy: ' . $csp);
 }
 
+/**
+ * Append an audit trail entry for the current actor.
+ *
+ * Old and new values are stored as JSON so a change can be reconstructed.
+ */
 function audit(
     string $module,
     string $action,

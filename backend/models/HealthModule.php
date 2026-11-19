@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Medical records and sick bay visits.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class HealthModule extends Model
 {
     public static function students(int $schoolId): array

@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Routes, vehicles and drivers.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class TransportModule extends Model
 {
     public static function routes(int $schoolId): array

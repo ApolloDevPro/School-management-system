@@ -106,6 +106,68 @@ $typeBadge = match($userType) { 'student' => 'primary', 'parent' => 'success', d
 
   <!-- ------------------------------------------------ Notices -->
   <div class="col-lg-8">
+    <?php if ($children): $currency = school_row()['currency'] ?? 'UGX'; ?>
+    <div class="card app-card mb-3">
+      <div class="card-header"><?= $userType === 'parent' ? 'My children at a glance' : 'My progress' ?></div>
+      <div class="list-group list-group-flush">
+        <?php foreach ($children as $child): $fees = $child['fees']; $att = $child['attendance']; $res = $child['result']; ?>
+        <div class="list-group-item">
+          <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+            <div>
+              <div class="fw-semibold"><?= e($child['first_name'] . ' ' . $child['last_name']) ?></div>
+              <div class="small text-muted">
+                <?= e($child['admission_number']) ?>
+                <?php if (!empty($child['class_name'])): ?> &bull; <?= e($child['class_name']) ?><?php endif; ?>
+              </div>
+            </div>
+            <span class="badge text-bg-<?= $child['status'] === 'active' ? 'success' : 'secondary' ?>"><?= e($child['status']) ?></span>
+          </div>
+
+          <div class="row g-2 mt-2 text-center">
+            <div class="col-md-4">
+              <div class="border rounded p-2 h-100">
+                <div class="small text-muted">Fee balance</div>
+                <div class="fw-semibold"><?= e($currency) ?> <?= number_format((float)$fees['balance'], 0) ?></div>
+                <div class="small text-muted">Paid <?= number_format((float)$fees['paid'], 0) ?> of <?= number_format((float)$fees['charged'], 0) ?></div>
+                <?php if ((float)$fees['overdue'] > 0): ?>
+                <div class="small text-danger">Overdue <?= number_format((float)$fees['overdue'], 0) ?></div>
+                <?php endif; ?>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="border rounded p-2 h-100">
+                <div class="small text-muted">Attendance</div>
+                <?php if ((int)$att['days_marked'] > 0): ?>
+                <div class="fw-semibold"><?= e((string)$att['percent']) ?>%</div>
+                <div class="small text-muted"><?= (int)$att['days_present'] ?> present of <?= (int)$att['days_marked'] ?> days</div>
+                <?php else: ?>
+                <div class="fw-semibold text-muted">Not recorded</div>
+                <div class="small text-muted">No daily attendance yet</div>
+                <?php endif; ?>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="border rounded p-2 h-100">
+                <div class="small text-muted">Last exam</div>
+                <?php if ($res): ?>
+                <div class="fw-semibold"><?= e(number_format((float)$res['average_percent'], 1)) ?>%</div>
+                <div class="small text-muted">
+                  <?= e(mb_strimwidth((string)$res['exam_name'], 0, 24, '…')) ?>
+                  &bull; #<?= (int)$res['class_rank'] ?> of <?= (int)$res['class_size'] ?>
+                </div>
+                <?php else: ?>
+                <div class="fw-semibold text-muted">No results</div>
+                <div class="small text-muted">No published exam yet</div>
+                <?php endif; ?>
+              </div>
+            </div>
+          </div>
+        </div>
+        <?php endforeach; ?>
+      </div>
+    </div>
+    <?php endif; ?>
+
     <div class="card app-card">
       <div class="card-header">Recent notices <span class="badge text-bg-light"><?= count($notices) ?></span></div>
       <?php if (!$notices): ?>
@@ -125,6 +187,7 @@ $typeBadge = match($userType) { 'student' => 'primary', 'parent' => 'success', d
       <?php endif; ?>
     </div>
 
+    <?php if (!in_array($userType, ['parent', 'student'], true)): ?>
     <!-- Quick links -->
     <div class="card app-card mt-3">
       <div class="card-header">Quick access</div>
@@ -152,6 +215,7 @@ $typeBadge = match($userType) { 'student' => 'primary', 'parent' => 'success', d
         </div>
       </div>
     </div>
+    <?php endif; ?>
   </div>
 
 </div>

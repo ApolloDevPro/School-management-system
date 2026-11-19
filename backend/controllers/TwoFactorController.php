@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * TOTP authenticator setup, verification and disabling.
+ *
+ * Backend controller: receives routed requests, enforces permissions and
+ * renders a view or returns JSON through the base Controller helpers.
+ */
 final class TwoFactorController extends Controller
 {
     private const BASE32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';

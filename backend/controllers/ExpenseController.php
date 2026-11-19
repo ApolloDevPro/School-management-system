@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Expense recording and deletion.
+ *
+ * Backend controller: receives routed requests, enforces permissions and
+ * renders a view or returns JSON through the base Controller helpers.
+ */
 final class ExpenseController extends Controller
 {
     public function index(): void

@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Clubs and memberships.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class CocurricularModule extends Model
 {
     public static function clubs(int $schoolId): array

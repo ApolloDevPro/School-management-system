@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Dormitories, bed allocation, boarding status and allocation letters.
+ *
+ * Backend controller: receives routed requests, enforces permissions and
+ * renders a view or returns JSON through the base Controller helpers.
+ */
 final class BoardingController extends Controller
 {
     public function index(): void

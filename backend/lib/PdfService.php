@@ -86,8 +86,16 @@ final class PdfService
 
     private static function renderDompdf(string $html): ?string
     {
-        $autoload = __DIR__ . '/../../vendor/autoload.php';
-        if (!is_file($autoload)) {
+        // composer.json now lives in backend/, so the vendor folder may sit at
+        // backend/vendor; older installs kept it at the project root.
+        $autoload = null;
+        foreach ([__DIR__ . '/../vendor/autoload.php', __DIR__ . '/../../vendor/autoload.php'] as $candidate) {
+            if (is_file($candidate)) {
+                $autoload = $candidate;
+                break;
+            }
+        }
+        if ($autoload === null) {
             return null;
         }
         require $autoload;

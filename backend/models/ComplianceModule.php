@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * EMIS returns and government grants.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class ComplianceModule extends Model
 {
     // ------------------------------------------------------------------ EMIS

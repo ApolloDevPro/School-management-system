@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Uploaded student documents.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class StudentDocument extends Model
 {
     protected static string $table = 'student_documents';

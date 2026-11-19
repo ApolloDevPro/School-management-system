@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Analytics screens plus CSV and PDF export built on the reporting views.
+ *
+ * Backend controller: receives routed requests, enforces permissions and
+ * renders a view or returns JSON through the base Controller helpers.
+ */
 final class ReportsController extends Controller
 {
     public function index(): void

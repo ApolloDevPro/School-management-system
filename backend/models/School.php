@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * School profile.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class School extends Model
 {
     protected static string $table = 'schools';

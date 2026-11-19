@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Student subject registrations.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class StudentSubject extends Model
 {
     protected static string $table = 'student_subjects';

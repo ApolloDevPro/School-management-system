@@ -1,8 +1,15 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Base model: small static helpers for the schema.
+ *
+ * Every model names its table in $table, then uses these helpers instead of
+ * opening its own connection. All values are bound parameters.
+ */
 abstract class Model
 {
+    /** Table backing this model. Set in each concrete model. */
     protected static string $table = '';
 
     protected static function db(): PDO
@@ -10,6 +17,9 @@ abstract class Model
         return Database::conn();
     }
 
+    /**
+     * Fetch one row by primary key.
+     */
     public static function find(int $id): ?array
     {
         $statement = static::db()->prepare('SELECT * FROM ' . static::$table . ' WHERE id = ?');
@@ -17,11 +27,17 @@ abstract class Model
         return $statement->fetch() ?: null;
     }
 
+    /**
+     * Fetch every row, optionally ordered by a trusted column expression.
+     */
     public static function all(string $orderBy = 'id'): array
     {
         return static::db()->query('SELECT * FROM ' . static::$table . ' ORDER BY ' . $orderBy)->fetchAll();
     }
 
+    /**
+     * Run a SELECT and return all rows.
+     */
     public static function query(string $sql, array $params = []): array
     {
         $statement = static::db()->prepare($sql);
@@ -29,6 +45,9 @@ abstract class Model
         return $statement->fetchAll();
     }
 
+    /**
+     * Run a SELECT and return the first row, or null.
+     */
     public static function one(string $sql, array $params = []): ?array
     {
         $statement = static::db()->prepare($sql);
@@ -36,6 +55,9 @@ abstract class Model
         return $statement->fetch() ?: null;
     }
 
+    /**
+     * Run a SELECT and return the first column of the first row, or null.
+     */
     public static function scalar(string $sql, array $params = []): mixed
     {
         $statement = static::db()->prepare($sql);
@@ -44,6 +66,9 @@ abstract class Model
         return $value === false ? null : $value;
     }
 
+    /**
+     * Run an INSERT/UPDATE/DELETE and return the affected row count.
+     */
     public static function execute(string $sql, array $params = []): int
     {
         $statement = static::db()->prepare($sql);
@@ -51,6 +76,9 @@ abstract class Model
         return $statement->rowCount();
     }
 
+    /**
+     * Insert an associative array and return the new primary key.
+     */
     public static function insert(array $data): int
     {
         $columns = array_keys($data);
@@ -61,6 +89,9 @@ abstract class Model
         return (int)static::db()->lastInsertId();
     }
 
+    /**
+     * Update one row by primary key. Returns true when a row changed.
+     */
     public static function updateRow(int $id, array $data): bool
     {
         $assignments = implode(', ', array_map(fn (string $column): string => $column . ' = ?', array_keys($data)));

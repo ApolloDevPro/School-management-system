@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Report card data, positions and comments.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class ReportCard extends Model
 {
     protected static string $table = 'subject_results';

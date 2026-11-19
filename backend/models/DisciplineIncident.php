@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Discipline incidents.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class DisciplineIncident extends Model
 {
     protected static string $table = 'discipline_incidents';

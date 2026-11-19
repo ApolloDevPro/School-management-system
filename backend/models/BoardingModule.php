@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Dormitory, bed and boarding allocation data.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class BoardingModule extends Model
 {
     public static function students(int $schoolId): array

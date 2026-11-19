@@ -1,11 +1,21 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Runner and bookkeeping for cron_jobs rows created under
+ * Support & security -> Scheduled tasks.
+ *
+ * The app itself only runs jobs on demand. Call runDueJobs() from an OS cron
+ * task or a small CLI script if you want automatic execution.
+ */
 final class CronScheduler
 {
     private const DUE_TABLE = 'cron_jobs';
     private const LOG_TABLE = 'cron_job_logs';
 
+    /**
+     * Active jobs whose next_run_at has passed (or was never set).
+     */
     public static function dueJobs(): array
     {
         $db = Database::conn();
@@ -20,17 +30,22 @@ final class CronScheduler
         )->fetchAll();
     }
 
+    /**
+     * Mark a job as running so a concurrent runner does not pick it up.
+     */
     public static function markRunning(int $jobId): void
     {
         $db = Database::conn();
         $db->prepare(
             "UPDATE " . self::DUE_TABLE . "
                SET last_run_at = NOW(), last_run_status = 'running'
-             WHERE id = ?",
-            [$jobId]
-        )->execute();
+             WHERE id = ?"
+        )->execute([$jobId]);
     }
 
+    /**
+     * Record success and schedule the next run based on the job interval.
+     */
     public static function markCompleted(int $jobId, string $message = '', int $nextOffsetMinutes = 0): void
     {
         $db = Database::conn();
@@ -49,6 +64,10 @@ final class CronScheduler
         )->execute();
     }
 
+    /**
+     * Record a failure and increment the failure counter. The job stays active
+     * so it can be retried on the next run.
+     */
     public static function markFailed(int $jobId, string $error): void
     {
         $db = Database::conn();
@@ -63,6 +82,9 @@ final class CronScheduler
         )->execute();
     }
 
+    /**
+     * Append a run log entry with its duration.
+     */
     public static function log(int $jobId, string $status, string $message, int $durationMs = 0): void
     {
         $db = Database::conn();
@@ -73,6 +95,11 @@ final class CronScheduler
         )->execute();
     }
 
+    /**
+     * Run every due job once. Each job is marked running, its handler is
+     * instantiated and called with (job id, job row), then the outcome is
+     * recorded. One failure does not stop the remaining jobs.
+     */
     public static function runDueJobs(): array
     {
         $results = [];

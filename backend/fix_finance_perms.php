@@ -7,8 +7,8 @@ if (PHP_SAPI !== 'cli') {
     exit("This diagnostic script can only be run from the command line.\n");
 }
 
-require __DIR__ . '/backend/config/config.php';
-require __DIR__ . '/backend/core/Database.php';
+require __DIR__ . '/config/config.php';
+require __DIR__ . '/core/Database.php';
 
 $db = Database::conn();
 

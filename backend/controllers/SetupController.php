@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * School profile, academic years, terms, classes, streams, departments, houses and the audit log.
+ *
+ * Backend controller: receives routed requests, enforces permissions and
+ * renders a view or returns JSON through the base Controller helpers.
+ */
 final class SetupController extends Controller
 {
     public function profile(): void

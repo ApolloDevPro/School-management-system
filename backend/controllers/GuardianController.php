@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Parent and guardian records and their links to students.
+ *
+ * Backend controller: receives routed requests, enforces permissions and
+ * renders a view or returns JSON through the base Controller helpers.
+ */
 final class GuardianController extends Controller
 {
     public function index(): void

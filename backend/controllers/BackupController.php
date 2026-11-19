@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Database backup creation, download and deletion using mysqldump.
+ *
+ * Backend controller: receives routed requests, enforces permissions and
+ * renders a view or returns JSON through the base Controller helpers.
+ */
 final class BackupController extends Controller
 {
     private const BACKUP_DIR = __DIR__ . '/../../backups';

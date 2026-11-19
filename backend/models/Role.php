@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Roles and permissions.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class Role extends Model
 {
     protected static string $table = 'roles';

@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Attendance persistence and summary queries.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class AttendanceModule extends Model
 {
     public static function classes(int $schoolId): array

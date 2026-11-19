@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Portal profiles, notices, consents and per-child fee, attendance and result summaries.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class PortalModule extends Model
 {
     public static function profile(int $userId, int $schoolId): ?array
@@ -92,6 +97,96 @@ final class PortalModule extends Model
               WHERE sg.guardian_id=? AND s.school_id=?
               ORDER BY s.last_name, s.first_name LIMIT 20",
             [$guardianId, $schoolId]
+        );
+    }
+
+    /**
+     * Students visible to a portal account, each with their own fee balance,
+     * attendance record and latest published exam result.
+     */
+    public static function portalChildren(array $profile, int $schoolId): array
+    {
+        $students = [];
+        if ($profile['user_type'] === 'student' && !empty($profile['student_id'])) {
+            $students = static::query(
+                "SELECT s.id, s.admission_number, s.first_name, s.last_name,
+                        s.status, c.name AS class_name
+                   FROM students s
+                   LEFT JOIN classes c ON c.id = s.current_class_id
+                  WHERE s.id = ? AND s.school_id = ?",
+                [(int)$profile['student_id'], $schoolId]
+            );
+        } elseif ($profile['user_type'] === 'parent' && !empty($profile['guardian_id'])) {
+            $students = static::query(
+                "SELECT s.id, s.admission_number, s.first_name, s.last_name,
+                        s.status, c.name AS class_name
+                   FROM students s
+                   JOIN student_guardians sg ON sg.student_id = s.id
+                   LEFT JOIN classes c ON c.id = s.current_class_id
+                  WHERE sg.guardian_id = ? AND s.school_id = ?
+                  ORDER BY s.last_name, s.first_name",
+                [(int)$profile['guardian_id'], $schoolId]
+            );
+        }
+
+        foreach ($students as &$student) {
+            $studentId = (int)$student['id'];
+            $student['fees'] = static::feeSnapshot($studentId, $schoolId);
+            $student['attendance'] = static::attendanceSnapshot($studentId, $schoolId);
+            $student['result'] = static::latestResult($studentId, $schoolId);
+        }
+        unset($student);
+
+        return $students;
+    }
+
+    public static function feeSnapshot(int $studentId, int $schoolId): array
+    {
+        $row = static::one(
+            "SELECT COALESCE(SUM(total_amount), 0) AS charged,
+                    COALESCE(SUM(paid_amount), 0) AS paid,
+                    COALESCE(SUM(balance), 0) AS balance,
+                    COALESCE(SUM(CASE WHEN balance > 0 AND due_date < CURRENT_DATE
+                                      THEN balance ELSE 0 END), 0) AS overdue
+               FROM fee_invoices
+              WHERE school_id = ? AND student_id = ? AND status <> 'void'",
+            [$schoolId, $studentId]
+        );
+
+        return $row ?: ['charged' => 0, 'paid' => 0, 'balance' => 0, 'overdue' => 0];
+    }
+
+    public static function attendanceSnapshot(int $studentId, int $schoolId): array
+    {
+        $row = static::one(
+            "SELECT COUNT(*) AS days_marked,
+                    COALESCE(SUM(status = 'present'), 0) AS days_present,
+                    COALESCE(SUM(status = 'absent'), 0) AS days_absent,
+                    ROUND(100 * COALESCE(SUM(status = 'present'), 0) / NULLIF(COUNT(*), 0), 1) AS percent
+               FROM student_attendance
+              WHERE school_id = ? AND student_id = ? AND record_scope = 'daily'",
+            [$schoolId, $studentId]
+        );
+
+        return $row ?: ['days_marked' => 0, 'days_present' => 0, 'days_absent' => 0, 'percent' => null];
+    }
+
+    public static function latestResult(int $studentId, int $schoolId): ?array
+    {
+        return static::one(
+            "SELECT e.name AS exam_name, e.published_at,
+                    rs.average_percent, rs.total_points,
+                    (SELECT COUNT(*) + 1 FROM result_summaries x
+                      WHERE x.exam_id = rs.exam_id AND x.class_id = rs.class_id
+                        AND x.average_percent > rs.average_percent) AS class_rank,
+                    (SELECT COUNT(*) FROM result_summaries x
+                      WHERE x.exam_id = rs.exam_id AND x.class_id = rs.class_id) AS class_size
+               FROM result_summaries rs
+               JOIN exams e ON e.id = rs.exam_id AND e.school_id = ?
+              WHERE rs.student_id = ? AND e.status = 'published'
+              ORDER BY e.published_at DESC, e.id DESC
+              LIMIT 1",
+            [$schoolId, $studentId]
         );
     }
 }

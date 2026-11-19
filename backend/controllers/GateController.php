@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Visitor check-in/check-out and gate passes.
+ *
+ * Backend controller: receives routed requests, enforces permissions and
+ * renders a view or returns JSON through the base Controller helpers.
+ */
 final class GateController extends Controller
 {
     public function index(): void

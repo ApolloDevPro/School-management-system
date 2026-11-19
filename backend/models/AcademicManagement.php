@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Curricula, subjects, combinations, allocations, timetables, homework, syllabus and coverage queries.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class AcademicManagement extends Model
 {
     protected static string $table = 'subjects';

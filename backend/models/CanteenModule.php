@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Canteen products and student wallets.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class CanteenModule extends Model
 {
     public static function products(int $schoolId): array

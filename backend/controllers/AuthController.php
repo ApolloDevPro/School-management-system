@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Sign-in, first-password installation, password reset, forced password change and the 2FA login challenge.
+ *
+ * Backend controller: receives routed requests, enforces permissions and
+ * renders a view or returns JSON through the base Controller helpers.
+ */
 final class AuthController extends Controller
 {
     public function install(): void
@@ -102,7 +108,7 @@ final class AuthController extends Controller
             $this->respond(false, 'Verification session expired. Sign in again.', 'login');
         }
         audit('security', '2fa_verified', 'users', $userId, 'Completed 2FA login challenge');
-        $target = Auth::mustChangePassword() ? 'change-password' : 'dashboard';
+        $target = Auth::mustChangePassword() ? 'change-password' : Auth::homeRoute();
         $this->respond(true, 'Verification successful.', $target);
     }
 
@@ -202,7 +208,7 @@ final class AuthController extends Controller
         User::changeOwnPassword((int)$user['id'], $password);
         Auth::markPasswordChanged();
         audit('security', 'password_changed', 'users', (int)$user['id'], 'User changed own password');
-        $this->respond(true, 'Password changed successfully.', 'dashboard');
+        $this->respond(true, 'Password changed successfully.', Auth::homeRoute());
     }
 
     public function logout(): void

@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Student subject and A-Level combination registration, including the JSON API endpoints.
+ *
+ * Backend controller: receives routed requests, enforces permissions and
+ * renders a view or returns JSON through the base Controller helpers.
+ */
 final class SubjectRegistrationController extends Controller
 {
     public function index(): void

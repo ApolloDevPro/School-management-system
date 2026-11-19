@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Student document uploads, verification and deletion.
+ *
+ * Backend controller: receives routed requests, enforces permissions and
+ * renders a view or returns JSON through the base Controller helpers.
+ */
 final class DocumentController extends Controller
 {
     public function index(): void

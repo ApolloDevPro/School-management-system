@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Daily student and staff attendance capture.
+ *
+ * Backend controller: receives routed requests, enforces permissions and
+ * renders a view or returns JSON through the base Controller helpers.
+ */
 final class AttendanceController extends Controller
 {
     private const STUDENT_STATUSES = ['present', 'absent', 'late', 'excused', 'sick', 'suspended'];

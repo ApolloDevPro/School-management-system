@@ -12,14 +12,14 @@
   },
   "autoload": {
     "psr-4": {
-      "SSMS\\": "backend/"
+      "SSMS\\": "./"
     },
     "classmap": [
-      "backend/core/",
-      "backend/controllers/",
-      "backend/models/",
-      "backend/lib/",
-      "backend/config/"
+      "core/",
+      "controllers/",
+      "models/",
+      "lib/",
+      "config/"
     ]
   },
   "scripts": {

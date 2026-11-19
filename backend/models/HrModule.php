@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Staff, contracts, leave, payroll and recruitment.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class HrModule extends Model
 {
     private const TABLES = ['staff', 'leave_types', 'leave_requests', 'payroll_periods', 'payroll_items'];

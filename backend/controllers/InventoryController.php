@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Stock requisitions and approvals.
+ *
+ * Backend controller: receives routed requests, enforces permissions and
+ * renders a view or returns JSON through the base Controller helpers.
+ */
 final class InventoryController extends Controller
 {
     public function index(): void

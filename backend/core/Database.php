@@ -1,10 +1,19 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Shared PDO connection to the application database.
+ *
+ * One connection is reused for the whole request. Credentials come from the
+ * constants defined in backend/config/config.php (which reads .env).
+ */
 final class Database
 {
     private static ?PDO $pdo = null;
 
+    /**
+     * Return the single PDO connection, creating it on first use.
+     */
     public static function conn(): PDO
     {
         if (self::$pdo === null) {
@@ -18,6 +27,9 @@ final class Database
         return self::$pdo;
     }
 
+    /**
+     * Prepare, bind and execute a statement, returning the executed statement.
+     */
     public static function query(string $sql, array $params = []): PDOStatement
     {
         $statement = self::conn()->prepare($sql);

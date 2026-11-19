@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Stock items and requisitions.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class InventoryModule extends Model
 {
     public static function items(int $schoolId): array

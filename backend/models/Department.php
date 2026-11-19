@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Departments.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class Department extends Model
 {
     protected static string $table = 'departments';

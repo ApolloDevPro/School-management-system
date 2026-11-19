@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Student transfers.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class Transfer extends Model
 {
     protected static string $table = 'transfers';

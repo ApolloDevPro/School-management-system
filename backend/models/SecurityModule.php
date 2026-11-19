@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Support tickets.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class SecurityModule extends Model
 {
     public static function tickets(int $schoolId, int $userId, bool $all): array

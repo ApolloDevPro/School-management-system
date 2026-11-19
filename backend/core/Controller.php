@@ -1,8 +1,20 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Base controller: rendering, responses and permission gating.
+ *
+ * Route permissions are declared in index.php, but actions that need a finer
+ * check call allowed() as well.
+ */
 abstract class Controller
 {
+    /**
+     * Render a view inside the main layout (or the bare auth layout).
+     *
+     * $data is extracted into local variables for the template. The request
+     * ends here, matching how the router expects a single response.
+     */
     protected function render(string $view, array $data = [], string $layout = 'app'): void
     {
         security_headers();
@@ -22,6 +34,10 @@ abstract class Controller
         exit;
     }
 
+    /**
+     * Finish an action: JSON for AJAX callers, otherwise a flash message and
+     * redirect. Validation errors are attached to the JSON response only.
+     */
     protected function respond(
         bool $ok,
         string $message,
@@ -41,6 +57,10 @@ abstract class Controller
         redirect($back, $params);
     }
 
+    /**
+     * Check a module permission; when denied, respond with an error and
+     * return false so the caller can stop.
+     */
     protected function allowed(string $module, string $action = 'view'): bool
     {
         if (Auth::can($module, $action)) {

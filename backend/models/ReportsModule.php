@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Queries over the reporting views.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class ReportsModule extends Model
 {
     private static function safeQuery(string $sql, array $params = []): array

@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * UNEB levels, candidates, CA submissions and results.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class UnebModule extends Model
 {
     public static function levels(int $schoolId): array

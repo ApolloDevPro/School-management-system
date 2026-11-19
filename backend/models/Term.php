@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Terms and the active term.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class Term extends Model
 {
     protected static string $table = 'terms';

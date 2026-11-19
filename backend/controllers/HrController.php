@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Staff records, leave, payroll, recruitment, appraisals and staff documents.
+ *
+ * Backend controller: receives routed requests, enforces permissions and
+ * renders a view or returns JSON through the base Controller helpers.
+ */
 final class HrController extends Controller
 {
     private const EMPLOYMENT_TYPES = ['teaching', 'non_teaching'];

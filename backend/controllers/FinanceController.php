@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Fee structures, invoices, payments, receipts, clearances, bank reconciliation, reminders, online payments and exports.
+ *
+ * Backend controller: receives routed requests, enforces permissions and
+ * renders a view or returns JSON through the base Controller helpers.
+ */
 final class FinanceController extends Controller
 {
     public function index(): void

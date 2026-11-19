@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * End-of-year student promotion.
+ *
+ * Backend controller: receives routed requests, enforces permissions and
+ * renders a view or returns JSON through the base Controller helpers.
+ */
 final class PromotionController extends Controller
 {
     public function index(): void

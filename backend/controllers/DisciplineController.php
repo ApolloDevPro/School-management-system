@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Student discipline incidents.
+ *
+ * Backend controller: receives routed requests, enforces permissions and
+ * renders a view or returns JSON through the base Controller helpers.
+ */
 final class DisciplineController extends Controller
 {
     public function index(): void

@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Academic year records and activation.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class AcademicYear extends Model
 {
     protected static string $table = 'academic_years';

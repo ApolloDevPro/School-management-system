@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Report card listing, single and batch printing, PDF or printable HTML, CSV export and teacher/head comments.
+ *
+ * Backend controller: receives routed requests, enforces permissions and
+ * renders a view or returns JSON through the base Controller helpers.
+ */
 final class ReportCardController extends Controller
 {
     public function index(): void

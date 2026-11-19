@@ -3,7 +3,7 @@ RewriteEngine On
 
 # Deny direct web access to source, configuration, data and backup files.
 # PHP code must be reached through index.php only.
-RewriteRule ^(?:\.git(?:/.*)?|\.env.*|backend(?:/.*)?|database(?:/.*)?|frontend(?:/.*)?|backups(?:/.*)?|composer\.(?:json|lock|phar)|fix_finance_perms\.php|README\.md|.*\.docx|.*\.sql)$ - [F,L,NC]
+RewriteRule ^(?:\.git(?:/.*)?|\.env.*|backend(?:/.*)?|database(?:/.*)?|frontend(?:/.*)?|backups(?:/.*)?|composer\.(?:json|lock|phar)|README\.md|.*\.docx|.*\.sql)$ - [F,L,NC]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

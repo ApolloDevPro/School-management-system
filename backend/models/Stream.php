@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Class streams.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class Stream extends Model
 {
     protected static string $table = 'streams';

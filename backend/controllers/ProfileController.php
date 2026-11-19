@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * The signed-in user\u2019s own profile.
+ *
+ * Backend controller: receives routed requests, enforces permissions and
+ * renders a view or returns JSON through the base Controller helpers.
+ */
 final class ProfileController extends Controller
 {
     public function index(): void

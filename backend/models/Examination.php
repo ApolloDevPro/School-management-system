@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Exams, marks, grading scales, result processing and summaries.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class Examination extends Model
 {
     protected static string $table = 'exams';

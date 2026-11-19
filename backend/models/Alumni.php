@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Alumni records.
+ *
+ * Backend model: thin static data-access layer over the shared PDO connection.
+ */
 final class Alumni extends Model
 {
     protected static string $table = 'alumni';

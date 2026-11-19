@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Parent and student self-service dashboard, limited to the account holder\u2019s own records.
+ *
+ * Backend controller: receives routed requests, enforces permissions and
+ * renders a view or returns JSON through the base Controller helpers.
+ */
 final class PortalController extends Controller
 {
     public function index(): void
@@ -13,6 +19,7 @@ final class PortalController extends Controller
         // Build dashboard data depending on user type
         $studentData  = null;
         $guardianData = null;
+        $children     = $profile ? PortalModule::portalChildren($profile, $schoolId) : [];
         $notices      = PortalModule::recentNotices($schoolId);
         $consents     = $profile ? PortalModule::consents($schoolId, $profile) : [];
 
@@ -28,6 +35,7 @@ final class PortalController extends Controller
             'profile'      => $profile,
             'studentData'  => $studentData,
             'guardianData' => $guardianData,
+            'children'     => $children,
             'notices'      => $notices,
             'consents'     => $consents,
         ]);
