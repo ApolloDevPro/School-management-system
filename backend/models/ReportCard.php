@@ -21,7 +21,7 @@ final class ReportCard extends Model
     public static function examsForTerm(int $termId, int $schoolId): array
     {
         return static::query(
-            'SELECT e.id, e.name, e.status, e.exam_date
+            'SELECT e.id, e.name, e.status, e.start_date AS exam_date
                FROM exams e
               WHERE e.term_id = ? AND e.school_id = ?
               ORDER BY e.id DESC',
@@ -67,12 +67,13 @@ final class ReportCard extends Model
                     m.ca_mark, m.max_ca_mark, m.exam_mark, m.max_exam_mark,
                     m.total_mark, m.percentage AS mark_percent, m.remarks AS mark_remarks
                FROM subject_results sr
+               JOIN exams e ON e.id = sr.exam_id AND e.school_id = ?
                JOIN subjects sub ON sub.id = sr.subject_id
                LEFT JOIN marks m ON m.exam_id = sr.exam_id AND m.student_id = sr.student_id
                    AND m.subject_id = sr.subject_id
-              WHERE sr.exam_id = ? AND sr.student_id = ? AND sr.school_id = ?
+              WHERE sr.exam_id = ? AND sr.student_id = ?
               ORDER BY sub.order_index, sub.name',
-            [$examId, $studentId, $schoolId]
+            [$schoolId, $examId, $studentId]
         );
 
         if (!$results) {
@@ -83,6 +84,42 @@ final class ReportCard extends Model
             'SELECT * FROM result_summaries WHERE exam_id = ? AND student_id = ?',
             [$examId, $studentId]
         );
+
+        $position = null;
+        $classSize = null;
+        $streamPosition = null;
+        $streamSize = null;
+        if ($summary && $summary['average_percent'] !== null) {
+            $average = (float)$summary['average_percent'];
+            $classId = (int)$summary['class_id'];
+
+            $classSize = (int)static::scalar(
+                'SELECT COUNT(*) FROM result_summaries WHERE exam_id = ? AND class_id = ?',
+                [$examId, $classId]
+            );
+            if ($classSize > 0) {
+                $ahead = (int)static::scalar(
+                    'SELECT COUNT(*) FROM result_summaries WHERE exam_id = ? AND class_id = ? AND average_percent > ?',
+                    [$examId, $classId, $average]
+                );
+                $position = $ahead + 1;
+            }
+
+            if (!empty($summary['stream_id'])) {
+                $streamId = (int)$summary['stream_id'];
+                $streamSize = (int)static::scalar(
+                    'SELECT COUNT(*) FROM result_summaries WHERE exam_id = ? AND class_id = ? AND stream_id = ?',
+                    [$examId, $classId, $streamId]
+                );
+                if ($streamSize > 0) {
+                    $streamAhead = (int)static::scalar(
+                        'SELECT COUNT(*) FROM result_summaries WHERE exam_id = ? AND class_id = ? AND stream_id = ? AND average_percent > ?',
+                        [$examId, $classId, $streamId, $average]
+                    );
+                    $streamPosition = $streamAhead + 1;
+                }
+            }
+        }
 
         $guardians = Student::guardiansOf($studentId);
         $primaryGuardian = null;
@@ -118,7 +155,61 @@ final class ReportCard extends Model
             'total_exam' => $totalExam,
             'subjects_with_ca' => $subjectsWithCa,
             'subjects_with_exam' => $subjectsWithExam,
+            'position' => $position,
+            'class_size' => $classSize,
+            'stream_position' => $streamPosition,
+            'stream_size' => $streamSize,
         ];
+    }
+
+    public static function summariesForClass(int $examId, int $classId, ?int $streamId, int $schoolId): array
+    {
+        $sql = 'SELECT rs.*
+                  FROM result_summaries rs
+                  JOIN exams e ON e.id = rs.exam_id AND e.school_id = ?
+                 WHERE rs.exam_id = ? AND rs.class_id = ?';
+        $params = [$schoolId, $examId, $classId];
+        if ($streamId !== null) {
+            $sql .= ' AND rs.stream_id = ?';
+            $params[] = $streamId;
+        }
+
+        $map = [];
+        foreach (static::query($sql, $params) as $row) {
+            $map[(int)$row['student_id']] = $row;
+        }
+        return $map;
+    }
+
+    public static function saveComments(
+        int $studentId,
+        int $examId,
+        int $schoolId,
+        ?string $teacherRemarks,
+        ?string $headRemarks
+    ): bool {
+        if (!Examination::examInSchool($examId, $schoolId)) {
+            return false;
+        }
+
+        $student = Student::findFull($studentId);
+        if (!$student || (int)$student['school_id'] !== $schoolId) {
+            return false;
+        }
+
+        $exists = (int)static::scalar(
+            'SELECT COUNT(*) FROM result_summaries WHERE exam_id = ? AND student_id = ?',
+            [$examId, $studentId]
+        );
+        if ($exists < 1) {
+            return false;
+        }
+
+        static::execute(
+            'UPDATE result_summaries SET teacher_remarks = ?, head_remarks = ? WHERE exam_id = ? AND student_id = ?',
+            [$teacherRemarks, $headRemarks, $examId, $studentId]
+        );
+        return true;
     }
 
     public static function classReportCardSummary(int $examId, int $schoolId): array
@@ -128,10 +219,11 @@ final class ReportCard extends Model
                     rs.average_percent, rs.total_points, rs.subjects_taken, rs.subjects_passed,
                     c.name AS class_name, st.name AS stream_name
                FROM result_summaries rs
+               JOIN exams e ON e.id = rs.exam_id AND e.school_id = ?
                JOIN students s ON s.id = rs.student_id
                LEFT JOIN classes c ON c.id = rs.class_id
                LEFT JOIN streams st ON st.id = rs.stream_id
-              WHERE rs.exam_id = ? AND rs.school_id = ?
+              WHERE rs.exam_id = ?
               ORDER BY rs.average_percent DESC',
             [$examId, $schoolId]
         );

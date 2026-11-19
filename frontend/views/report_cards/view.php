@@ -4,8 +4,8 @@
     <p class="text-muted small mb-0"><?= e($card['exam']['name'] ?? '') ?> &middot; <?= e($card['student']['admission_number']) ?></p>
   </div>
   <div class="d-flex gap-2">
-    <a class="btn btn-outline-secondary" href="<?= url('report_cards', ['term_id' => (int)($_GET['term_id'] ?? 0), 'class_id' => (int)($_GET['class_id'] ?? 0), 'stream_id' => (int)($_GET['stream_id'] ?? 0), 'exam_id' => $card['exam']['id']) ?>"><i class="bi bi-arrow-left"></i> Back to list</a>
-    <a class="btn btn-primary" href="<?= url('report_cards/pdf', ['student_id' => (int)$card['student']['id'], 'exam_id' => $card['exam']['id']) ?>" target="_blank"><i class="bi bi-file-earmark-pdf"></i> Download PDF</a>
+    <a class="btn btn-outline-secondary" href="<?= url('report_cards', ['term_id' => (int)($_GET['term_id'] ?? 0), 'class_id' => (int)($_GET['class_id'] ?? 0), 'stream_id' => (int)($_GET['stream_id'] ?? 0), 'exam_id' => $card['exam']['id']]) ?>"><i class="bi bi-arrow-left"></i> Back to list</a>
+    <a class="btn btn-primary" href="<?= url('report_cards/pdf', ['student_id' => (int)$card['student']['id'], 'exam_id' => $card['exam']['id']]) ?>" target="_blank"><i class="bi bi-file-earmark-pdf"></i> Download PDF</a>
   </div>
 </div>
 
@@ -36,7 +36,7 @@
     </div>
 
     <div class="row g-3 mb-4">
-      <div class="col-md-4">
+      <div class="col-md-3">
         <label class="form-label small text-muted">Term / Exam</label>
         <p class="mb-0"><?= e($card['exam']['name'] ?? '') ?> &mdash; <?= e($card['exam']['status'] ?? '') ?></p>
       </div>
@@ -48,7 +48,7 @@
         <label class="form-label small text-muted">Subjects Taken</label>
         <p class="mb-0 fw-bold"><?= count($card['results']) ?></p>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-2">
         <label class="form-label small text-muted">Average</label>
         <p class="mb-0 fw-bold">
           <?php
@@ -57,6 +57,15 @@
           echo number_format($avg, 1) . '%';
           ?>
         </p>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small text-muted">Class position</label>
+        <p class="mb-0 fw-bold">
+          <?= $card['position'] !== null && $card['class_size'] ? (int)$card['position'] . ' of ' . (int)$card['class_size'] : '—' ?>
+        </p>
+        <?php if ($card['stream_position'] !== null && (int)$card['stream_size'] > 1): ?>
+          <small class="text-muted">Stream: <?= (int)$card['stream_position'] ?> of <?= (int)$card['stream_size'] ?></small>
+        <?php endif; ?>
       </div>
     </div>
 
@@ -101,12 +110,16 @@
       </table>
     </div>
 
+    <?php
+      $teacherRemark = trim((string)($summary['teacher_remarks'] ?? ''));
+      $headRemark = trim((string)($summary['head_remarks'] ?? ''));
+    ?>
     <div class="row mt-4">
       <div class="col-md-6">
         <div class="card app-card p-3">
           <h6 class="mb-2">Teacher’s Comment</h6>
           <div class="border rounded p-2 bg-light" style="min-height:100px;color:#4b5563">
-            Keep up the good work. Continue to revise regularly and submit assignments on time.
+            <?= $teacherRemark !== '' ? nl2br(e($teacherRemark)) : '<span class="text-muted">No comment recorded yet.</span>' ?>
           </div>
         </div>
       </div>
@@ -114,11 +127,40 @@
         <div class="card app-card p-3">
           <h6 class="mb-2">Head Teacher’s Comment</h6>
           <div class="border rounded p-2 bg-light" style="min-height:100px;color:#4b5563">
-            Satisfactory progress. Encouraged to maintain discipline and focus in the next term.
+            <?= $headRemark !== '' ? nl2br(e($headRemark)) : '<span class="text-muted">No comment recorded yet.</span>' ?>
           </div>
         </div>
       </div>
     </div>
+
+    <?php if (!empty($canEdit)): ?>
+    <div class="card app-card p-3 mt-3">
+      <h6 class="mb-3">Record comments</h6>
+      <?php if (!$summary): ?>
+        <p class="text-muted small mb-0">Comments become available once the exam results have been processed.</p>
+      <?php else: ?>
+      <form method="post" action="<?= url('report_cards/comments') ?>">
+        <?= csrf_field() ?>
+        <input type="hidden" name="student_id" value="<?= (int)$card['student']['id'] ?>">
+        <input type="hidden" name="exam_id" value="<?= (int)$card['exam']['id'] ?>">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label small" for="f_teacher_remarks">Teacher’s comment</label>
+            <textarea class="form-control" id="f_teacher_remarks" name="teacher_remarks" rows="3" maxlength="255"><?= e($teacherRemark) ?></textarea>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small" for="f_head_remarks">Head teacher’s comment</label>
+            <textarea class="form-control" id="f_head_remarks" name="head_remarks" rows="3" maxlength="255"><?= e($headRemark) ?></textarea>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-3 mt-2">
+          <button class="btn btn-primary btn-sm" type="submit">Save comments</button>
+          <span class="form-text mb-0">Up to 255 characters each. These appear on the printed card.</span>
+        </div>
+      </form>
+      <?php endif; ?>
+    </div>
+    <?php endif; ?>
 
     <div class="mt-4 border-top pt-3 d-flex justify-content-between">
       <div>

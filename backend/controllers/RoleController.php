@@ -5,7 +5,7 @@ final class RoleController extends Controller
 {
     public function index(): void
     {
-        $roles   = Role::allActive();
+        $roles   = Role::allActive(school_id());
         $roleId  = (int)($_GET['id'] ?? 0);
         $current = null;
 
@@ -33,7 +33,7 @@ final class RoleController extends Controller
     {
         $roleId = (int)($_POST['role_id'] ?? 0);
         $role   = Role::find($roleId);
-        if (!$role) {
+        if (!$role || (int)$role['school_id'] !== school_id()) {
             $this->respond(false, 'That role no longer exists.', 'roles');
         }
 

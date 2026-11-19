@@ -251,6 +251,26 @@
     }, 4500);
   }
 
+  function syncUserLinkFields() {
+    var form = document.getElementById('userForm');
+    if (!form) { return; }
+    var typeField = form.querySelector('[name="user_type"]');
+    var type = typeField ? typeField.value : 'staff';
+
+    form.querySelectorAll('[data-link-group]').forEach(function (group) {
+      var active = group.getAttribute('data-link-group') === type;
+      group.classList.toggle('d-none', !active);
+      var select = group.querySelector('select');
+      if (select) { select.disabled = !active; }
+    });
+  }
+
+  document.addEventListener('change', function (event) {
+    if (event.target && event.target.id === 'f_user_type') {
+      syncUserLinkFields();
+    }
+  });
+
   function openUserModal(user) {
     var form = document.getElementById('userForm');
     if (!form) { return; }
@@ -260,6 +280,7 @@
 
     clearErrors();
     form.reset();
+    syncUserLinkFields();
     form.action = (window.APP && window.APP.urls && window.APP.urls.store) || form.action;
     if (title) { title.textContent = 'Add user'; }
     if (password) {
@@ -271,10 +292,11 @@
       form.action = (window.APP && window.APP.urls && window.APP.urls.update) || form.action;
       if (title) { title.textContent = 'Edit user · ' + user.username; }
 
-      ['id', 'username', 'full_name', 'email', 'phone', 'user_type', 'role_id'].forEach(function (field) {
+      ['id', 'username', 'full_name', 'email', 'phone', 'user_type', 'role_id', 'staff_id', 'guardian_id', 'student_id'].forEach(function (field) {
         var input = form.querySelector('[name="' + field + '"]');
         if (input) { input.value = user[field] === null || user[field] === undefined ? '' : user[field]; }
       });
+      syncUserLinkFields();
 
       if (password) {
         password.required = false;
@@ -290,6 +312,22 @@
 
   document.querySelectorAll('table[data-table]').forEach(function (table) {
     if (!window.DataTable) { return; }
+
+    // Views render a single "no records" row with colspan. DataTables counts
+    // DOM cells rather than spanning columns, so that row makes every header
+    // past the first look missing ("Requested unknown parameter '1'"). Let
+    // DataTables provide its own empty message instead.
+    var body = table.tBodies[0];
+    if (body) {
+      var rows = body.querySelectorAll('tr');
+      if (rows.length === 1) {
+        var cells = rows[0].querySelectorAll('td');
+        if (cells.length === 1 && cells[0].hasAttribute('colspan')) {
+          body.removeChild(rows[0]);
+        }
+      }
+    }
+
     new window.DataTable(table, {
       pageLength: 25,
       lengthMenu: [10, 25, 50, 100],

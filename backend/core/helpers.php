@@ -85,13 +85,28 @@ function school_id(): int
     throw new RuntimeException('No school context available. Please configure a school or sign in.');
 }
 
+function password_min_length(): int
+{
+    try {
+        $min = (int)Setting::get(school_id(), 'security.password_min_length', 8);
+    } catch (Throwable) {
+        $min = 8;
+    }
+    return max(8, min(64, $min));
+}
+
 function current_term_name(): string
 {
     static $name = null;
     if ($name === null) {
-        $name = (string)(Database::conn()
-            ->query('SELECT t.name FROM terms t WHERE t.is_active = 1 ORDER BY t.id LIMIT 1')
-            ->fetchColumn() ?: 'No active term');
+        $statement = Database::conn()->prepare(
+            'SELECT t.name FROM terms t
+               JOIN academic_years y ON y.id = t.academic_year_id
+              WHERE y.school_id = ? AND t.is_active = 1
+              ORDER BY t.id LIMIT 1'
+        );
+        $statement->execute([school_id()]);
+        $name = (string)($statement->fetchColumn() ?: 'No active term');
     }
     return $name;
 }

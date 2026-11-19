@@ -299,6 +299,481 @@ final class HrController extends Controller
         return (float)$value;
     }
 
+    public function recruitment(): void
+    {
+        if (!$this->allowed('hr', 'view')) {
+            return;
+        }
+        $schoolId = school_id();
+        $db = Database::conn();
+
+        $vacancies = $db->query(
+            'SELECT v.*, d.name AS department_name,
+                    (SELECT COUNT(*) FROM job_applications ja WHERE ja.vacancy_id = v.id) AS application_count
+               FROM vacancies v
+               LEFT JOIN departments d ON d.id = v.department_id
+              WHERE v.school_id = ?
+              ORDER BY v.created_at DESC',
+            [$schoolId]
+        )->fetchAll();
+
+        $applications = $db->query(
+            'SELECT ja.*, v.title AS vacancy_title, v.status AS vacancy_status
+               FROM job_applications ja
+               LEFT JOIN vacancies v ON v.id = ja.vacancy_id
+              WHERE ja.school_id = ?
+              ORDER BY ja.applied_at DESC
+              LIMIT 200',
+            [$schoolId]
+        )->fetchAll();
+
+        $staff = HrModule::staffForSchool($schoolId);
+        $departments = AcademicManagement::departments($schoolId);
+
+        $this->render('hr/recruitment', [
+            'pageTitle' => 'Recruitment',
+            'activeNav' => 'hr',
+            'vacancies' => $vacancies,
+            'applications' => $applications,
+            'staff' => $staff,
+            'departments' => $departments,
+            'canAdd' => Auth::can('hr', 'add'),
+            'canApprove' => Auth::can('hr', 'approve'),
+        ]);
+    }
+
+    public function saveVacancy(): void
+    {
+        if (!$this->allowed('hr', 'edit')) {
+            return;
+        }
+        $schoolId = school_id();
+        $db = Database::conn();
+
+        $id = (int)($_POST['id'] ?? 0);
+        $title = trim((string)($_POST['title'] ?? ''));
+        $departmentId = $this->optionalInt($_POST['department_id'] ?? null);
+        $position = trim((string)($_POST['position'] ?? ''));
+        $employmentType = (string)($_POST['employment_type'] ?? 'teaching');
+        $slots = filter_var($_POST['slots'] ?? '1', FILTER_VALIDATE_INT);
+        $minQualification = trim((string)($_POST['min_qualification'] ?? ''));
+        $experienceRequired = trim((string)($_POST['experience_required'] ?? ''));
+        $salaryMin = $this->optionalMoney($_POST['salary_min'] ?? null);
+        $salaryMax = $this->optionalMoney($_POST['salary_max'] ?? null);
+        $publishedDate = $this->optionalDate($_POST['published_date'] ?? null);
+        $closingDate = $this->optionalDate($_POST['closing_date'] ?? null);
+        $status = (string)($_POST['status'] ?? 'draft');
+
+        if ($title === '' || mb_strlen($title) > 140
+            || $position === '' || mb_strlen($position) > 120
+            || !in_array($employmentType, ['teaching', 'non_teaching'], true)
+            || ($slots === false || $slots < 1 || $slots > 100)
+            || mb_strlen($minQualification) > 140
+            || mb_strlen($experienceRequired) > 80
+            || ($salaryMin !== null && $salaryMin < 0)
+            || ($salaryMax !== null && $salaryMax < 0)
+            || ($salaryMin !== null && $salaryMax !== null && $salaryMax < $salaryMin)
+            || !$this->validDateOpt($publishedDate)
+            || !$this->validDateOpt($closingDate)
+            || ($publishedDate && $closingDate && $closingDate < $publishedDate)
+            || !in_array($status, ['draft', 'open', 'closed', 'filled', 'cancelled'], true)) {
+            $this->respond(false, 'Enter valid vacancy details.', 'hr');
+            return;
+        }
+
+        $db->beginTransaction();
+        try {
+            if ($id > 0) {
+                $exists = $db->query('SELECT id FROM vacancies WHERE id = ? AND school_id = ?', [$id, $schoolId])->fetch();
+                if (!$exists) {
+                    throw new DomainException('Vacancy not found.');
+                }
+                $db->prepare(
+                    'UPDATE vacancies SET title = ?, department_id = ?, position = ?, employment_type = ?,
+                        slots = ?, min_qualification = ?, experience_required = ?, salary_min = ?,
+                        salary_max = ?, published_date = ?, closing_date = ?, status = ?
+                      WHERE id = ? AND school_id = ?'
+                )->execute([
+                    $title, $departmentId, $position, $employmentType, $slots,
+                    $minQualification !== '' ? $minQualification : null,
+                    $experienceRequired !== '' ? $experienceRequired : null,
+                    $salaryMin, $salaryMax, $publishedDate, $closingDate, $status, $id, $schoolId
+                ]);
+                audit('hr', 'update_vacancy', 'vacancies', $id, 'Updated vacancy: ' . $title);
+                $this->respond(true, 'Vacancy updated.', 'hr');
+            } else {
+                $db->prepare(
+                    'INSERT INTO vacancies
+                        (school_id, title, department_id, position, employment_type, slots,
+                         min_qualification, experience_required, salary_min, salary_max,
+                         published_date, closing_date, status, created_by)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                )->execute([
+                    $schoolId, $title, $departmentId, $position, $employmentType, $slots,
+                    $minQualification !== '' ? $minQualification : null,
+                    $experienceRequired !== '' ? $experienceRequired : null,
+                    $salaryMin, $salaryMax, $publishedDate, $closingDate, $status,
+                    (int)(Auth::user()['id'] ?? 0)
+                ]);
+                $newId = (int)$db->lastInsertId();
+                audit('hr', 'create_vacancy', 'vacancies', $newId, 'Created vacancy: ' . $title);
+                $this->respond(true, 'Vacancy created.', 'hr');
+            }
+            $db->commit();
+        } catch (Throwable $error) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            $this->respond(false, $error->getMessage(), 'hr');
+        }
+    }
+
+    public function vacancyStatus(): void
+    {
+        if (!$this->allowed('hr', 'edit')) {
+            return;
+        }
+        $schoolId = school_id();
+        $db = Database::conn();
+
+        $id = (int)($_POST['id'] ?? 0);
+        $status = (string)($_POST['status'] ?? '');
+        if (!in_array($status, ['draft', 'open', 'closed', 'filled', 'cancelled'], true)) {
+            $this->respond(false, 'Invalid status.', 'hr');
+            return;
+        }
+
+        $vacancy = $db->query('SELECT title FROM vacancies WHERE id = ? AND school_id = ?', [$id, $schoolId])->fetch();
+        if (!$vacancy) {
+            $this->respond(false, 'Vacancy not found.', 'hr');
+            return;
+        }
+
+        $db->prepare('UPDATE vacancies SET status = ? WHERE id = ? AND school_id = ?')
+            ->execute([$status, $id, $schoolId]);
+        audit('hr', 'vacancy_status', 'vacancies', $id, 'Changed vacancy status to ' . $status . ': ' . $vacancy['title']);
+        $this->respond(true, 'Vacancy status updated.', 'hr');
+    }
+
+    public function saveApplication(): void
+    {
+        if (!$this->allowed('hr', 'add')) {
+            return;
+        }
+        $schoolId = school_id();
+        $db = Database::conn();
+
+        $id = (int)($_POST['id'] ?? 0);
+        $vacancyId = $this->optionalInt($_POST['vacancy_id'] ?? null);
+        $fullName = trim((string)($_POST['full_name'] ?? ''));
+        $gender = (string)($_POST['gender'] ?? '');
+        $dateOfBirth = $this->optionalDate($_POST['date_of_birth'] ?? null);
+        $phone = trim((string)($_POST['phone'] ?? ''));
+        $email = trim((string)($_POST['email'] ?? ''));
+        $address = trim((string)($_POST['address'] ?? ''));
+        $qualification = trim((string)($_POST['qualification'] ?? ''));
+        $experienceYears = filter_var($_POST['experience_years'] ?? null, FILTER_VALIDATE_INT);
+        $currentPosition = trim((string)($_POST['current_position'] ?? ''));
+        $status = (string)($_POST['status'] ?? 'received');
+
+        if ($fullName === '' || mb_strlen($fullName) > 140
+            || ($gender !== '' && !in_array($gender, ['male', 'female', 'other'], true))
+            || !$this->validDateOpt($dateOfBirth)
+            || mb_strlen($phone) > 40
+            || ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL))
+            || mb_strlen($address) > 255
+            || mb_strlen($qualification) > 160
+            || ($experienceYears === false && $_POST['experience_years'] !== '')
+            || ($experienceYears !== null && ($experienceYears < 0 || $experienceYears > 100))
+            || mb_strlen($currentPosition) > 120
+            || !in_array($status, ['received', 'shortlisted', 'interviewed', 'appointed', 'rejected', 'withdrawn'], true)) {
+            $this->respond(false, 'Enter valid application details.', 'hr');
+            return;
+        }
+
+        if ($vacancyId !== null) {
+            $vacancy = $db->query('SELECT id FROM vacancies WHERE id = ? AND school_id = ?', [$vacancyId, $schoolId])->fetch();
+            if (!$vacancy) {
+                $this->respond(false, 'Vacancy not found.', 'hr');
+                return;
+            }
+        }
+
+        $db->beginTransaction();
+        try {
+            if ($id > 0) {
+                $exists = $db->query('SELECT id FROM job_applications WHERE id = ? AND school_id = ?', [$id, $schoolId])->fetch();
+                if (!$exists) {
+                    throw new DomainException('Application not found.');
+                }
+                $db->prepare(
+                    'UPDATE job_applications SET vacancy_id = ?, full_name = ?, gender = ?, date_of_birth = ?,
+                        phone = ?, email = ?, address = ?, qualification = ?, experience_years = ?,
+                        current_position = ?, status = ?
+                      WHERE id = ? AND school_id = ?'
+                )->execute([
+                    $vacancyId, $fullName, $gender !== '' ? $gender : null, $dateOfBirth,
+                    $phone !== '' ? $phone : null, $email !== '' ? $email : null,
+                    $address !== '' ? $address : null, $qualification !== '' ? $qualification : null,
+                    $experienceYears, $currentPosition !== '' ? $currentPosition : null, $status, $id, $schoolId
+                ]);
+                audit('hr', 'update_application', 'job_applications', $id, 'Updated application: ' . $fullName);
+                $this->respond(true, 'Application updated.', 'hr');
+            } else {
+                $db->prepare(
+                    'INSERT INTO job_applications
+                        (vacancy_id, school_id, full_name, gender, date_of_birth, phone, email,
+                         address, qualification, experience_years, current_position, status)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                )->execute([
+                    $vacancyId, $schoolId, $fullName, $gender !== '' ? $gender : null, $dateOfBirth,
+                    $phone !== '' ? $phone : null, $email !== '' ? $email : null,
+                    $address !== '' ? $address : null, $qualification !== '' ? $qualification : null,
+                    $experienceYears, $currentPosition !== '' ? $currentPosition : null, $status
+                ]);
+                $newId = (int)$db->lastInsertId();
+                audit('hr', 'create_application', 'job_applications', $newId, 'Received application: ' . $fullName);
+                $this->respond(true, 'Application received.', 'hr');
+            }
+            $db->commit();
+        } catch (Throwable $error) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            $this->respond(false, $error->getMessage(), 'hr');
+        }
+    }
+
+    public function decideApplication(): void
+    {
+        if (!$this->allowed('hr', 'approve')) {
+            return;
+        }
+        $schoolId = school_id();
+        $db = Database::conn();
+
+        $id = (int)($_POST['id'] ?? 0);
+        $action = (string)($_POST['action'] ?? '');
+        $interviewDate = $this->optionalDate($_POST['interview_date'] ?? null);
+        $interviewNotes = trim((string)($_POST['interview_notes'] ?? ''));
+        $decisionNotes = trim((string)($_POST['decision_notes'] ?? ''));
+
+        $validActions = ['shortlist', 'interview', 'appoint', 'reject', 'withdraw'];
+        if (!in_array($action, $validActions, true)) {
+            $this->respond(false, 'Invalid action.', 'hr');
+            return;
+        }
+
+        $statusMap = [
+            'shortlist' => 'shortlisted',
+            'interview' => 'interviewed',
+            'appoint' => 'appointed',
+            'reject' => 'rejected',
+            'withdraw' => 'withdrawn',
+        ];
+        $newStatus = $statusMap[$action];
+
+        $application = $db->query(
+            'SELECT ja.*, v.title AS vacancy_title FROM job_applications ja
+               LEFT JOIN vacancies v ON v.id = ja.vacancy_id
+              WHERE ja.id = ? AND ja.school_id = ?',
+            [$id, $schoolId]
+        )->fetch();
+        if (!$application) {
+            $this->respond(false, 'Application not found.', 'hr');
+            return;
+        }
+
+        $db->beginTransaction();
+        try {
+            $db->prepare(
+                'UPDATE job_applications SET status = ?, interview_date = ?,
+                    interview_notes = ?, decision_notes = ?
+                  WHERE id = ? AND school_id = ?'
+            )->execute([
+                $newStatus, $interviewDate, $interviewNotes !== '' ? $interviewNotes : null,
+                $decisionNotes !== '' ? $decisionNotes : null, $id, $schoolId
+            ]);
+
+            if ($action === 'appoint' && !empty($_POST['appoint_staff_id'] ?? null)) {
+                $staffId = (int)$_POST['appoint_staff_id'];
+                $db->prepare('UPDATE job_applications SET appointed_staff_id = ? WHERE id = ?')
+                    ->execute([$staffId, $id]);
+            }
+
+            audit('hr', 'decide_application', 'job_applications', $id,
+                'Application ' . $action . ': ' . $application['full_name'] . ' → ' . $newStatus,
+                null, ['action' => $action, 'status' => $newStatus]);
+            $db->commit();
+            $this->respond(true, 'Application decision recorded.', 'hr');
+        } catch (Throwable $error) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            $this->respond(false, $error->getMessage(), 'hr');
+        }
+    }
+
+    public function appraisals(): void
+    {
+        if (!$this->allowed('hr', 'view')) {
+            return;
+        }
+        $schoolId = school_id();
+        $db = Database::conn();
+
+        $appraisals = $db->query(
+            'SELECT sa.*, s.first_name, s.last_name, s.staff_number,
+                    ua.full_name AS appraiser_name
+               FROM staff_appraisals sa
+               JOIN staff s ON s.id = sa.staff_id
+               LEFT JOIN staff ua ON ua.id = sa.appraised_by
+              WHERE s.school_id = ?
+              ORDER BY sa.created_at DESC
+              LIMIT 200',
+            [$schoolId]
+        )->fetchAll();
+
+        $staff = HrModule::staffForSchool($schoolId);
+
+        $this->render('hr/appraisals', [
+            'pageTitle' => 'Staff Appraisals',
+            'activeNav' => 'hr',
+            'appraisals' => $appraisals,
+            'staff' => $staff,
+            'canAdd' => Auth::can('hr', 'add'),
+        ]);
+    }
+
+    public function saveAppraisal(): void
+    {
+        if (!$this->allowed('hr', 'edit')) {
+            return;
+        }
+        $schoolId = school_id();
+        $db = Database::conn();
+
+        $id = (int)($_POST['id'] ?? 0);
+        $staffId = $this->positiveInt($_POST['staff_id'] ?? null, 'Staff member');
+        $periodLabel = trim((string)($_POST['period_label'] ?? ''));
+        $periodStart = $this->optionalDate($_POST['period_start'] ?? null);
+        $periodEnd = $this->optionalDate($_POST['period_end'] ?? null);
+        $criteria = [];
+        $rawCriteria = $_POST['criteria'] ?? [];
+        if (is_array($rawCriteria)) {
+            foreach ($rawCriteria as $key => $value) {
+                $k = trim((string)$key);
+                $v = trim((string)$value);
+                if ($k !== '') {
+                    $criteria[$k] = $v;
+                }
+            }
+        }
+        $overallScore = $this->optionalMoney($_POST['overall_score'] ?? null);
+        $comments = trim((string)($_POST['comments'] ?? ''));
+        $targets = trim((string)($_POST['targets'] ?? ''));
+        $recommendations = trim((string)($_POST['recommendations'] ?? ''));
+        $appraisedBy = $this->positiveInt($_POST['appraised_by'] ?? null, 'Appraiser');
+        $appraisalDate = $this->optionalDate($_POST['appraisal_date'] ?? null);
+        $status = (string)($_POST['status'] ?? 'draft');
+
+        if ($staffId < 1 || $periodLabel === '' || mb_strlen($periodLabel) > 60
+            || !$this->validDateOpt($periodStart) || !$this->validDateOpt($periodEnd)
+            || ($periodStart && $periodEnd && $periodEnd < $periodStart)
+            || ($overallScore !== null && ($overallScore < 0 || $overallScore > 100))
+            || mb_strlen($comments) > 65535 || mb_strlen($targets) > 65535
+            || mb_strlen($recommendations) > 255
+            || $appraisedBy < 1
+            || !$this->validDateOpt($appraisalDate)
+            || !in_array($status, ['draft', 'completed', 'acknowledged', 'disputed'], true)) {
+            $this->respond(false, 'Enter valid appraisal details.', 'hr');
+            return;
+        }
+
+        $staff = $db->query('SELECT id FROM staff WHERE id = ? AND school_id = ?', [$staffId, $schoolId])->fetch();
+        if (!$staff) {
+            $this->respond(false, 'Staff member not found in this school.', 'hr');
+            return;
+        }
+        $appraiser = $db->query('SELECT id FROM staff WHERE id = ? AND school_id = ?', [$appraisedBy, $schoolId])->fetch();
+        if (!$appraiser) {
+            $this->respond(false, 'Appraiser not found in this school.', 'hr');
+            return;
+        }
+
+        $db->beginTransaction();
+        try {
+            if ($id > 0) {
+                $exists = $db->query(
+                    'SELECT sa.id FROM staff_appraisals sa JOIN staff s ON s.id = sa.staff_id
+                      WHERE sa.id = ? AND s.school_id = ?',
+                    [$id, $schoolId]
+                )->fetch();
+                if (!$exists) {
+                    throw new DomainException('Appraisal not found.');
+                }
+                $db->prepare(
+                    'UPDATE staff_appraisals SET staff_id = ?, period_label = ?, period_start = ?,
+                        period_end = ?, criteria = ?, overall_score = ?, comments = ?,
+                        targets = ?, recommendations = ?, appraised_by = ?, appraisal_date = ?,
+                        status = ?
+                      WHERE id = ?'
+                )->execute([
+                    $staffId, $periodLabel, $periodStart, $periodEnd,
+                    json_encode($criteria), $overallScore, $comments !== '' ? $comments : null,
+                    $targets !== '' ? $targets : null,
+                    $recommendations !== '' ? $recommendations : null,
+                    $appraisedBy, $appraisalDate, $status, $id
+                ]);
+                audit('hr', 'update_appraisal', 'staff_appraisals', $id, 'Updated appraisal for staff #' . $staffId);
+                $this->respond(true, 'Appraisal updated.', 'hr');
+            } else {
+                $db->prepare(
+                    'INSERT INTO staff_appraisals
+                        (staff_id, period_label, period_start, period_end, criteria,
+                         overall_score, comments, targets, recommendations, appraised_by,
+                         appraisal_date, status)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                )->execute([
+                    $staffId, $periodLabel, $periodStart, $periodEnd, json_encode($criteria),
+                    $overallScore, $comments !== '' ? $comments : null,
+                    $targets !== '' ? $targets : null,
+                    $recommendations !== '' ? $recommendations : null,
+                    $appraisedBy, $appraisalDate, $status
+                ]);
+                $newId = (int)$db->lastInsertId();
+                audit('hr', 'create_appraisal', 'staff_appraisals', $newId, 'Created appraisal for staff #' . $staffId);
+                $this->respond(true, 'Appraisal created.', 'hr');
+            }
+            $db->commit();
+        } catch (Throwable $error) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            $this->respond(false, $error->getMessage(), 'hr');
+        }
+    }
+
+    private function optionalMoney(mixed $value): ?float
+    {
+        if ($value === null || trim((string)$value) === '') {
+            return null;
+        }
+        if (!preg_match('/^\d{1,10}(?:\.\d{1,2})?$/', (string)$value)) {
+            return null;
+        }
+        return (float)$value;
+    }
+
+    private function validDateOpt(?string $value): bool
+    {
+        if ($value === null || $value === '') {
+            return true;
+        }
+        $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+        return $date !== false && $date->format('Y-m-d') === $value;
+    }
+
     protected function allowed(string $module = 'hr', string $action = 'view'): bool
     {
         if (Auth::can('hr', $action)) {
@@ -313,7 +788,7 @@ final class HrController extends Controller
         $schoolId = school_id();
         $staffId = (int)($_GET['staff_id'] ?? 0);
         $db = Database::conn();
-        $staff = $db->query(
+        $staff = Database::query(
             'SELECT sf.*, d.name AS department_name
                FROM staff sf
                LEFT JOIN departments d ON d.id = sf.department_id
@@ -334,7 +809,7 @@ final class HrController extends Controller
         $schoolId = school_id();
         $staffId = (int)($_GET['staff_id'] ?? 0);
         $db = Database::conn();
-        $staff = $db->query(
+        $staff = Database::query(
             'SELECT sf.*, d.name AS department_name
                FROM staff sf
                LEFT JOIN departments d ON d.id = sf.department_id

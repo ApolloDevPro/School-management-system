@@ -76,6 +76,8 @@ final class ReportsController extends Controller
             $row = $stmt->fetch();
             return (int)($row['c'] ?? 0) > 0;
         };
+        $hasContractView = $viewExists('vw_contract_expiry_alerts');
+        $hasLicenceView  = $viewExists('vw_licence_expiry_alerts');
 
         $school = school_row() ?? [];
         $currency = $school['currency_symbol'] ?? 'Ugx';
@@ -132,7 +134,7 @@ final class ReportsController extends Controller
                 break;
             case 'contracts':
                 $title = 'Contract Expiry Report';
-                $rows = $hasDashboardView ? ReportsModule::contractExpiry($schoolId) : [];
+                $rows = $hasContractView ? ReportsModule::contractExpiry($schoolId) : [];
                 $columns = ['Staff name', 'Position', 'Contract type', 'Start date', 'Expiry date', 'Days left', 'Status'];
                 break;
             case 'licences':

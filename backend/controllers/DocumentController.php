@@ -96,7 +96,7 @@ final class DocumentController extends Controller
     public function verify(): void
     {
         $id  = (int)($_POST['id'] ?? 0);
-        $doc = StudentDocument::find($id);
+        $doc = $this->documentInSchool($id);
         if (!$doc) {
             $this->respond(false, 'That document no longer exists.', 'students/documents');
         }
@@ -116,7 +116,7 @@ final class DocumentController extends Controller
     public function delete(): void
     {
         $id  = (int)($_POST['id'] ?? 0);
-        $doc = StudentDocument::find($id);
+        $doc = $this->documentInSchool($id);
         if (!$doc) {
             $this->respond(false, 'That document no longer exists.', 'students/documents');
         }
@@ -130,5 +130,18 @@ final class DocumentController extends Controller
         audit('students', 'delete', 'student_documents', $id, 'Deleted document "' . $doc['title'] . '"');
 
         $this->respond(true, 'Document deleted.', 'students/documents');
+    }
+
+    private function documentInSchool(int $id): ?array
+    {
+        $doc = $id > 0 ? StudentDocument::find($id) : null;
+        if (!$doc) {
+            return null;
+        }
+        $student = Student::find((int)$doc['student_id']);
+        if (!$student || (int)$student['school_id'] !== school_id()) {
+            return null;
+        }
+        return $doc;
     }
 }

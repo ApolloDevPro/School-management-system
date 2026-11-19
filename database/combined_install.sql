@@ -2074,74 +2074,76 @@ CREATE TABLE remedial_records (
 );
 
 -- --------------------------------------------------------------------------
--- UNEB Candidate Registration
+-- UNEB candidate, subject-entry and results tables (canonical definition
+-- lives in 21_uneb_module.sql; repeated here so that the 19_reports_views
+-- readiness view can be created in installations that run this file first).
 -- --------------------------------------------------------------------------
-CREATE TABLE uneb_candidates (
-  id                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  student_id          INT UNSIGNED NOT NULL,
-  academic_year_id    INT UNSIGNED NOT NULL,
-  cycle               ENUM('UCE','UACE') NOT NULL,
-  candidate_number    VARCHAR(60),
-  index_number        VARCHAR(60),
-  registration_status ENUM('draft','validated','ready','exported','submitted','accepted','rejected') NOT NULL DEFAULT 'draft',
-  eligibility_status  ENUM('not_checked','eligible','ineligible','warning') NOT NULL DEFAULT 'not_checked',
-  subjects_count      SMALLINT NOT NULL DEFAULT 0,
-  missing_compulsory  SMALLINT NOT NULL DEFAULT 0,
-  missing_project_work SMALLINT NOT NULL DEFAULT 0,
-  export_file_path    VARCHAR(255),
-  exported_by         INT UNSIGNED,
-  exported_at         DATETIME,
-  uneb_response       TEXT,
-  issues              JSON,
-  notes               VARCHAR(255),
-  created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+CREATE TABLE IF NOT EXISTS uneb_levels (
+  id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id   INT UNSIGNED NOT NULL,
+  name        VARCHAR(60) NOT NULL,
+  code        VARCHAR(20) NOT NULL,
+  is_active   TINYINT(1) NOT NULL DEFAULT 1,
+  created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE KEY uq_uneb_candidate (student_id,academic_year_id,cycle),
-  KEY idx_uneb_status (cycle,registration_status),
-  CONSTRAINT fk_uneb_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
-  CONSTRAINT fk_uneb_year FOREIGN KEY (academic_year_id) REFERENCES academic_years (id) ON DELETE CASCADE
+  UNIQUE KEY uq_uneb_level (school_id, code),
+  CONSTRAINT fk_uneb_level_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE
 );
 
-CREATE TABLE uneb_candidate_subjects (
-  candidate_id        INT UNSIGNED NOT NULL,
-  subject_id          INT UNSIGNED NOT NULL,
-  entry_type          ENUM('principal','subsidiary','compulsory','elective') NOT NULL DEFAULT 'elective',
-  project_work_status ENUM('recorded','missing','not_applicable') NOT NULL DEFAULT 'not_applicable',
-  ca_status           ENUM('ready','partial','missing','submitted') NOT NULL DEFAULT 'ready',
-  uneb_subject_code   VARCHAR(20),
-  PRIMARY KEY (candidate_id,subject_id),
-  CONSTRAINT fk_ucs_candidate FOREIGN KEY (candidate_id) REFERENCES uneb_candidates (id) ON DELETE CASCADE,
-  CONSTRAINT fk_ucs_subject FOREIGN KEY (subject_id) REFERENCES subjects (id) ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS uneb_candidates (
+  id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id       INT UNSIGNED NOT NULL,
+  index_number    VARCHAR(30) NOT NULL,
+  full_name       VARCHAR(160) NOT NULL,
+  gender          ENUM('male','female') NOT NULL,
+  date_of_birth   DATE,
+  student_id      INT UNSIGNED,
+  level_id        INT UNSIGNED NOT NULL,
+  status          ENUM('registered','entered','withdrawn','completed') NOT NULL DEFAULT 'registered',
+  notes           VARCHAR(255),
+  registered_by   INT UNSIGNED,
+  registered_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_uneb_index (school_id, index_number),
+  KEY idx_uneb_level (level_id, status),
+  CONSTRAINT fk_uneb_cand_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_uneb_cand_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE SET NULL,
+  CONSTRAINT fk_uneb_cand_level FOREIGN KEY (level_id) REFERENCES uneb_levels (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- UNEB Results Records (national results after release)
--- --------------------------------------------------------------------------
-CREATE TABLE uneb_results (
-  id                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  student_id         INT UNSIGNED,
-  academic_year_id   INT UNSIGNED NOT NULL,
-  cycle              ENUM('UCE','UACE') NOT NULL,
-  index_number       VARCHAR(60),
-  subject_id         INT UNSIGNED NOT NULL,
-  achievement_level  VARCHAR(10),
-  grade_code         VARCHAR(10),
-  points             DECIMAL(5,2),
-  ca_score           DECIMAL(6,2),
-  division           VARCHAR(10),
-  aggregate          DECIMAL(8,2),
-  result_code        ENUM('Result 1','Result 2','Result 3'),
-  source             ENUM('manual_entry','excel_import','uneb_file') NOT NULL DEFAULT 'excel_import',
-  imported_by        INT UNSIGNED,
-  imported_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  remarks            VARCHAR(255),
+CREATE TABLE IF NOT EXISTS uneb_candidate_subjects (
+  id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  candidate_id  INT UNSIGNED NOT NULL,
+  subject_id    INT UNSIGNED NOT NULL,
   PRIMARY KEY (id),
-  UNIQUE KEY uq_uneb_result (student_id,academic_year_id,cycle,subject_id),
-  KEY idx_uneb_result_year (academic_year_id,cycle),
-  CONSTRAINT fk_uneb_res_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
-  CONSTRAINT fk_uneb_res_year FOREIGN KEY (academic_year_id) REFERENCES academic_years (id) ON DELETE CASCADE,
-  CONSTRAINT fk_uneb_res_subject FOREIGN KEY (subject_id) REFERENCES subjects (id) ON DELETE CASCADE
+  UNIQUE KEY uq_uneb_cand_subject (candidate_id, subject_id),
+  CONSTRAINT fk_uneb_subj_candidate FOREIGN KEY (candidate_id) REFERENCES uneb_candidates (id) ON DELETE CASCADE,
+  CONSTRAINT fk_uneb_subj_subject FOREIGN KEY (subject_id) REFERENCES subjects (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS uneb_results (
+  id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id        INT UNSIGNED NOT NULL,
+  level_id         INT UNSIGNED NOT NULL,
+  academic_year_id INT UNSIGNED,
+  exam_year        YEAR NOT NULL,
+  index_number     VARCHAR(30) NOT NULL,
+  full_name        VARCHAR(160) NOT NULL,
+  gender           ENUM('male','female') NOT NULL,
+  subject_results  TEXT,
+  overall_level    VARCHAR(10),
+  result_code      ENUM('Result 1','Result 2','Result 3'),
+  ca_score_submitted TINYINT(1) NOT NULL DEFAULT 0,
+  notes            VARCHAR(255),
+  recorded_by      INT UNSIGNED,
+  recorded_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_uneb_result (school_id, level_id, exam_year, index_number),
+  KEY idx_uneb_result_year (exam_year, index_number),
+  CONSTRAINT fk_uneb_res_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_uneb_res_level FOREIGN KEY (level_id) REFERENCES uneb_levels (id) ON DELETE CASCADE,
+  CONSTRAINT fk_uneb_res_year FOREIGN KEY (academic_year_id) REFERENCES academic_years (id) ON DELETE SET NULL
 );
 
 -- --------------------------------------------------------------------------
@@ -5725,9 +5727,9 @@ CREATE TABLE ticket_replies (
   CONSTRAINT fk_reply_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
+
 -- Global Search log (improves search relevance and audits lookups)
--- --------------------------------------------------------------------------
+
 CREATE TABLE search_logs (
   id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id      INT UNSIGNED NOT NULL,
@@ -5749,22 +5751,17 @@ CREATE TABLE search_logs (
 
 
 
--- ============================================================================
+
 -- MODULE: 19_reports_views.sql
--- ============================================================================
--- ==========================================================================
 -- SSMS - File : 19_reports_views.sql
 -- Module      : 2.20 Reports and Analytics (operational reports live here
 --               instead of being duplicated inside each module)
 -- Depends on  : all module files (00 - 18)
--- ==========================================================================
 
 USE ssms;
 SET NAMES utf8mb4;
 
--- --------------------------------------------------------------------------
 -- Active academic year / term
--- --------------------------------------------------------------------------
 CREATE OR REPLACE VIEW vw_current_term AS
 SELECT
   ay.school_id,
@@ -5779,9 +5776,8 @@ FROM academic_years ay
 JOIN terms t ON t.academic_year_id = ay.id AND t.is_active = 1
 WHERE ay.is_active = 1;
 
--- --------------------------------------------------------------------------
 -- Student placement and contacts
--- --------------------------------------------------------------------------
+
 CREATE OR REPLACE VIEW vw_student_placement AS
 SELECT
   s.id                AS student_id,
@@ -5828,9 +5824,8 @@ SELECT
 FROM student_guardians sg
 JOIN guardians g ON g.id = sg.guardian_id;
 
--- --------------------------------------------------------------------------
 -- Finance : balances, debtors and collection
--- --------------------------------------------------------------------------
+
 CREATE OR REPLACE VIEW vw_fee_balances AS
 SELECT
   i.school_id,
@@ -5886,6 +5881,7 @@ LEFT JOIN payment_methods pm ON pm.id = p.payment_method_id
 WHERE p.status IN ('verified','posted')
 GROUP BY p.school_id, p.payment_date, p.channel, pm.name;
 
+
 CREATE OR REPLACE VIEW vw_invoice_status AS
 SELECT
   i.id AS invoice_id,
@@ -5906,9 +5902,8 @@ SELECT
        ELSE 'Unpaid' END AS ageing_status
 FROM fee_invoices i;
 
--- --------------------------------------------------------------------------
 -- Attendance reports
--- --------------------------------------------------------------------------
+
 CREATE OR REPLACE VIEW vw_attendance_daily_summary AS
 SELECT
   a.school_id,
@@ -5960,9 +5955,8 @@ FROM staff_attendance sa
 JOIN staff st ON st.id = sa.staff_id
 GROUP BY sa.school_id, sa.staff_id, st.first_name, st.last_name;
 
--- --------------------------------------------------------------------------
+
 -- Examination and assessment reports
--- --------------------------------------------------------------------------
 CREATE OR REPLACE VIEW vw_subject_results_with_grades AS
 SELECT
   r.exam_id,
@@ -6096,9 +6090,7 @@ JOIN subjects sub ON sub.id = p.subject_id
 WHERE p.status IN ('pending','missing')
    OR p.score IS NULL;
 
--- --------------------------------------------------------------------------
 -- Academic operations
--- --------------------------------------------------------------------------
 CREATE OR REPLACE VIEW vw_teaching_workload AS
 SELECT
   st.school_id,
@@ -6162,9 +6154,8 @@ LEFT JOIN homework_submissions hs ON hs.homework_id = h.id
 GROUP BY h.id, h.title, h.subject_id, sub.name, h.class_id, c.name,
          h.staff_id, st.first_name, st.last_name, h.assigned_date, h.due_date, h.status;
 
--- --------------------------------------------------------------------------
+
 -- Library, boarding, transport and inventory reports
--- --------------------------------------------------------------------------
 CREATE OR REPLACE VIEW vw_overdue_books AS
 SELECT
   b.id AS borrowing_id,
@@ -6252,9 +6243,7 @@ WHERE i.current_stock <= i.reorder_level
   AND i.is_stocked = 1
   AND i.status = 'active';
 
--- --------------------------------------------------------------------------
 -- Finance : budgeting, income and expenditure
--- --------------------------------------------------------------------------
 CREATE OR REPLACE VIEW vw_budget_vs_actual AS
 SELECT
   b.school_id,
@@ -6292,9 +6281,8 @@ JOIN gl_accounts a ON a.id = le.account_id
 WHERE le.is_posted = 1
 GROUP BY le.school_id, le.entry_date, a.account_code, a.account_name, a.account_type;
 
--- --------------------------------------------------------------------------
+
 -- HR reports
--- --------------------------------------------------------------------------
 CREATE OR REPLACE VIEW vw_leave_balance AS
 SELECT
   st.school_id,
@@ -6351,9 +6339,8 @@ WHERE ct.status = 'active'
   AND ct.end_date IS NOT NULL
   AND DATEDIFF(ct.end_date, CURRENT_DATE) <= 90;
 
--- --------------------------------------------------------------------------
+
 -- Compliance and support
--- --------------------------------------------------------------------------
 CREATE OR REPLACE VIEW vw_licence_expiry_alerts AS
 SELECT
   l.school_id,
@@ -6394,9 +6381,8 @@ SELECT
 FROM support_tickets st
 GROUP BY st.school_id, st.status, st.priority;
 
--- --------------------------------------------------------------------------
+
 -- Role dashboard : key figures per school
--- --------------------------------------------------------------------------
 CREATE OR REPLACE VIEW vw_school_dashboard AS
 SELECT
   sc.id AS school_id,
@@ -6414,32 +6400,25 @@ FROM schools sc;
 
 
 
--- ============================================================================
 -- MODULE: 20_seed_data.sql
--- ============================================================================
--- ==========================================================================
 -- SSMS - File : 20_seed_data.sql
 -- Module      : Baseline configuration data for a fresh installation
 -- Depends on  : all module files (00 - 19)
 -- NOTE        : Grading boundaries, statutory rates and UNEB subject codes
 --               are provisional starting points. Confirm them with UNEB,
 --               NCDC and URA before the system goes live.
--- ==========================================================================
 
 USE ssms;
 SET NAMES utf8mb4;
 
--- --------------------------------------------------------------------------
 -- 1. School profile (edit after installation)
--- --------------------------------------------------------------------------
 INSERT INTO schools (name,motto,ownership_type,currency,currency_symbol,date_format,timezone)
 VALUES ('Demo Secondary School','Excellence Through Hard Work','private','UGX','Ugx','d/m/Y','Africa/Kampala');
 
 SET @school_id = (SELECT id FROM schools ORDER BY id LIMIT 1);
 
--- --------------------------------------------------------------------------
+
 -- 2. Roles (module 2.1)
--- --------------------------------------------------------------------------
 INSERT INTO roles (school_id,name,slug,description,is_system) VALUES
 (@school_id,'Administrator','administrator','Full access to every module and setting',1),
 (@school_id,'Head Teacher','head_teacher','Head of school: approves key decisions across modules',1),
@@ -6458,9 +6437,8 @@ INSERT INTO roles (school_id,name,slug,description,is_system) VALUES
 (@school_id,'Parent','parent','Portal access to fees, results, attendance and messages',1),
 (@school_id,'Student','student','Portal access to timetable, homework, results and notices',1);
 
--- --------------------------------------------------------------------------
+
 -- 3. Permissions (one row per controlled module / sensitive area)
--- --------------------------------------------------------------------------
 INSERT INTO permissions (module_code,code,name,description,sort_order) VALUES
 ('administration','administration','Administration and System Configuration','School profile, users, roles, academic year, terms, classes, streams, departments, houses, settings, audit logs',1),
 ('students','students','Student Management','Admission, registration, profiles, allocation, promotion, transfers, discipline, documents, alumni',2),
@@ -6485,12 +6463,11 @@ INSERT INTO permissions (module_code,code,name,description,sort_order) VALUES
 ('reports','reports','Reports and Analytics','Consolidated reports, analytics, export and role-based dashboards',20),
 ('security','security','System Security, Data Management and Support','Password policy, sessions, backup, import/export, data protection, support tickets',21);
 
--- --------------------------------------------------------------------------
+
 -- 4. Role / permission matrix
 --    full    = view, add, edit, approve, print, delete
 --    manage  = view, add, edit, approve, print
 --    view    = view, print
--- --------------------------------------------------------------------------
 INSERT INTO role_permissions
   (role_id,permission_id,can_view,can_add,can_edit,can_approve,can_print,can_delete)
 SELECT r.id, p.id,
@@ -6560,11 +6537,9 @@ JOIN (
 ) m ON m.slug = r.slug
 WHERE r.school_id = @school_id;
 
--- --------------------------------------------------------------------------
 -- 5. First administrator account
 --    IMPORTANT: set password_hash with PHP password_hash() during install,
 --    e.g. UPDATE users SET password_hash = password_hash_value WHERE id = 1;
--- --------------------------------------------------------------------------
 INSERT INTO users (school_id,username,full_name,email,user_type,role_id,must_change_password,is_active)
 SELECT @school_id,'admin','System Administrator','admin@demo.sc.ug','staff',
        (SELECT id FROM roles WHERE slug='administrator' AND school_id=@school_id), 1, 1;
@@ -6573,9 +6548,7 @@ INSERT INTO password_history (user_id,password_hash,change_reason)
 SELECT u.id, 'FORCE_CHANGE_ON_FIRST_LOGIN', 'admin_reset'
 FROM users u WHERE u.username='admin' AND u.school_id=@school_id;
 
--- --------------------------------------------------------------------------
 -- 6. Academic year and terms (adjust to the school calendar)
--- --------------------------------------------------------------------------
 INSERT INTO academic_years (school_id,name,start_date,end_date,is_active,status) VALUES
 (@school_id,'2026','2026-01-26','2026-12-11',1,'active');
 
@@ -6586,9 +6559,7 @@ INSERT INTO terms (academic_year_id,name,term_number,start_date,end_date,report_
 (@year_id,'Term 2',2,'2026-04-27','2026-07-31','2026-08-07',0,'closed'),
 (@year_id,'Term 3',3,'2026-08-24','2026-12-11','2026-12-18',1,'active');
 
--- --------------------------------------------------------------------------
 -- 7. Classes (S1 - S6) and sample streams
--- --------------------------------------------------------------------------
 INSERT INTO classes (school_id,name,level,order_index) VALUES
 (@school_id,'S1','O-Level',1),
 (@school_id,'S2','O-Level',2),
@@ -6603,9 +6574,7 @@ FROM classes c
 JOIN (SELECT 'East' AS stream_name UNION ALL SELECT 'West') s
 WHERE c.school_id = @school_id;
 
--- --------------------------------------------------------------------------
 -- 8. Departments and houses
--- --------------------------------------------------------------------------
 INSERT INTO departments (school_id,name,type,description) VALUES
 (@school_id,'Sciences','academic','Physics, Chemistry, Biology and practical sciences'),
 (@school_id,'Mathematics','academic','Mathematics and ICT'),
@@ -6621,18 +6590,15 @@ INSERT INTO houses (school_id,name,colour,motto) VALUES
 (@school_id,'Albert','Yellow','Strength'),
 (@school_id,'Kyoga','Red','Unity');
 
--- --------------------------------------------------------------------------
+
 -- 9. Curricula
--- --------------------------------------------------------------------------
 INSERT INTO curricula (school_id,name,code,level_scope,description,status) VALUES
 (@school_id,'New Lower Secondary Curriculum (Competency-Based)','CBC_LOWER','O-Level','S1-S4 competency-based curriculum with 20% school continuous assessment and 80% UNEB end-of-cycle examination','active'),
 (@school_id,'Uganda Advanced Certificate of Education (A-Level)','UACE','A-Level','Current S5-S6 A-Level programme pending competency-based reform (reported around 2028)','active');
 
--- --------------------------------------------------------------------------
 -- 10. Subjects
 --     uneb_subject_code is intentionally NULL: fill it from the current UNEB
 --     subject list before registering candidates.
--- --------------------------------------------------------------------------
 INSERT INTO subjects (school_id,code,name,short_name,level,category,department_id,order_index) VALUES
 (@school_id,'MAT','Mathematics','Maths','O-Level','compulsory',(SELECT id FROM departments WHERE school_id=@school_id AND name='Mathematics'),1),
 (@school_id,'ENG','English Language','English','O-Level','compulsory',(SELECT id FROM departments WHERE school_id=@school_id AND name='Languages'),2),
@@ -6665,11 +6631,9 @@ INSERT INTO subjects (school_id,code,name,short_name,level,category,department_i
 (@school_id,'ASUBICT','Subsidiary ICT','Sub ICT','A-Level','subsidiary',(SELECT id FROM departments WHERE school_id=@school_id AND name='Mathematics'),41),
 (@school_id,'ASUBMATH','Subsidiary Mathematics','Sub Maths','A-Level','subsidiary',(SELECT id FROM departments WHERE school_id=@school_id AND name='Mathematics'),42);
 
--- --------------------------------------------------------------------------
 -- 11. A-Level combinations
 --     Confirm the approved combinations and subsidiary rules with the school
 --     and UNEB before opening them for registration.
--- --------------------------------------------------------------------------
 INSERT INTO alevel_combinations (school_id,code,name,description) VALUES
 (@school_id,'PCM','Physics, Chemistry, Mathematics','Science combination for engineering and physical sciences'),
 (@school_id,'BCG','Biology, Chemistry, Geography','Science combination for health and environmental sciences'),
@@ -6706,9 +6670,7 @@ FROM alevel_combinations cb
 JOIN subjects s ON s.school_id = cb.school_id AND s.code = 'ASUBICT'
 WHERE cb.school_id = @school_id;
 
--- --------------------------------------------------------------------------
 -- 12. Generic skills (competency-based curriculum)
--- --------------------------------------------------------------------------
 INSERT INTO generic_skills (school_id,code,name,description,level_scope) VALUES
 (@school_id,'COMM','Communication','Listening, speaking, reading and writing effectively','O-Level'),
 (@school_id,'CRIT','Critical Thinking and Problem Solving','Analysing situations and proposing solutions','O-Level'),
@@ -6719,11 +6681,9 @@ INSERT INTO generic_skills (school_id,code,name,description,level_scope) VALUES
 (@school_id,'CREA','Creativity and Innovation','Generating and developing original ideas','O-Level'),
 (@school_id,'LEAD','Leadership','Guiding and influencing others positively','Both');
 
--- --------------------------------------------------------------------------
 -- 13. Grading scales and bands
 --     Boundaries below are PROVISIONAL settings and are configurable.
 --     CBC (S1-S4): five achievement levels, no divisions or aggregates.
--- --------------------------------------------------------------------------
 INSERT INTO grading_scales (school_id,code,name,level_scope,uses_division,uses_points,description,is_default) VALUES
 (@school_id,'CBC_AE','CBC Achievement Levels A-E (S1-S4)','O-Level',0,0,'Five achievement levels reported with descriptors. Divisions and aggregates are not used for new-curriculum learners.',1),
 (@school_id,'UACE','UACE A-Level Grading and Points (S5-S6)','A-Level',0,1,'Current UACE principal/subsidiary grading and points. Rules are configurable pending the A-Level curriculum reform.',1),
@@ -6775,10 +6735,8 @@ JOIN (
 ) b
 WHERE s.school_id = @school_id AND s.code = 'LEGACY_D1_F9';
 
--- --------------------------------------------------------------------------
 -- 14. Assessment component weights
 --     S1-S4: UNEB structure (20% school-based CA + 80% end-of-cycle exam).
--- --------------------------------------------------------------------------
 INSERT INTO assessment_components (school_id,level_scope,component_code,name,weight_percent,scale_min,scale_max,applies_to,notes) VALUES
 (@school_id,'O-Level','school_ca','School-based Continuous Assessment',20.00,0,100,'official_results','Accumulated 1-3 scale scores for activities, projects and integrated tasks, converted to a percentage'),
 (@school_id,'O-Level','project_work','Project Work (part of school CA)',0.00,1,3,'official_results','Mandatory component recorded per subject; feeds the 20% school-based score'),
@@ -6788,9 +6746,8 @@ INSERT INTO assessment_components (school_id,level_scope,component_code,name,wei
 (@school_id,'A-Level','midterm','Mid-Term Assessment',40.00,0,100,'internal_reports','Internal weights for S5-S6 reports; UNEB sets official A-Level grading'),
 (@school_id,'A-Level','end_of_term','End-of-Term Examination',60.00,0,100,'internal_reports','Internal weights for S5-S6 reports; UNEB sets official A-Level grading');
 
--- --------------------------------------------------------------------------
+
 -- 15. Payment methods
--- --------------------------------------------------------------------------
 INSERT INTO payment_methods (school_id,code,name,channel,requires_verification,sort_order) VALUES
 (@school_id,'cash','Cash at School','cash',0,1),
 (@school_id,'bank_deposit','Bank Deposit','bank',1,2),
@@ -6799,9 +6756,7 @@ INSERT INTO payment_methods (school_id,code,name,channel,requires_verification,s
 (@school_id,'airtel_money','Airtel Money','mobile_money',0,5),
 (@school_id,'online_gateway','Online Payment Gateway','online',0,6);
 
--- --------------------------------------------------------------------------
 -- 16. System settings
--- --------------------------------------------------------------------------
 INSERT INTO settings (school_id,setting_group,setting_key,setting_value,value_type,description) VALUES
 (@school_id,'general','date_format','d/m/Y','string','Display format for dates'),
 (@school_id,'general','currency','UGX','string','Default currency code'),
@@ -6832,9 +6787,7 @@ INSERT INTO settings (school_id,setting_group,setting_key,setting_value,value_ty
 (@school_id,'data_protection','retain_alumni_data','1','bool','Keep alumni records after completion'),
 (@school_id,'data_protection','consent_required_photo_use','1','bool','Require recorded consent before publishing student photos');
 
--- --------------------------------------------------------------------------
 -- 16b. Expanded System Settings (Administrator configuration)
--- --------------------------------------------------------------------------
 INSERT INTO settings (school_id,setting_group,setting_key,setting_value,value_type,description) VALUES
 -- SMTP / email configuration
 (@school_id,'smtp','smtp_host','','string','SMTP server hostname for outgoing email'),
@@ -6844,61 +6797,45 @@ INSERT INTO settings (school_id,setting_group,setting_key,setting_value,value_ty
 (@school_id,'smtp','smtp_encryption','tls','string','Encryption method: none, ssl, or tls'),
 (@school_id,'smtp','smtp_from_name','SSMS','string','Display name shown as email sender'),
 (@school_id,'smtp','smtp_from_address','no-reply@demo.sc.ug','string','Email address shown as sender'),
-
--- SMS gateway configuration
 (@school_id,'sms','sms_provider','','string','SMS provider name (e.g. Africa\'s Talking, Twilio, local gateway)'),
 (@school_id,'sms','sms_api_key','','string','SMS API key or username'),
 (@school_id,'sms','sms_api_secret','','string','SMS API secret or password'),
 (@school_id,'sms','sms_sender_id','SSMS','string','SMS sender ID displayed on recipient phone'),
 (@school_id,'sms','sms_gateway_url','','string','SMS gateway HTTP endpoint URL'),
 (@school_id,'sms','sms_default_language','en','string','Default language for SMS templates'),
-
--- Grading configuration
 (@school_id,'grading','grading_pass_mark','50','int','Minimum percentage score to be considered a pass'),
 (@school_id,'grading','default_grading_scale','CBC_AE','string','Default grading scale code used for new learners'),
 (@school_id,'grading','show_class_ranking','0','bool','Display class ranking on report cards (0 = off)'),
 (@school_id,'grading','round_marks','0','bool','Round computed marks to nearest whole number'),
 (@school_id,'grading','include_project_in_ca','1','bool','Include project work in continuous assessment score'),
-
--- Parent & Student Portal configuration
 (@school_id,'portal','portal_parent_access','1','bool','Allow parents to access the portal (1 = on)'),
 (@school_id,'portal','portal_student_access','1','bool','Allow students to access the portal (1 = on)'),
 (@school_id,'portal','portal_publish_results','0','bool','Automatically publish results to portal when processed'),
 (@school_id,'portal','portal_show_fee_balance','1','bool','Show fee balances to parents in portal'),
 (@school_id,'portal','portal_show_attendance','1','bool','Show attendance records to parents in portal'),
 (@school_id,'portal','portal_session_timeout','15','int','Portal session timeout in minutes'),
-
--- UNEB (Uganda National Examinations Board) configuration
 (@school_id,'uneb','uneb_center_number','','string','UNEB center/examination number assigned to the school'),
 (@school_id,'uneb','uneb_school_code','','string','UNEB school code for candidate registration'),
 (@school_id,'uneb','uneb_district','','string','District where the school is registered with UNEB'),
 (@school_id,'uneb','ca_submission_deadline','','date','Deadline for submitting continuous assessment scores to UNEB'),
 (@school_id,'uneb','project_work_mandatory','1','bool','Project work is mandatory for UCE candidates (1 = yes)'),
 (@school_id,'uneb','min_subjects_uce','8','int','Minimum number of subjects for UCE certification'),
-
--- Academic structure configuration
 (@school_id,'academic','lessons_per_day','8','int','Default number of teaching periods per day'),
 (@school_id,'academic','lesson_duration_minutes','40','int','Duration of each teaching period in minutes'),
 (@school_id,'academic','default_class_teacher','','string','Default class teacher assignment policy'),
 (@school_id,'academic','terms_per_year','3','int','Number of academic terms per year'),
 (@school_id,'academic','promotion_min_average','50','int','Minimum average score required for promotion'),
 (@school_id,'academic','allow_repeaters','1','bool','Allow students to repeat a class (1 = yes)'),
-
--- Additional finance configuration
 (@school_id,'finance','default_tax_rate','0','int','Default tax rate percentage applied to invoices'),
 (@school_id,'finance','receipt_footer','Thank you for your payment','string','Footer text printed on receipts'),
 (@school_id,'finance','invoice_payment_terms','Payment due within 14 days','string','Standard payment terms shown on invoices'),
 (@school_id,'finance','auto_generate_invoices','0','bool','Automatically generate fee invoices at term start'),
 (@school_id,'finance','late_payment_fee','0','decimal','Flat late payment fee amount'),
-
--- Additional security configuration
 (@school_id,'security','ip_whitelist','','string','Comma-separated list of allowed IP addresses (blank = all allowed)'),
 (@school_id,'security','login_notification_email','','string','Email address to receive login notifications'),
 (@school_id,'security','max_concurrent_sessions','1','int','Maximum number of simultaneous sessions per user'),
 (@school_id,'security','force_https','0','bool','Force HTTPS connections (1 = yes)'),
 (@school_id,'security','audit_log_retention_days','365','int','Number of days to retain audit log entries'),
-
--- Curriculum configuration (Competency-Based Curriculum)
 (@school_id,'curriculum','cbc_enabled','1','bool','Competency-Based Curriculum is active for O-Level'),
 (@school_id,'curriculum','ca_weight_percent','20','int','Continuous assessment weight percentage (S1-S4)'),
 (@school_id,'curriculum','exam_weight_percent','80','int','End-of-cycle examination weight percentage (S1-S4)'),
@@ -6906,9 +6843,7 @@ INSERT INTO settings (school_id,setting_group,setting_key,setting_value,value_ty
 (@school_id,'curriculum','project_work_scale_min','1','int','Minimum project work score (1-3 scale)'),
 (@school_id,'curriculum','project_work_scale_max','3','int','Maximum project work score (1-3 scale)');
 
--- --------------------------------------------------------------------------
 -- 17. Number sequences
--- --------------------------------------------------------------------------
 INSERT INTO sequences (school_id,seq_key,prefix,next_value,padding,description) VALUES
 (@school_id,'admission_number','ADM/',1,5,'Student admission numbers'),
 (@school_id,'staff_number','STF/',1,4,'Staff numbers'),
@@ -6929,9 +6864,8 @@ INSERT INTO sequences (school_id,seq_key,prefix,next_value,padding,description) 
 (@school_id,'security_incident','SEC/',1,4,'Security incident numbers'),
 (@school_id,'asset_tag','AST/',1,5,'Fixed asset tags');
 
--- --------------------------------------------------------------------------
+
 -- 18. Chart of accounts
--- --------------------------------------------------------------------------
 INSERT INTO gl_accounts (school_id,account_code,account_name,account_type) VALUES
 (@school_id,'1000','Assets','asset'),
 (@school_id,'2000','Liabilities','liability'),
@@ -6986,9 +6920,8 @@ SET c.parent_id = p.id
 WHERE c.parent_id IS NULL
   AND c.account_code <> CONCAT(LEFT(c.account_code, 1), '000');
 
--- --------------------------------------------------------------------------
+
 -- 19. Item categories, leave types, notification templates
--- --------------------------------------------------------------------------
 INSERT INTO item_categories (school_id,name,code) VALUES
 (@school_id,'Food and Catering','FOOD'),
 (@school_id,'Cleaning','CLEAN'),
@@ -7019,16 +6952,13 @@ INSERT INTO notification_templates (school_id,template_code,name,channel,subject
 (@school_id,'exeat_notification','Exeat approval','sms',NULL,'Dear {guardian_name}, exeat {exeat_number} for {student_name} to leave on {out_date} and return by {return_time} has been {status}. - {school_name}','{guardian_name},{exeat_number},{student_name},{out_date},{return_time},{status}','boarding'),
 (@school_id,'report_card_notice','Report card available','portal','New report card available','Dear {guardian_name}, the report card for {student_name} ({term}) has been released and can now be downloaded from the portal.','{guardian_name},{student_name},{term}','examinations');
 
--- --------------------------------------------------------------------------
 -- 20. Payment gateway placeholder (credentials filled in Settings at runtime)
--- --------------------------------------------------------------------------
 INSERT INTO gateway_configs (school_id,provider_code,provider_name,provider_type,currency,environment,is_active) VALUES
 (@school_id,'mtn_momo','MTN Mobile Money','mobile_money','UGX','sandbox',1),
 (@school_id,'airtel_money','Airtel Money','mobile_money','UGX','sandbox',1);
 
--- --------------------------------------------------------------------------
+
 -- 21. Statutory deduction rules (VERIFY the current rates with URA / NSSF)
--- --------------------------------------------------------------------------
 INSERT INTO statutory_rates (school_id,code,name,rate_type,rate_value,band_min,band_max,is_employer,effective_from,notes) VALUES
 (@school_id,'NSSF_EMPLOYEE','NSSF employee contribution','percentage',5.000,NULL,NULL,0,'2026-01-01','Confirm the current NSSF rate with NSSF Uganda'),
 (@school_id,'NSSF_EMPLOYER','NSSF employer contribution','percentage',10.000,NULL,NULL,1,'2026-01-01','Confirm the current NSSF rate with NSSF Uganda'),
@@ -7037,9 +6967,8 @@ INSERT INTO statutory_rates (school_id,code,name,rate_type,rate_value,band_min,b
 (@school_id,'PAYE_BAND_3','PAYE band 335,001 - 410,000','band',20.000,335000.01,410000.00,0,'2026-01-01','Verify current URA PAYE bands and personal relief'),
 (@school_id,'PAYE_BAND_4','PAYE band above 410,000','band',30.000,410000.01,NULL,0,'2026-01-01','Verify current URA PAYE bands and personal relief');
 
--- --------------------------------------------------------------------------
+
 -- 22. Basic allowance types
--- --------------------------------------------------------------------------
 INSERT INTO allowances (school_id,code,name,amount_type,default_amount,is_taxable) VALUES
 (@school_id,'HOUSING','Housing Allowance','fixed',0.00,1),
 (@school_id,'TRANSPORT','Transport Allowance','fixed',0.00,1),
@@ -7049,24 +6978,6 @@ INSERT INTO allowances (school_id,code,name,amount_type,default_amount,is_taxabl
 (@school_id,'MEDICAL','Medical Allowance','fixed',0.00,1);
 
 
-
-
-
--- ============================================================================
--- MODULE: 21_uneb_module.sql
--- ============================================================================
--- ==========================================================================
--- SSMS - File : 21_uneb_module.sql
--- Module      : 2.4 Examination and Assessment Management (UNEB)
--- Depends on  : 00 - 04 (schools, students, subjects, academic_years, terms)
--- ==========================================================================
-
-USE ssms;
-SET NAMES utf8mb4;
-
--- --------------------------------------------------------------------------
--- UNEB Levels (UCE / UACE)
--- --------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS uneb_levels (
   id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id   INT UNSIGNED NOT NULL,
@@ -7079,9 +6990,7 @@ CREATE TABLE IF NOT EXISTS uneb_levels (
   CONSTRAINT fk_uneb_level_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
 -- UNEB Candidates (candidate registration for UCE/UACE)
--- --------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS uneb_candidates (
   id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id       INT UNSIGNED NOT NULL,
@@ -7104,9 +7013,8 @@ CREATE TABLE IF NOT EXISTS uneb_candidates (
   CONSTRAINT fk_uneb_cand_level FOREIGN KEY (level_id) REFERENCES uneb_levels (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
+
 -- UNEB Candidate Subjects (subjects each candidate is entered for)
--- --------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS uneb_candidate_subjects (
   id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
   candidate_id  INT UNSIGNED NOT NULL,
@@ -7117,9 +7025,7 @@ CREATE TABLE IF NOT EXISTS uneb_candidate_subjects (
   CONSTRAINT fk_uneb_subj_subject FOREIGN KEY (subject_id) REFERENCES subjects (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
 -- UNEB Continuous Assessment Submission
--- --------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS uneb_ca_submission (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -7140,9 +7046,7 @@ CREATE TABLE IF NOT EXISTS uneb_ca_submission (
   CONSTRAINT fk_uneb_ca_term FOREIGN KEY (term_id) REFERENCES terms (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
 -- UNEB CA Subject Scores
--- --------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS uneb_ca_subject_scores (
   id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
   submission_id  INT UNSIGNED NOT NULL,
@@ -7159,9 +7063,7 @@ CREATE TABLE IF NOT EXISTS uneb_ca_subject_scores (
   CONSTRAINT fk_uneb_ca_score_subj FOREIGN KEY (subject_id) REFERENCES subjects (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
 -- UNEB National Results (stored after release by UNEB)
--- --------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS uneb_results (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,

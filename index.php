@@ -1,10 +1,16 @@
 <?php
 declare(strict_types=1);
 
+// Load .env first so the session settings below actually reflect it.
+require __DIR__ . '/backend/config/config.php';
+
 // Session security settings (must be set before session_start)
-$sessionSecure = filter_var($_ENV['SESSION_SECURE'] ?? $_SERVER['SESSION_SECURE'] ?? '0', FILTER_VALIDATE_BOOLEAN);
+$https = (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off')
+    || (string)($_SERVER['SERVER_PORT'] ?? '') === '443';
+$sessionSecure = filter_var($_ENV['SESSION_SECURE'] ?? $_SERVER['SESSION_SECURE'] ?? ($https ? '1' : '0'), FILTER_VALIDATE_BOOLEAN);
 $sessionHttpOnly = filter_var($_ENV['SESSION_HTTPONLY'] ?? $_SERVER['SESSION_HTTPONLY'] ?? '1', FILTER_VALIDATE_BOOLEAN);
 ini_set('session.cookie_httponly', $sessionHttpOnly ? '1' : '0');
+ini_set('session.cookie_samesite', 'Lax');
 ini_set('session.use_only_cookies', '1');
 if ($sessionSecure) {
     ini_set('session.cookie_secure', '1');
@@ -15,7 +21,6 @@ ini_set('session.cookie_lifetime', '14400');
 
 session_start();
 
-require __DIR__ . '/backend/config/config.php';
 require __DIR__ . '/backend/core/helpers.php';
 
 spl_autoload_register(function (string $class): void {
@@ -152,10 +157,26 @@ $router->post('academics/allocations/teachers/save', [AcademicsController::class
 $router->post('academics/allocations/teachers/remove', [AcademicsController::class, 'removeTeacherAllocation'], ['auth' => true, 'perm' => ['academics', 'edit']]);
 $router->post('academics/schemes/save', [AcademicsController::class, 'saveScheme'], ['auth' => true, 'perm' => ['academics', 'edit']]);
 
+$router->post('academics/timetables/save', [AcademicsController::class, 'saveTimetable'], ['auth' => true, 'perm' => ['academics', 'edit']]);
+$router->post('academics/timetables/delete', [AcademicsController::class, 'deleteTimetable'], ['auth' => true, 'perm' => ['academics', 'edit']]);
+$router->post('academics/timetables/slots/save', [AcademicsController::class, 'saveTimetableSlot'], ['auth' => true, 'perm' => ['academics', 'edit']]);
+$router->post('academics/timetables/slots/delete', [AcademicsController::class, 'deleteTimetableSlot'], ['auth' => true, 'perm' => ['academics', 'edit']]);
+
+$router->post('academics/homework/save', [AcademicsController::class, 'saveHomework'], ['auth' => true, 'perm' => ['academics', 'edit']]);
+$router->post('academics/homework/submissions/save', [AcademicsController::class, 'saveHomeworkSubmissions'], ['auth' => true, 'perm' => ['academics', 'edit']]);
+$router->post('academics/events/save', [AcademicsController::class, 'saveEvent'], ['auth' => true, 'perm' => ['academics', 'edit']]);
+$router->post('academics/syllabi/save', [AcademicsController::class, 'saveSyllabus'], ['auth' => true, 'perm' => ['academics', 'edit']]);
+$router->post('academics/syllabi/topics/save', [AcademicsController::class, 'saveSyllabusTopic'], ['auth' => true, 'perm' => ['academics', 'edit']]);
+$router->post('academics/coverage/save', [AcademicsController::class, 'saveCoverage'], ['auth' => true, 'perm' => ['academics', 'edit']]);
+$router->post('academics/activities/save', [AcademicsController::class, 'saveActivity'], ['auth' => true, 'perm' => ['academics', 'edit']]);
+$router->post('academics/activities/status', [AcademicsController::class, 'updateActivityStatus'], ['auth' => true, 'perm' => ['academics', 'edit']]);
+
 // Report cards
 $router->get('report_cards', [ReportCardController::class, 'index'], ['auth' => true, 'perm' => ['academics', 'view']]);
 $router->get('report_cards/view', [ReportCardController::class, 'view'], ['auth' => true, 'perm' => ['academics', 'view']]);
 $router->get('report_cards/pdf', [ReportCardController::class, 'pdf'], ['auth' => true, 'perm' => ['academics', 'view']]);
+$router->get('report_cards/batch', [ReportCardController::class, 'batch'], ['auth' => true, 'perm' => ['academics', 'view']]);
+$router->post('report_cards/comments', [ReportCardController::class, 'saveComments'], ['auth' => true, 'perm' => ['academics', 'edit']]);
 
 // Examinations & assessment
 $router->get('examinations', [ExaminationController::class, 'index'], ['auth' => true, 'perm' => ['examinations', 'view']]);
@@ -167,6 +188,8 @@ $router->post('examinations/results/process', [ExaminationController::class, 'pr
 $router->post('examinations/results/publish', [ExaminationController::class, 'publishResults'], ['auth' => true, 'perm' => ['examinations', 'approve']]);
 $router->get('examinations/timetable', [ExaminationController::class, 'examTimetable'], ['auth' => true, 'perm' => ['examinations', 'view']]);
 $router->get('examinations/result-slip', [ExaminationController::class, 'resultSlip'], ['auth' => true, 'perm' => ['examinations', 'view']]);
+$router->get('examinations/transcript', [ExaminationController::class, 'transcript'], ['auth' => true, 'perm' => ['examinations', 'view']]);
+$router->get('examinations/certificate-eligibility', [ExaminationController::class, 'certificateEligibility'], ['auth' => true, 'perm' => ['examinations', 'view']]);
 
 // UNEB (candidate registration, CA submission, national results)
 $router->get('uneb', [UnebController::class, 'index'], ['auth' => true, 'perm' => ['uneb', 'view']]);
@@ -187,11 +210,22 @@ $router->post('uneb/save-result', [UnebController::class, 'saveResult'], ['auth'
 // Finance & fees
 $router->get('finance', [FinanceController::class, 'index'], ['auth' => true, 'perm' => ['finance', 'view']]);
 $router->post('finance/store-invoice', [FinanceController::class, 'storeInvoice'], ['auth' => true, 'perm' => ['finance', 'add']]);
+$router->post('finance/structures/store', [FinanceController::class, 'storeStructure'], ['auth' => true, 'perm' => ['finance', 'add']]);
+$router->post('finance/structures/items/store', [FinanceController::class, 'storeStructureItem'], ['auth' => true, 'perm' => ['finance', 'edit']]);
+$router->post('finance/structures/status', [FinanceController::class, 'setStructureStatus'], ['auth' => true, 'perm' => ['finance', 'edit']]);
+$router->post('finance/structures/bulk-invoice', [FinanceController::class, 'bulkInvoice'], ['auth' => true, 'perm' => ['finance', 'add']]);
+$router->post('finance/clearances/save', [FinanceController::class, 'saveClearance'], ['auth' => true, 'perm' => ['finance', 'edit']]);
+$router->post('finance/clearances/approve', [FinanceController::class, 'approveClearance'], ['auth' => true, 'perm' => ['finance', 'approve']]);
+$router->post('finance/reminders/send', [FinanceController::class, 'sendReminder'], ['auth' => true, 'perm' => ['finance', 'add']]);
 $router->post('finance/record-payment', [FinanceController::class, 'recordPayment'], ['auth' => true, 'perm' => ['finance', 'add']]);
 $router->post('finance/verify-payment', [FinanceController::class, 'verifyPayment'], ['auth' => true, 'perm' => ['finance', 'approve']]);
 $router->get('finance/invoice-pdf', [FinanceController::class, 'invoicePdf'], ['auth' => true, 'perm' => ['finance', 'view']]);
 $router->get('finance/receipts', [FinanceController::class, 'receipts'], ['auth' => true, 'perm' => ['finance', 'view']]);
 $router->get('finance/receipt-pdf', [FinanceController::class, 'receiptPdf'], ['auth' => true, 'perm' => ['finance', 'view']]);
+$router->get('finance/bank-reconciliation', [FinanceController::class, 'bankReconciliation'], ['auth' => true, 'perm' => ['finance', 'view']]);
+$router->post('finance/bank-account/save', [FinanceController::class, 'saveBankAccount'], ['auth' => true, 'perm' => ['finance', 'edit']]);
+$router->post('finance/bank-transaction/save', [FinanceController::class, 'saveBankTransaction'], ['auth' => true, 'perm' => ['finance', 'edit']]);
+$router->post('finance/bank-reconcile', [FinanceController::class, 'reconcileBank'], ['auth' => true, 'perm' => ['finance', 'approve']]);
 $router->post('finance/receipts/void', [FinanceController::class, 'voidReceipt'], ['auth' => true, 'perm' => ['finance', 'edit']]);
 $router->post('finance/receipts/reprint', [FinanceController::class, 'reprintReceipt'], ['auth' => true, 'perm' => ['finance', 'view']]);
 $router->post('finance/receipts/email', [FinanceController::class, 'emailReceipt'], ['auth' => true, 'perm' => ['finance', 'edit']]);
@@ -243,6 +277,13 @@ $router->post('hr/payroll/periods/create', [HrController::class, 'createPayrollP
 $router->post('hr/payroll/items/add', [HrController::class, 'addPayrollItem'], ['auth' => true, 'perm' => ['hr', 'edit']]);
 $router->get('hr/appointment-letter', [HrController::class, 'staffAppointmentLetter'], ['auth' => true, 'perm' => ['hr', 'view']]);
 $router->get('hr/id-card', [HrController::class, 'staffIdCard'], ['auth' => true, 'perm' => ['hr', 'view']]);
+$router->get('hr/recruitment', [HrController::class, 'recruitment'], ['auth' => true, 'perm' => ['hr', 'view']]);
+$router->post('hr/vacancies/save', [HrController::class, 'saveVacancy'], ['auth' => true, 'perm' => ['hr', 'edit']]);
+$router->post('hr/vacancies/status', [HrController::class, 'vacancyStatus'], ['auth' => true, 'perm' => ['hr', 'edit']]);
+$router->post('hr/applications/save', [HrController::class, 'saveApplication'], ['auth' => true, 'perm' => ['hr', 'add']]);
+$router->post('hr/applications/decide', [HrController::class, 'decideApplication'], ['auth' => true, 'perm' => ['hr', 'approve']]);
+$router->get('hr/appraisals', [HrController::class, 'appraisals'], ['auth' => true, 'perm' => ['hr', 'view']]);
+$router->post('hr/appraisals/save', [HrController::class, 'saveAppraisal'], ['auth' => true, 'perm' => ['hr', 'edit']]);
 
 // Attendance
 $router->get('attendance', [AttendanceController::class, 'index'], ['auth' => true, 'perm' => ['attendance', 'view']]);
@@ -278,6 +319,10 @@ $router->get('transport', [TransportController::class, 'index'], ['auth' => true
 $router->post('transport/routes/store', [TransportController::class, 'storeRoute'], ['auth' => true, 'perm' => ['transport', 'add']]);
 $router->post('transport/routes/toggle', [TransportController::class, 'toggleRoute'], ['auth' => true, 'perm' => ['transport', 'edit']]);
 $router->get('transport/route-sheet', [TransportController::class, 'transportRouteSheet'], ['auth' => true, 'perm' => ['transport', 'view']]);
+$router->post('transport/vehicles/save', [TransportController::class, 'saveVehicle'], ['auth' => true, 'perm' => ['transport', 'add']]);
+$router->post('transport/vehicles/toggle', [TransportController::class, 'toggleVehicle'], ['auth' => true, 'perm' => ['transport', 'edit']]);
+$router->post('transport/drivers/save', [TransportController::class, 'saveDriver'], ['auth' => true, 'perm' => ['transport', 'add']]);
+$router->post('transport/drivers/toggle', [TransportController::class, 'toggleDriver'], ['auth' => true, 'perm' => ['transport', 'edit']]);
 
 // Inventory & procurement
 $router->get('inventory', [InventoryController::class, 'index'], ['auth' => true, 'perm' => ['inventory', 'view']]);
@@ -304,11 +349,13 @@ $router->get('gate/pass', [GateController::class, 'gatePass'], ['auth' => true, 
 $router->get('canteen', [CanteenController::class, 'index'], ['auth' => true, 'perm' => ['canteen', 'view']]);
 $router->post('canteen/products/store', [CanteenController::class, 'storeProduct'], ['auth' => true, 'perm' => ['canteen', 'add']]);
 $router->post('canteen/products/toggle', [CanteenController::class, 'toggleProduct'], ['auth' => true, 'perm' => ['canteen', 'edit']]);
+$router->get('canteen/wallet', [CanteenController::class, 'walletTransactions'], ['auth' => true, 'perm' => ['canteen', 'view']]);
+$router->post('canteen/wallet/deposit', [CanteenController::class, 'walletDeposit'], ['auth' => true, 'perm' => ['canteen', 'add']]);
 
 // Reports & analytics
-$router->get('reports',        [ReportsController::class, 'index'],  ['auth' => true, 'perm' => ['administration', 'view']]);
-$router->get('reports/export', [ReportsController::class, 'export'], ['auth' => true, 'perm' => ['administration', 'view']]);
-$router->get('reports/pdf',    [ReportsController::class, 'exportPdf'], ['auth' => true, 'perm' => ['administration', 'view']]);
+$router->get('reports',        [ReportsController::class, 'index'],  ['auth' => true, 'perm' => ['reports', 'view']]);
+$router->get('reports/export', [ReportsController::class, 'export'], ['auth' => true, 'perm' => ['reports', 'view']]);
+$router->get('reports/pdf',    [ReportsController::class, 'exportPdf'], ['auth' => true, 'perm' => ['reports', 'view']]);
 
 // Support & security
 $router->get('security', [SecurityController::class, 'index'], ['auth' => true, 'perm' => ['security', 'view']]);
@@ -325,6 +372,10 @@ $router->post('security/2fa-send-code', [TwoFactorController::class, 'sendCode']
 $router->post('security/2fa-verify-code', [TwoFactorController::class, 'verifyCode'], ['auth' => true, 'perm' => ['security', 'edit']]);
 $router->get('security/db-setup', [DatabaseSetupController::class, 'index'], ['auth' => true, 'perm' => ['security', 'edit']]);
 $router->post('security/db-setup', [DatabaseSetupController::class, 'index'], ['auth' => true, 'perm' => ['security', 'edit']]);
+$router->get('system/cron-jobs', [CronController::class, 'index'], ['auth' => true, 'perm' => ['security', 'edit']]);
+$router->post('system/cron-jobs/save', [CronController::class, 'save'], ['auth' => true, 'perm' => ['security', 'edit']]);
+$router->post('system/cron-jobs/toggle', [CronController::class, 'toggle'], ['auth' => true, 'perm' => ['security', 'edit']]);
+$router->post('system/cron-jobs/run', [CronController::class, 'runJob'], ['auth' => true, 'perm' => ['security', 'edit']]);
 
 // Government compliance
 $router->get('compliance', [ComplianceController::class, 'index'], ['auth' => true, 'perm' => ['compliance', 'view']]);

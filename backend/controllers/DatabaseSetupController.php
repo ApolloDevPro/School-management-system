@@ -9,6 +9,17 @@ final class DatabaseSetupController extends Controller
             return;
         }
 
+        // Installing views rewrites database objects: require an explicit POST.
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+            $this->render('database_setup/index', [
+                'pageTitle' => 'Database Setup',
+                'activeNav' => 'security',
+                'created' => [],
+                'errors' => [],
+            ]);
+            return;
+        }
+
         $db = Database::conn();
         $created = [];
         $errors = [];
@@ -432,23 +443,23 @@ SQL;
         return <<<SQL
 CREATE OR REPLACE VIEW vw_uneb_candidate_readiness AS
 SELECT
-  u.student_id,
+  c.student_id,
   s.admission_number,
   CONCAT(s.first_name, ' ', s.last_name) AS student_name,
-  u.academic_year_id,
-  u.cycle,
-  u.registration_status,
-  u.eligibility_status,
-  u.subjects_count,
-  u.missing_compulsory,
-  u.missing_project_work,
-  CASE WHEN u.missing_project_work > 0 THEN 'Missing project work'
-       WHEN u.missing_compulsory > 0 THEN 'Missing compulsory subjects'
-       WHEN u.subjects_count < 8 THEN 'Fewer than 8 subjects'
-       ELSE 'Ready' END AS readiness_issue,
-  u.issues
-FROM uneb_candidates u
-JOIN students s ON s.id = u.student_id
+  c.index_number,
+  l.name AS level_name,
+  c.status AS registration_status,
+  (SELECT COUNT(*) FROM uneb_candidate_subjects cs WHERE cs.candidate_id = c.id) AS subjects_count,
+  CASE
+    WHEN c.status = 'withdrawn' THEN 'Candidate withdrawn'
+    WHEN c.status = 'completed' THEN 'Completed'
+    WHEN (SELECT COUNT(*) FROM uneb_candidate_subjects cs WHERE cs.candidate_id = c.id) < 8 THEN 'Fewer than 8 subjects'
+    ELSE 'Ready'
+  END AS readiness_issue,
+  c.notes AS issues
+FROM uneb_candidates c
+LEFT JOIN students s ON s.id = c.student_id
+JOIN uneb_levels l ON l.id = c.level_id
 SQL;
     }
 

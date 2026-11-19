@@ -313,6 +313,179 @@ final class ExaminationController extends Controller
         $this->respond(true, 'Results published.', 'examinations', ['exam_id' => $examId]);
     }
 
+    public function transcript(): void
+    {
+        $schoolId = school_id();
+        $studentId = (int)($_GET['student_id'] ?? 0);
+        $examId = (int)($_GET['exam_id'] ?? 0);
+
+        if ($studentId < 1) {
+            $this->respond(false, 'Invalid student.', 'examinations');
+            return;
+        }
+
+        $student = Examination::one(
+            'SELECT s.*, c.name AS class_name, st.name AS stream_name
+               FROM students s
+               LEFT JOIN classes c ON c.id = s.current_class_id
+               LEFT JOIN streams st ON st.id = s.current_stream_id
+              WHERE s.id = ? AND s.school_id = ?',
+            [$studentId, $schoolId]
+        );
+        if (!$student) {
+            $this->respond(false, 'Student not found.', 'examinations');
+            return;
+        }
+
+        $exams = Examination::query(
+            'SELECT e.*, y.name AS year_name, t.name AS term_name
+               FROM exams e
+               JOIN academic_years y ON y.id = e.academic_year_id
+               JOIN terms t ON t.id = e.term_id
+              WHERE e.school_id = ?
+              ORDER BY y.start_date DESC, t.term_number DESC, e.id DESC',
+            [$schoolId]
+        );
+        $exam = null;
+        if ($examId > 0) {
+            foreach ($exams as $candidate) {
+                if ((int)$candidate['id'] === $examId) {
+                    $exam = $candidate;
+                    break;
+                }
+            }
+        }
+        if (!$exam && $exams) {
+            $exam = $exams[0];
+            $examId = (int)$exam['id'];
+        }
+
+        $results = [];
+        if ($exam) {
+            $results = Examination::query(
+                'SELECT sr.*, sub.code AS subject_code, sub.name AS subject_name,
+                        sub.level AS subject_level, sub.category AS subject_category,
+                        m.ca_mark, m.exam_mark, m.total_mark, m.percentage, m.status AS mark_status
+                   FROM subject_results sr
+                   JOIN subjects sub ON sub.id = sr.subject_id
+                   LEFT JOIN marks m ON m.exam_id = sr.exam_id AND m.student_id = sr.student_id
+                       AND m.subject_id = sr.subject_id
+                  WHERE sr.exam_id = ? AND sr.student_id = ? AND sr.school_id = ?
+                  ORDER BY sub.name',
+                [$examId, $studentId, $schoolId]
+            );
+        }
+
+        $summary = null;
+        if ($exam) {
+            $summary = Examination::one(
+                'SELECT * FROM result_summaries WHERE exam_id = ? AND student_id = ?',
+                [$examId, $studentId]
+            );
+        }
+
+        $this->render('examinations/transcript', [
+            'pageTitle' => 'Academic Transcript - ' . $student['admission_number'],
+            'activeNav' => 'examinations',
+            'student' => $student,
+            'exams' => $exams,
+            'exam' => $exam,
+            'examId' => $examId,
+            'results' => $results,
+            'summary' => $summary,
+        ]);
+    }
+
+    public function certificateEligibility(): void
+    {
+        $schoolId = school_id();
+        $studentId = (int)($_GET['student_id'] ?? 0);
+        $examId = (int)($_GET['exam_id'] ?? 0);
+
+        if ($studentId < 1 || $examId < 1) {
+            $this->respond(false, 'Invalid student or exam.', 'examinations');
+            return;
+        }
+
+        $student = Examination::one(
+            'SELECT s.*, c.name AS class_name, st.name AS stream_name
+               FROM students s
+               LEFT JOIN classes c ON c.id = s.current_class_id
+               LEFT JOIN streams st ON st.id = s.current_stream_id
+              WHERE s.id = ? AND s.school_id = ?',
+            [$studentId, $schoolId]
+        );
+        if (!$student) {
+            $this->respond(false, 'Student not found.', 'examinations');
+            return;
+        }
+
+        $exam = Examination::examInSchool($examId, $schoolId);
+        if (!$exam) {
+            $this->respond(false, 'Exam not found.', 'examinations');
+            return;
+        }
+
+        $results = Examination::query(
+            'SELECT sr.*, sub.code AS subject_code, sub.name AS subject_name,
+                    sub.category AS subject_category, sub.level AS subject_level
+               FROM subject_results sr
+               JOIN subjects sub ON sub.id = sr.subject_id
+              WHERE sr.exam_id = ? AND sr.student_id = ? AND sr.school_id = ?
+              ORDER BY sub.name',
+            [$examId, $studentId, $schoolId]
+        );
+
+        $summary = Examination::one(
+            'SELECT * FROM result_summaries WHERE exam_id = ? AND student_id = ?',
+            [$examId, $studentId]
+        );
+
+        $hasD = false;
+        $allE = true;
+        $subjectCount = count($results);
+        $missingProject = false;
+        foreach ($results as $result) {
+            $grade = strtoupper((string)($result['grade_code'] ?? ''));
+            if ($grade === 'D' || $grade === 'C' || $grade === 'B' || $grade === 'A') {
+                $hasD = true;
+            }
+            if ($grade !== 'E') {
+                $allE = false;
+            }
+        }
+
+        $resultCode = null;
+        $eligible = false;
+        $reason = '';
+        if ($subjectCount >= 8 && $hasD && !$allE && !$missingProject) {
+            $resultCode = 'Result 1';
+            $eligible = true;
+            $reason = 'Qualifies for UCE certificate and transcript: at least level D in one subject.';
+        } elseif ($allE && $subjectCount > 0) {
+            $resultCode = 'Result 3';
+            $eligible = false;
+            $reason = 'Transcript only: level E in all subjects taken.';
+        } else {
+            $resultCode = 'Result 2';
+            $eligible = false;
+            $reason = 'Transcript only: missed compulsory subjects, fewer than eight subjects, or missing project work scores.';
+        }
+
+        $this->render('examinations/certificate_eligibility', [
+            'pageTitle' => 'UCE Certificate Eligibility - ' . $student['admission_number'],
+            'activeNav' => 'examinations',
+            'student' => $student,
+            'exam' => $exam,
+            'results' => $results,
+            'summary' => $summary,
+            'resultCode' => $resultCode,
+            'eligible' => $eligible,
+            'reason' => $reason,
+            'subjectCount' => $subjectCount,
+        ]);
+    }
+
     private function validDate(string $value): bool
     {
         $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
@@ -341,7 +514,7 @@ final class ExaminationController extends Controller
         $schoolId = school_id();
         $examId = (int)($_GET['exam_id'] ?? 0);
         $db = Database::conn();
-        $exam = $db->query(
+        $exam = Database::query(
             'SELECT e.*, y.name AS year_name, t.name AS term_name
                FROM exams e
                JOIN academic_years y ON y.id = e.academic_year_id
@@ -353,7 +526,7 @@ final class ExaminationController extends Controller
             $this->respond(false, 'Exam not found.', 'examinations');
             return;
         }
-        $schedules = $db->query(
+        $schedules = Database::query(
             'SELECT es.*, sub.code AS subject_code, sub.name AS subject_name,
                     c.name AS class_name, st.name AS stream_name
                FROM exam_schedule es
@@ -379,7 +552,7 @@ final class ExaminationController extends Controller
         $studentId = (int)($_GET['student_id'] ?? 0);
         $examId = (int)($_GET['exam_id'] ?? 0);
         $db = Database::conn();
-        $student = $db->query(
+        $student = Database::query(
             'SELECT s.*, c.name AS class_name, st.name AS stream_name
                FROM students s
                LEFT JOIN classes c ON c.id = s.current_class_id
@@ -391,7 +564,7 @@ final class ExaminationController extends Controller
             $this->respond(false, 'Student not found.', 'examinations');
             return;
         }
-        $exam = $db->query(
+        $exam = Database::query(
             'SELECT e.*, y.name AS year_name, t.name AS term_name
                FROM exams e
                JOIN academic_years y ON y.id = e.academic_year_id
@@ -403,7 +576,7 @@ final class ExaminationController extends Controller
             $this->respond(false, 'Exam not found.', 'examinations');
             return;
         }
-        $results = $db->query(
+        $results = Database::query(
             'SELECT sr.*, sub.code AS subject_code, sub.name AS subject_name,
                     m.ca_mark, m.exam_mark
                FROM subject_results sr

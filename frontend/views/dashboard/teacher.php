@@ -11,6 +11,13 @@ $can = function (string $module, string $action = 'view') use ($user): bool {
   </div>
 </div>
 
+<?php if (empty($staffLinked)): ?>
+<div class="alert alert-warning">
+  This account is not linked to a staff record, so your classes, subjects and allocations cannot be shown.
+  Ask an administrator to link this user account to your staff record.
+</div>
+<?php endif; ?>
+
 <div class="row g-3 mb-4">
   <div class="col-6 col-xl-3">
     <div class="card stat-card tone-primary">

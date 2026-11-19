@@ -93,8 +93,12 @@ final class GuardianController extends Controller
         $studentId  = (int)($_POST['student_id'] ?? 0);
         $guardianId = (int)($_POST['guardian_id'] ?? 0);
         $student    = Student::find($studentId);
+        $guardian   = Guardian::find($guardianId);
         if (!$student || (int)$student['school_id'] !== school_id()) {
             $this->respond(false, 'That student no longer exists.', 'students');
+        }
+        if (!$guardian || (int)$guardian['school_id'] !== school_id()) {
+            $this->respond(false, 'That guardian no longer exists.', 'students');
         }
 
         Guardian::unlink($studentId, $guardianId);

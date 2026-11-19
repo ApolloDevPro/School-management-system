@@ -19,6 +19,7 @@
             <th>Email</th>
             <th>Role</th>
             <th>Type</th>
+            <th>Linked record</th>
             <th>Status</th>
             <th>Last login</th>
             <th class="text-end">Actions</th>
@@ -26,7 +27,7 @@
         </thead>
         <tbody>
 <?php if (!$users): ?>
-          <tr><td colspan="8" class="text-center text-muted py-4">No users found.</td></tr>
+          <tr><td colspan="9" class="text-center text-muted py-4">No users found.</td></tr>
 <?php endif; ?>
 <?php foreach ($users as $user): ?>
           <tr data-user='<?= e(json_encode([
@@ -37,6 +38,9 @@
               'phone'      => $user['phone'],
               'user_type'  => $user['user_type'],
               'role_id'    => $user['role_id'] !== null ? (int)$user['role_id'] : '',
+              'staff_id'   => $user['staff_id'] !== null ? (int)$user['staff_id'] : '',
+              'guardian_id'=> $user['guardian_id'] !== null ? (int)$user['guardian_id'] : '',
+              'student_id' => $user['student_id'] !== null ? (int)$user['student_id'] : '',
               'is_active'  => (int)$user['is_active'],
           ])) ?>'>
             <td>
@@ -49,6 +53,17 @@
             <td><?= e($user['email'] ?: '-') ?></td>
             <td><?= e($user['role_name'] ?: 'No role') ?></td>
             <td><span class="badge text-bg-light"><?= e($user['user_type']) ?></span></td>
+            <td class="small">
+<?php if (!empty($user['staff_id'])): ?>
+              <?= e($user['staff_name'] ?: 'Staff #' . (int)$user['staff_id']) ?>
+<?php elseif (!empty($user['guardian_id'])): ?>
+              <?= e($user['guardian_name'] ?: 'Guardian #' . (int)$user['guardian_id']) ?>
+<?php elseif (!empty($user['student_id'])): ?>
+              <?= e($user['student_name'] ?: 'Student #' . (int)$user['student_id']) ?>
+<?php else: ?>
+              <span class="text-muted">Not linked</span>
+<?php endif; ?>
+            </td>
             <td>
 <?php if ((int)$user['is_active']): ?>
               <span class="badge text-bg-success">Active</span>
@@ -137,6 +152,45 @@
 <?php endforeach; ?>
               </select>
               <div class="invalid-feedback" data-error-for="role_id"></div>
+            </div>
+            <div class="col-12 d-none" data-link-group="staff">
+              <label class="form-label" for="f_staff_id">Staff record</label>
+              <select class="form-select" id="f_staff_id" name="staff_id" disabled>
+                <option value="">Not linked</option>
+<?php foreach ($staffList as $staff): ?>
+                <option value="<?= (int)$staff['id'] ?>">
+                  <?= e(trim(($staff['staff_number'] ?? '') . ' · ' . ($staff['first_name'] ?? '') . ' ' . ($staff['middle_name'] ?? '') . ' ' . ($staff['last_name'] ?? ''))) ?><?= !empty($staff['position']) ? ' — ' . e($staff['position']) : '' ?>
+                </option>
+<?php endforeach; ?>
+              </select>
+              <div class="invalid-feedback" data-error-for="staff_id"></div>
+              <div class="form-text">Required for teachers so their classes and allocations appear on the teacher dashboard.</div>
+            </div>
+            <div class="col-12 d-none" data-link-group="parent">
+              <label class="form-label" for="f_guardian_id">Parent / guardian record</label>
+              <select class="form-select" id="f_guardian_id" name="guardian_id" disabled>
+                <option value="">Choose a guardian...</option>
+<?php foreach ($guardianList as $guardian): ?>
+                <option value="<?= (int)$guardian['id'] ?>">
+                  <?= e(trim(($guardian['first_name'] ?? '') . ' ' . ($guardian['last_name'] ?? ''))) ?><?= !empty($guardian['phone']) ? ' — ' . e($guardian['phone']) : '' ?>
+                </option>
+<?php endforeach; ?>
+              </select>
+              <div class="invalid-feedback" data-error-for="guardian_id"></div>
+              <div class="form-text">The portal shows the children linked to this guardian.</div>
+            </div>
+            <div class="col-12 d-none" data-link-group="student">
+              <label class="form-label" for="f_student_id">Student record</label>
+              <select class="form-select" id="f_student_id" name="student_id" disabled>
+                <option value="">Choose a student...</option>
+<?php foreach ($studentList as $student): ?>
+                <option value="<?= (int)$student['id'] ?>">
+                  <?= e(trim(($student['admission_number'] ?? '') . ' · ' . ($student['first_name'] ?? '') . ' ' . ($student['last_name'] ?? ''))) ?><?= !empty($student['class_name']) ? ' — ' . e($student['class_name']) : '' ?>
+                </option>
+<?php endforeach; ?>
+              </select>
+              <div class="invalid-feedback" data-error-for="student_id"></div>
+              <div class="form-text">The portal shows this student's fees, results and timetable.</div>
             </div>
             <div class="col-12">
               <label class="form-label" for="f_password">Password</label>

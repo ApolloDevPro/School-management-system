@@ -12,11 +12,11 @@ final class PettyCashController extends Controller
         $db = Database::conn();
 
         $stmt = $db->prepare(
-            'SELECT f.*, s.full_name AS custodian_name
+            "SELECT f.*, CONCAT_WS(' ', s.first_name, s.last_name) AS custodian_name
                FROM petty_cash_funds f
                LEFT JOIN staff s ON s.id = f.custodian_staff_id AND s.school_id = f.school_id
               WHERE f.school_id = ?
-              ORDER BY f.fund_name'
+              ORDER BY f.fund_name"
         );
         $stmt->execute([$schoolId]);
         $funds = $stmt->fetchAll();

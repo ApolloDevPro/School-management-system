@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+// Diagnostic tool: command line only. Never expose database metadata over HTTP.
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit("This diagnostic script can only be run from the command line.\n");
+}
+
 require __DIR__ . '/backend/config/config.php';
 require __DIR__ . '/backend/core/Database.php';
 
@@ -10,7 +16,7 @@ echo "<h2>Permission Diagnostic</h2>";
 
 // 1. Check if permissions exist
 echo "<h3>1. Finance Permissions in DB</h3>";
-$stmt = $db->query("SELECT * FROM permissions WHERE module_code = 'finance' AND code IN ('add', 'edit')");
+$stmt = $db->query("SELECT * FROM permissions WHERE module_code = 'finance'");
 $perms = $stmt->fetchAll();
 if ($perms) {
     echo "<table border='1' cellpadding='5'><tr><th>ID</th><th>Module</th><th>Code</th><th>Name</th></tr>";

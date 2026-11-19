@@ -5,10 +5,22 @@ final class UnebModule extends Model
 {
     public static function levels(int $schoolId): array
     {
-        return static::query(
+        $levels = static::query(
             'SELECT id,name,code,is_active FROM uneb_levels WHERE school_id = ? ORDER BY name',
             [$schoolId]
         );
+        if (!$levels) {
+            // Guarantee the two UNEB cycles exist for every school.
+            static::execute(
+                "INSERT IGNORE INTO uneb_levels (school_id,name,code) VALUES (?, 'UCE', 'UCE'), (?, 'UACE', 'UACE')",
+                [$schoolId, $schoolId]
+            );
+            $levels = static::query(
+                'SELECT id,name,code,is_active FROM uneb_levels WHERE school_id = ? ORDER BY name',
+                [$schoolId]
+            );
+        }
+        return $levels;
     }
 
     public static function candidates(int $schoolId, ?int $levelId = null, string $status = ''): array
@@ -17,7 +29,7 @@ final class UnebModule extends Model
                        s.admission_number, s.first_name, s.last_name, s.gender, s.date_of_birth
                   FROM uneb_candidates c
                   JOIN uneb_levels l ON l.id = c.level_id
-                  JOIN students s ON s.id = c.student_id
+                  LEFT JOIN students s ON s.id = c.student_id
                  WHERE c.school_id = ?';
         $params = [$schoolId];
         if ($levelId !== null) {
@@ -155,7 +167,25 @@ final class UnebModule extends Model
                 $data['submission_type'], $data['status'], $data['notes'] ?: null, $actorId,
             ]
         );
-        return (int)static::db()->lastInsertId();
+        $submissionId = (int)static::db()->lastInsertId();
+        static::seedCaScoreRows($submissionId, $schoolId, (int)$data['level_id']);
+        return $submissionId;
+    }
+
+    /**
+     * Prepare one empty score row per candidate subject so that the CA scores
+     * screen has something to edit as soon as a submission is created.
+     */
+    public static function seedCaScoreRows(int $submissionId, int $schoolId, int $levelId): void
+    {
+        static::execute(
+            'INSERT IGNORE INTO uneb_ca_subject_scores (submission_id, candidate_id, subject_id)
+             SELECT ?, c.id, cs.subject_id
+               FROM uneb_candidates c
+               JOIN uneb_candidate_subjects cs ON cs.candidate_id = c.id
+              WHERE c.school_id = ? AND c.level_id = ? AND c.status <> \'withdrawn\'',
+            [$submissionId, $schoolId, $levelId]
+        );
     }
 
     public static function saveCaScores(int $submissionId, array $scores): void

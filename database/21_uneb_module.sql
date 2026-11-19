@@ -22,6 +22,14 @@ CREATE TABLE IF NOT EXISTS uneb_levels (
   CONSTRAINT fk_uneb_level_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE
 );
 
+-- Make the two UNEB cycles available as soon as a school exists. The
+-- application also creates them on first use, so this is only a convenience
+-- for fresh installations where the seed data has already been imported.
+INSERT IGNORE INTO uneb_levels (school_id, name, code)
+SELECT id, 'UCE', 'UCE' FROM schools
+UNION ALL
+SELECT id, 'UACE', 'UACE' FROM schools;
+
 -- --------------------------------------------------------------------------
 -- UNEB Candidates (candidate registration for UCE/UACE)
 -- --------------------------------------------------------------------------

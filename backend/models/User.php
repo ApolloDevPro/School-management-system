@@ -17,15 +17,24 @@ final class User extends Model
         );
     }
 
-    public static function allWithRole(): array
+    public static function allWithRole(int $schoolId): array
     {
         return static::query(
             'SELECT u.id, u.username, u.full_name, u.email, u.phone, u.user_type, u.role_id,
+                    u.staff_id, u.guardian_id, u.student_id,
                     u.is_active, u.must_change_password, u.failed_attempts, u.locked_until,
-                    u.last_login_at, u.last_login_ip, r.name AS role_name
+                    u.last_login_at, u.last_login_ip, r.name AS role_name,
+                    CONCAT(s.first_name, \' \', s.last_name) AS staff_name,
+                    CONCAT(g.first_name, \' \', g.last_name) AS guardian_name,
+                    CONCAT(st.first_name, \' \', st.last_name) AS student_name
                FROM users u
                LEFT JOIN roles r ON r.id = u.role_id
-              ORDER BY u.full_name'
+               LEFT JOIN staff s ON s.id = u.staff_id
+               LEFT JOIN guardians g ON g.id = u.guardian_id
+               LEFT JOIN students st ON st.id = u.student_id
+              WHERE u.school_id = ?
+              ORDER BY u.full_name',
+            [$schoolId]
         );
     }
 
@@ -54,6 +63,9 @@ final class User extends Model
             'password_hash'        => password_hash($password, PASSWORD_DEFAULT),
             'user_type'            => $data['user_type'],
             'role_id'              => $data['role_id'],
+            'staff_id'             => $data['staff_id'] ?? null,
+            'guardian_id'          => $data['guardian_id'] ?? null,
+            'student_id'           => $data['student_id'] ?? null,
             'must_change_password' => 1,
             'is_active'            => 1,
             'created_by'           => $data['created_by'],

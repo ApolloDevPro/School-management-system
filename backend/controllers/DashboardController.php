@@ -6,58 +6,42 @@ final class DashboardController extends Controller
     public function index(): void
     {
         $user = Auth::user();
-        $roleSlug = $user['role_slug'] ?? '';
-        $userType = $user['user_type'] ?? 'staff';
+        $roleSlug = strtolower(trim((string)($user['role_slug'] ?? '')));
+        $userType = strtolower(trim((string)($user['user_type'] ?? 'staff')));
 
-        if (in_array($roleSlug, ['administrator', 'head_teacher', 'deputy_head_teacher'], true)) {
-            $this->leadership();
-            return;
-        }
-        if ($roleSlug === 'director_of_studies') {
-            $this->director();
-            return;
-        }
-        if ($roleSlug === 'teacher' || $userType === 'staff') {
-            $this->teacher();
-            return;
-        }
-        if (in_array($roleSlug, ['bursar', 'accountant'], true)) {
-            $this->bursar();
-            return;
-        }
-        if ($roleSlug === 'registrar') {
-            $this->registrar();
-            return;
-        }
-        if ($roleSlug === 'librarian') {
-            $this->librarian();
-            return;
-        }
-        if ($roleSlug === 'nurse') {
-            $this->nurse();
-            return;
-        }
-        if ($roleSlug === 'warden') {
-            $this->warden();
-            return;
-        }
-        if ($roleSlug === 'gate_officer') {
-            $this->gate();
-            return;
-        }
-        if ($roleSlug === 'hr_officer') {
-            $this->hr();
-            return;
-        }
-        if ($roleSlug === 'storekeeper') {
-            $this->storekeeper();
-            return;
-        }
-        if ($userType === 'parent' || $userType === 'student') {
+        // Parents and students use the shared portal dashboard.
+        if (in_array($userType, ['parent', 'student'], true) || in_array($roleSlug, ['parent', 'student'], true)) {
             redirect('portal');
             return;
         }
-        $this->leadership();
+
+        // One dashboard per role. Roles that do the same work share a view.
+        $dashboards = [
+            'administrator'       => 'leadership',
+            'head_teacher'        => 'leadership',
+            'deputy_head_teacher' => 'leadership',
+            'director_of_studies' => 'director',
+            'teacher'             => 'teacher',
+            'bursar'              => 'bursar',
+            'accountant'          => 'bursar',
+            'registrar'           => 'registrar',
+            'librarian'           => 'librarian',
+            'nurse'               => 'nurse',
+            'warden'              => 'warden',
+            'gate_officer'        => 'gate',
+            'hr_officer'          => 'hr',
+            'storekeeper'         => 'storekeeper',
+        ];
+
+        $dashboard = $dashboards[$roleSlug] ?? null;
+        if ($dashboard === null) {
+            // Never fall back to the leadership dashboard: an unassigned or custom
+            // role must not inherit school-wide figures.
+            $this->unassigned();
+            return;
+        }
+
+        $this->{$dashboard}();
     }
 
     private function scalar(string $sql, array $params = []): string|int|float|false
@@ -204,11 +188,19 @@ final class DashboardController extends Controller
         $user = Auth::user();
         $staffId = (int)($user['staff_id'] ?? 0);
 
+        // Sessions created before account linking was introduced may not carry
+        // staff_id, so read it from the account record when it is missing.
+        if ($staffId === 0 && !empty($user['id'])) {
+            $row = User::find((int)$user['id']);
+            $staffId = (int)($row['staff_id'] ?? 0);
+        }
+        $staffLinked = $staffId > 0;
+
         $activeYear = (int)$this->scalar("SELECT id FROM academic_years WHERE school_id = ? AND is_active = 1 LIMIT 1", [$schoolId]);
         $activeTerm = (int)$this->scalar("SELECT t.id FROM terms t JOIN academic_years y ON y.id = t.academic_year_id WHERE y.school_id = ? AND y.is_active = 1 AND t.is_active = 1 LIMIT 1", [$schoolId]);
 
-        $allocations = $activeYear ? AcademicManagement::teacherAllocations($schoolId, $activeYear) : [];
-        $myAllocations = array_filter($allocations, fn (array $a) => (int)$a['staff_id'] === $staffId);
+        $allocations = ($activeYear && $staffLinked) ? AcademicManagement::teacherAllocations($schoolId, $activeYear) : [];
+        $myAllocations = $staffLinked ? array_filter($allocations, fn (array $a) => (int)$a['staff_id'] === $staffId) : [];
 
         $classes = array_values(array_unique(array_map(fn (array $a) => $a['class_name'], $myAllocations)));
         $subjects = array_values(array_unique(array_map(fn (array $a) => $a['subject_name'], $myAllocations)));
@@ -217,16 +209,19 @@ final class DashboardController extends Controller
             'classes'    => count($classes),
             'subjects'   => count($subjects),
             'allocations'=> count($myAllocations),
-            'students'   => (int)$this->scalar("SELECT COUNT(DISTINCT s.id) FROM students s JOIN teacher_allocations ta ON ta.class_id = s.current_class_id WHERE ta.staff_id = ? AND ta.academic_year_id = ? AND s.status <> 'withdrawn' AND s.school_id = ?", [$staffId, $activeYear, $schoolId]),
+            'students'   => $staffLinked && $activeYear
+                ? (int)$this->scalar("SELECT COUNT(DISTINCT s.id) FROM students s JOIN teacher_allocations ta ON ta.class_id = s.current_class_id WHERE ta.staff_id = ? AND ta.academic_year_id = ? AND s.status <> 'withdrawn' AND s.school_id = ?", [$staffId, $activeYear, $schoolId])
+                : 0,
         ];
 
         $this->render('dashboard/teacher', [
             'pageTitle' => 'Teacher Dashboard',
             'activeNav' => 'dashboard',
             'stats'     => $stats,
-            'allocations' => array_slice($myAllocations, 0, 8),
+            'allocations' => array_slice(array_values($myAllocations), 0, 8),
             'activeYear'  => $activeYear,
             'activeTerm'  => $activeTerm,
+            'staffLinked' => $staffLinked,
             'recent'      => AuditLog::recent(8),
         ]);
     }
@@ -418,6 +413,17 @@ final class DashboardController extends Controller
             'items'     => array_slice($items, 0, 8),
             'requests'  => array_slice($requests, 0, 8),
             'recent'    => AuditLog::recent(8),
+        ]);
+    }
+
+    private function unassigned(): void
+    {
+        $user = Auth::user();
+
+        $this->render('dashboard/unassigned', [
+            'pageTitle' => 'Dashboard',
+            'activeNav' => 'dashboard',
+            'user'      => $user,
         ]);
     }
 }

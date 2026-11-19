@@ -2040,74 +2040,76 @@ CREATE TABLE remedial_records (
 );
 
 -- --------------------------------------------------------------------------
--- UNEB Candidate Registration
+-- UNEB candidate, subject-entry and results tables (canonical definition
+-- lives in 21_uneb_module.sql; repeated here so that the 19_reports_views
+-- readiness view can be created in installations that run this file first).
 -- --------------------------------------------------------------------------
-CREATE TABLE uneb_candidates (
-  id                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  student_id          INT UNSIGNED NOT NULL,
-  academic_year_id    INT UNSIGNED NOT NULL,
-  cycle               ENUM('UCE','UACE') NOT NULL,
-  candidate_number    VARCHAR(60),
-  index_number        VARCHAR(60),
-  registration_status ENUM('draft','validated','ready','exported','submitted','accepted','rejected') NOT NULL DEFAULT 'draft',
-  eligibility_status  ENUM('not_checked','eligible','ineligible','warning') NOT NULL DEFAULT 'not_checked',
-  subjects_count      SMALLINT NOT NULL DEFAULT 0,
-  missing_compulsory  SMALLINT NOT NULL DEFAULT 0,
-  missing_project_work SMALLINT NOT NULL DEFAULT 0,
-  export_file_path    VARCHAR(255),
-  exported_by         INT UNSIGNED,
-  exported_at         DATETIME,
-  uneb_response       TEXT,
-  issues              JSON,
-  notes               VARCHAR(255),
-  created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+CREATE TABLE IF NOT EXISTS uneb_levels (
+  id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id   INT UNSIGNED NOT NULL,
+  name        VARCHAR(60) NOT NULL,
+  code        VARCHAR(20) NOT NULL,
+  is_active   TINYINT(1) NOT NULL DEFAULT 1,
+  created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE KEY uq_uneb_candidate (student_id,academic_year_id,cycle),
-  KEY idx_uneb_status (cycle,registration_status),
-  CONSTRAINT fk_uneb_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
-  CONSTRAINT fk_uneb_year FOREIGN KEY (academic_year_id) REFERENCES academic_years (id) ON DELETE CASCADE
+  UNIQUE KEY uq_uneb_level (school_id, code),
+  CONSTRAINT fk_uneb_level_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE
 );
 
-CREATE TABLE uneb_candidate_subjects (
-  candidate_id        INT UNSIGNED NOT NULL,
-  subject_id          INT UNSIGNED NOT NULL,
-  entry_type          ENUM('principal','subsidiary','compulsory','elective') NOT NULL DEFAULT 'elective',
-  project_work_status ENUM('recorded','missing','not_applicable') NOT NULL DEFAULT 'not_applicable',
-  ca_status           ENUM('ready','partial','missing','submitted') NOT NULL DEFAULT 'ready',
-  uneb_subject_code   VARCHAR(20),
-  PRIMARY KEY (candidate_id,subject_id),
-  CONSTRAINT fk_ucs_candidate FOREIGN KEY (candidate_id) REFERENCES uneb_candidates (id) ON DELETE CASCADE,
-  CONSTRAINT fk_ucs_subject FOREIGN KEY (subject_id) REFERENCES subjects (id) ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS uneb_candidates (
+  id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id       INT UNSIGNED NOT NULL,
+  index_number    VARCHAR(30) NOT NULL,
+  full_name       VARCHAR(160) NOT NULL,
+  gender          ENUM('male','female') NOT NULL,
+  date_of_birth   DATE,
+  student_id      INT UNSIGNED,
+  level_id        INT UNSIGNED NOT NULL,
+  status          ENUM('registered','entered','withdrawn','completed') NOT NULL DEFAULT 'registered',
+  notes           VARCHAR(255),
+  registered_by   INT UNSIGNED,
+  registered_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_uneb_index (school_id, index_number),
+  KEY idx_uneb_level (level_id, status),
+  CONSTRAINT fk_uneb_cand_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_uneb_cand_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE SET NULL,
+  CONSTRAINT fk_uneb_cand_level FOREIGN KEY (level_id) REFERENCES uneb_levels (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- UNEB Results Records (national results after release)
--- --------------------------------------------------------------------------
-CREATE TABLE uneb_results (
-  id                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  student_id         INT UNSIGNED,
-  academic_year_id   INT UNSIGNED NOT NULL,
-  cycle              ENUM('UCE','UACE') NOT NULL,
-  index_number       VARCHAR(60),
-  subject_id         INT UNSIGNED NOT NULL,
-  achievement_level  VARCHAR(10),
-  grade_code         VARCHAR(10),
-  points             DECIMAL(5,2),
-  ca_score           DECIMAL(6,2),
-  division           VARCHAR(10),
-  aggregate          DECIMAL(8,2),
-  result_code        ENUM('Result 1','Result 2','Result 3'),
-  source             ENUM('manual_entry','excel_import','uneb_file') NOT NULL DEFAULT 'excel_import',
-  imported_by        INT UNSIGNED,
-  imported_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  remarks            VARCHAR(255),
+CREATE TABLE IF NOT EXISTS uneb_candidate_subjects (
+  id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  candidate_id  INT UNSIGNED NOT NULL,
+  subject_id    INT UNSIGNED NOT NULL,
   PRIMARY KEY (id),
-  UNIQUE KEY uq_uneb_result (student_id,academic_year_id,cycle,subject_id),
-  KEY idx_uneb_result_year (academic_year_id,cycle),
-  CONSTRAINT fk_uneb_res_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
-  CONSTRAINT fk_uneb_res_year FOREIGN KEY (academic_year_id) REFERENCES academic_years (id) ON DELETE CASCADE,
-  CONSTRAINT fk_uneb_res_subject FOREIGN KEY (subject_id) REFERENCES subjects (id) ON DELETE CASCADE
+  UNIQUE KEY uq_uneb_cand_subject (candidate_id, subject_id),
+  CONSTRAINT fk_uneb_subj_candidate FOREIGN KEY (candidate_id) REFERENCES uneb_candidates (id) ON DELETE CASCADE,
+  CONSTRAINT fk_uneb_subj_subject FOREIGN KEY (subject_id) REFERENCES subjects (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS uneb_results (
+  id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  school_id        INT UNSIGNED NOT NULL,
+  level_id         INT UNSIGNED NOT NULL,
+  academic_year_id INT UNSIGNED,
+  exam_year        YEAR NOT NULL,
+  index_number     VARCHAR(30) NOT NULL,
+  full_name        VARCHAR(160) NOT NULL,
+  gender           ENUM('male','female') NOT NULL,
+  subject_results  TEXT,
+  overall_level    VARCHAR(10),
+  result_code      ENUM('Result 1','Result 2','Result 3'),
+  ca_score_submitted TINYINT(1) NOT NULL DEFAULT 0,
+  notes            VARCHAR(255),
+  recorded_by      INT UNSIGNED,
+  recorded_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_uneb_result (school_id, level_id, exam_year, index_number),
+  KEY idx_uneb_result_year (exam_year, index_number),
+  CONSTRAINT fk_uneb_res_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
+  CONSTRAINT fk_uneb_res_level FOREIGN KEY (level_id) REFERENCES uneb_levels (id) ON DELETE CASCADE,
+  CONSTRAINT fk_uneb_res_year FOREIGN KEY (academic_year_id) REFERENCES academic_years (id) ON DELETE SET NULL
 );
 
 -- --------------------------------------------------------------------------

@@ -9,7 +9,7 @@ $alerts = array_values(array_filter($alerts, fn($a) => !empty($a['show'])));
 ?>
 <div class="page-head">
   <div>
-    <h1 class="h4 mb-0">Dashboard</h1>
+    <h1 class="h4 mb-0">Leadership Dashboard</h1>
     <p class="text-muted small mb-0">Welcome back, <?= e($user['full_name'] ?? '') ?> &middot; <?= e($user['role_name'] ?? '') ?></p>
   </div>
   <div class="text-end">

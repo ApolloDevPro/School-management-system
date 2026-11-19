@@ -22,7 +22,8 @@ final class AuthController extends Controller
         $target = null;
         foreach ($pending as $row) { if ($row['username'] === $username) { $target = $row; break; } }
         if ($target === null) { $errors['username'] = 'Choose an account that still needs a password.'; }
-        if (strlen($password) < 8) { $errors['password'] = 'Use at least 8 characters.'; }
+        $minLength = password_min_length();
+        if (strlen($password) < $minLength) { $errors['password'] = 'Use at least ' . $minLength . ' characters.'; }
         if ($password !== $confirm) { $errors['confirm'] = 'The two passwords do not match.'; }
         if ($errors) { $this->respond(false, 'Please correct the highlighted fields.', 'install', [], $errors); }
         User::setPassword((int)$target['id'], $password);
@@ -33,7 +34,7 @@ final class AuthController extends Controller
     public function loginForm(): void
     {
         if (Auth::check()) { redirect('dashboard'); }
-        unset($_SESSION['pending_2fa']);
+        unset($_SESSION['pending_2fa'], $_SESSION['pending_2fa_attempts']);
         $this->render('auth/login', ['pageTitle' => 'Sign in', 'school' => school_row()], 'bare');
     }
 
@@ -75,6 +76,11 @@ final class AuthController extends Controller
         }
         $code = trim((string)($_POST['code'] ?? ''));
         $userId = (int)$pending['user_id'];
+        $attempts = (int)($_SESSION['pending_2fa_attempts'] ?? 0);
+        if ($attempts >= 5) {
+            unset($_SESSION['pending_2fa'], $_SESSION['pending_2fa_attempts']);
+            $this->respond(false, 'Too many invalid verification attempts. Sign in again.', 'login');
+        }
         if ($code === '' || !preg_match('/^\d{6}$/', $code)) {
             $this->respond(false, 'Enter the 6-digit code from your authenticator app.', 'two-factor/challenge');
         }
@@ -84,7 +90,12 @@ final class AuthController extends Controller
         $secretRow->execute([$userId]);
         $secret = (string)($secretRow->fetchColumn() ?: '');
         if ($secret === '' || !TwoFactorController::verifyTotpStatic($secret, $code)) {
+            $_SESSION['pending_2fa_attempts'] = $attempts + 1;
             audit('security', '2fa_failed', 'users', $userId, 'Invalid 2FA code during login');
+            if ($attempts + 1 >= 5) {
+                unset($_SESSION['pending_2fa'], $_SESSION['pending_2fa_attempts']);
+                $this->respond(false, 'Too many invalid verification attempts. Sign in again.', 'login');
+            }
             $this->respond(false, 'Invalid verification code.', 'two-factor/challenge');
         }
         if (!Auth::completePendingTwoFactor($userId)) {
@@ -120,7 +131,8 @@ final class AuthController extends Controller
                 $sent = MailService::send($user['email'], 'SSMS Password Reset', $body);
             }
             audit('security', 'password_reset_requested', 'users', (int)$user['id'], 'Password reset requested');
-            if (!$sent) {
+            if (!$sent && APP_ENV === 'local') {
+                // Development convenience only: never reveal a reset token in production.
                 $_SESSION['reset_link_once'] = $link;
             }
         }
@@ -155,7 +167,8 @@ final class AuthController extends Controller
         $reset = $token !== '' ? User::validPasswordReset($token) : null;
         $errors = [];
         if (!$reset) { $errors['token'] = 'This reset link is invalid or has expired.'; }
-        if (strlen($password) < 8) { $errors['password'] = 'Use at least 8 characters.'; }
+        $minLength = password_min_length();
+        if (strlen($password) < $minLength) { $errors['password'] = 'Use at least ' . $minLength . ' characters.'; }
         if ($password !== $confirm) { $errors['confirm'] = 'The two passwords do not match.'; }
         if ($errors) { $this->respond(false, $errors['token'] ?? 'Please correct the highlighted fields.', 'reset-password', ['token' => $token], $errors); }
         User::applyPasswordReset((int)$reset['id'], (int)$reset['user_id'], $password);
@@ -182,7 +195,8 @@ final class AuthController extends Controller
         $row = User::find((int)$user['id']);
         $errors = [];
         if (!$row || !password_verify($current, (string)$row['password_hash'])) { $errors['current_password'] = 'Current password is incorrect.'; }
-        if (strlen($password) < 8) { $errors['password'] = 'Use at least 8 characters.'; }
+        $minLength = password_min_length();
+        if (strlen($password) < $minLength) { $errors['password'] = 'Use at least ' . $minLength . ' characters.'; }
         if ($password !== $confirm) { $errors['confirm'] = 'The two passwords do not match.'; }
         if ($errors) { $this->respond(false, 'Please correct the highlighted fields.', 'change-password', [], $errors); }
         User::changeOwnPassword((int)$user['id'], $password);

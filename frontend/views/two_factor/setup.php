@@ -14,7 +14,7 @@
       </div>
       <div class="card-body">
         <div class="text-center mb-4">
-          <img src="<?= e($qrUrl) ?>" alt="QR Code" class="img-fluid mb-2" style="max-width:200px;border:1px solid #e2e8f0;padding:8px;background:#fff;border-radius:8px">
+          <div id="qrBox" class="d-inline-block mb-2" data-otpauth="<?= e($otpAuthUrl) ?>" style="min-width:200px;min-height:200px;border:1px solid #e2e8f0;padding:8px;background:#fff;border-radius:8px"></div>
           <div class="text-muted small">Scan this QR code with your authenticator app</div>
         </div>
         <div class="mb-3">
@@ -87,6 +87,18 @@
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+(function () {
+  var box = document.getElementById('qrBox');
+  if (!box) { return; }
+  if (window.QRCode) {
+    new QRCode(box, { text: box.getAttribute('data-otpauth'), width: 200, height: 200 });
+  } else {
+    box.textContent = 'QR library unavailable - enter the setup key manually.';
+  }
+})();
+</script>
 <script>
 document.querySelectorAll('[data-toggle-modal="sendCodeModal"]').forEach(function (btn) {
   btn.addEventListener('click', function () {

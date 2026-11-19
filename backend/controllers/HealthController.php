@@ -150,7 +150,7 @@ final class HealthController extends Controller
         $schoolId = school_id();
         $studentId = (int)($_GET['student_id'] ?? 0);
         $db = Database::conn();
-        $student = $db->query(
+        $student = Database::query(
             'SELECT s.*, c.name AS class_name, st.name AS stream_name
                FROM students s
                LEFT JOIN classes c ON c.id = s.current_class_id

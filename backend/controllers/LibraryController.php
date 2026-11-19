@@ -284,7 +284,7 @@ final class LibraryController extends Controller
         $schoolId = school_id();
         $studentId = (int)($_GET['student_id'] ?? 0);
         $db = Database::conn();
-        $student = $db->query(
+        $student = Database::query(
             'SELECT s.*, c.name AS class_name, st.name AS stream_name
                FROM students s
                LEFT JOIN classes c ON c.id = s.current_class_id
@@ -296,7 +296,7 @@ final class LibraryController extends Controller
             $this->respond(false, 'Student not found.', 'library');
             return;
         }
-        $books = $db->query(
+        $books = Database::query(
             'SELECT bk.title, bc.accession_number, b.due_date,
                     DATEDIFF(CURRENT_DATE, b.due_date) AS days_overdue,
                     COALESCE(f.amount, 0) AS fine

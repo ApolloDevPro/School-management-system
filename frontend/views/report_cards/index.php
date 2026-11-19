@@ -3,7 +3,12 @@
     <h1 class="h4 mb-0">Report Cards</h1>
     <p class="text-muted small mb-0">Generate and view student report cards by term and exam.</p>
   </div>
-  <a class="btn btn-outline-secondary" href="<?= url('report_cards') ?>&export=csv"><i class="bi bi-file-earmark-excel"></i> Export CSV</a>
+  <?php if ($examId > 0 && $classId > 0): ?>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-primary" target="_blank" href="<?= url('report_cards/batch', ['class_id' => $classId, 'stream_id' => (int)$streamId, 'exam_id' => $examId]) ?>"><i class="bi bi-printer"></i> Print all cards</a>
+    <a class="btn btn-outline-secondary" href="<?= url('report_cards', ['term_id' => $termId, 'class_id' => $classId, 'stream_id' => (int)$streamId, 'exam_id' => $examId, 'export' => 'csv']) ?>"><i class="bi bi-file-earmark-excel"></i> Export CSV</a>
+  </div>
+  <?php endif; ?>
 </div>
 
 <div class="card app-card filter-bar mb-3">

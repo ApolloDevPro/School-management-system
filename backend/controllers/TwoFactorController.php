@@ -21,7 +21,6 @@ final class TwoFactorController extends Controller
             'activeNav' => 'security',
             'secret' => $secret,
             'otpAuthUrl' => $otpAuthUrl,
-            'qrUrl' => 'https://chart.googleapis.com/chart?chs=200x200&chld=L|0&cht=qr&chl=' . urlencode($otpAuthUrl),
         ]);
     }
 
@@ -118,7 +117,7 @@ final class TwoFactorController extends Controller
             $this->respond(false, 'Too many failed attempts. Code expired. Request a new one.', 'security');
         }
 
-        $valid = (hash('sha256', $code) === $row['code_hash']);
+        $valid = hash_equals((string)$row['code_hash'], hash('sha256', $code));
         Database::conn()->prepare('UPDATE two_factor_codes SET attempts = ?, is_used = IF(?, 1, is_used) WHERE id = ?')->execute([$attempts, $valid ? 1 : 0, (int)$row['id']]);
         if (!$valid) {
             $this->respond(false, 'Invalid verification code. Attempt ' . $attempts . ' of ' . $maxAttempts . '.', 'security');
@@ -142,7 +141,7 @@ final class TwoFactorController extends Controller
         $time = (int)floor(time() / 30);
         $code = str_pad(preg_replace('/\D/', '', $code) ?? '', 6, '0', STR_PAD_LEFT);
         for ($offset = -$window; $offset <= $window; $offset++) {
-            if (self::generateTotpStatic($key, $time + $offset) === $code) { return true; }
+            if (hash_equals(self::generateTotpStatic($key, $time + $offset), $code)) { return true; }
         }
         return false;
     }

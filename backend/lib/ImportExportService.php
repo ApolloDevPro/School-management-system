@@ -99,49 +99,109 @@ final class ImportExportService
     {
         $created = 0;
         $errors = [];
-        foreach ($fileRows as $lineNo => $row) {
-            if ($lineNo === 1) { continue; } // header
-            $row = array_map('trim', $row);
-            if (empty($row[0]) && empty($row[1]) && empty($row[2])) { continue; }
+        $db = Database::conn();
 
-            try {
+        $db->beginTransaction();
+        try {
+            foreach ($fileRows as $lineNo => $row) {
+                // Skip a header row, but still accept files that start with data.
+                if ($lineNo === 0 && str_contains(strtolower(trim((string)($row[0] ?? ''))), 'admission')) {
+                    continue;
+                }
+                $row = array_map('trim', $row);
+                if (empty($row[0]) && empty($row[1]) && empty($row[2])) { continue; }
+
                 $admission = $row[0] ?? '';
                 $first = $row[1] ?? '';
                 $last = $row[2] ?? '';
-                $gender = $row[3] ?? '';
-                $dob = $row[4] ?? null;
-                $className = $row[5] ?? null;
-                $status = $row[8] ?? 'active';
-
                 if ($admission === '' || $first === '' || $last === '') {
                     $errors[] = 'Line '.($lineNo + 1).': missing admission number or name';
                     continue;
                 }
 
-                $classId = null;
-                if ($className !== null && $className !== '') {
-                    $c = SchoolClass::one('SELECT id FROM classes WHERE school_id = ? AND name = ?', [$schoolId, $className]);
-                    if ($c) { $classId = (int)$c['id']; }
+                $genderRaw = strtolower($row[3] ?? '');
+                $gender = match (true) {
+                    in_array($genderRaw, ['m', 'male', 'boy'], true) => 'male',
+                    in_array($genderRaw, ['f', 'female', 'girl'], true) => 'female',
+                    default => null,
+                };
+                if ($gender === null) {
+                    $errors[] = 'Line '.($lineNo + 1).': gender must be male or female';
+                    continue;
                 }
 
-                $id = Student::insert([
-                    'school_id' => $schoolId,
-                    'admission_number' => $admission,
-                    'first_name' => $first,
-                    'last_name' => $last,
-                    'gender' => $gender,
-                    'date_of_birth' => $dob,
-                    'current_class_id' => $classId,
-                    'status' => in_array($status, ['active','suspended','withdrawn'], true) ? $status : 'active',
-                    'admission_date' => $row[9] ?? date('Y-m-d'),
-                    'created_by' => $createdBy,
-                ]);
+                $dob = $row[4] ?? '';
+                if ($dob !== '') {
+                    $parsed = DateTimeImmutable::createFromFormat('!Y-m-d', $dob);
+                    if (!$parsed || $parsed->format('Y-m-d') !== $dob) {
+                        $errors[] = 'Line '.($lineNo + 1).': date of birth must be YYYY-MM-DD';
+                        continue;
+                    }
+                }
+
+                $className = $row[5] ?? '';
+                $classId = null;
+                if ($className !== '') {
+                    $c = SchoolClass::one('SELECT id FROM classes WHERE school_id = ? AND name = ?', [$schoolId, $className]);
+                    if (!$c) {
+                        $errors[] = 'Line '.($lineNo + 1).': class "' . $className . '" was not found in this school';
+                        continue;
+                    }
+                    $classId = (int)$c['id'];
+                }
+
+                $admissionDate = $row[9] ?? '';
+                if ($admissionDate === '') {
+                    $admissionDate = date('Y-m-d');
+                } else {
+                    $parsedDate = DateTimeImmutable::createFromFormat('!Y-m-d', $admissionDate);
+                    if (!$parsedDate || $parsedDate->format('Y-m-d') !== $admissionDate) {
+                        $errors[] = 'Line '.($lineNo + 1).': admission date must be YYYY-MM-DD';
+                        continue;
+                    }
+                }
+
+                $status = strtolower($row[8] ?? '');
+                $allowedStatuses = ['applicant', 'active', 'completed', 'transferred_out', 'withdrawn', 'suspended', 'graduated'];
+                if ($status === '') {
+                    $status = 'active';
+                } elseif (!in_array($status, $allowedStatuses, true)) {
+                    $errors[] = 'Line '.($lineNo + 1).': status must be one of '.implode(', ', $allowedStatuses);
+                    continue;
+                }
+
+                try {
+                    Student::insert([
+                        'school_id' => $schoolId,
+                        'admission_number' => $admission,
+                        'first_name' => $first,
+                        'last_name' => $last,
+                        'gender' => $gender,
+                        'date_of_birth' => $dob !== '' ? $dob : null,
+                        'current_class_id' => $classId,
+                        'status' => $status,
+                        'admission_date' => $admissionDate,
+                        'created_by' => $createdBy,
+                    ]);
+                } catch (Throwable $e) {
+                    $errors[] = 'Line '.($lineNo + 1).': '.$e->getMessage();
+                    continue;
+                }
                 $created++;
-            } catch (Throwable $e) {
-                $errors[] = 'Line '.($lineNo + 1).': '.$e->getMessage();
             }
+
+            if ($errors) {
+                $db->rollBack();
+                return ['created' => 0, 'errors' => $errors];
+            }
+            $db->commit();
+            return ['created' => $created, 'errors' => []];
+        } catch (Throwable $e) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            throw $e;
         }
-        return ['created' => $created, 'errors' => $errors];
     }
 
     public static function parseUploadedCsv(string $tmpPath): array
@@ -153,6 +213,10 @@ final class ImportExportService
             $rows[] = $row;
         }
         fclose($handle);
+        // Strip a UTF-8 BOM so Excel-saved files still match the header row.
+        if ($rows && isset($rows[0][0])) {
+            $rows[0][0] = preg_replace('/^\xEF\xBB\xBF/', '', (string)$rows[0][0]);
+        }
         return $rows;
     }
 }

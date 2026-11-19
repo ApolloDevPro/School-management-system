@@ -62,7 +62,7 @@ final class BoardingController extends Controller
         $schoolId = school_id();
         $studentId = (int)($_GET['student_id'] ?? 0);
         $db = Database::conn();
-        $student = $db->query(
+        $student = Database::query(
             'SELECT s.*, c.name AS class_name, st.name AS stream_name
                FROM students s
                LEFT JOIN classes c ON c.id = s.current_class_id
@@ -74,7 +74,7 @@ final class BoardingController extends Controller
             $this->respond(false, 'Student not found.', 'boarding');
             return;
         }
-        $registration = $db->query(
+        $registration = Database::query(
             'SELECT br.*, d.name AS dormitory_name, d.bed_number, w.first_name AS warden_first, w.last_name AS warden_last,
                     y.name AS year_name, t.name AS term_name
                FROM boarding_registrations br

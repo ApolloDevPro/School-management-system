@@ -43,7 +43,8 @@ final class SmsService
             CURLOPT_POSTFIELDS => http_build_query($payload),
             CURLOPT_CONNECTTIMEOUT => 10,
             CURLOPT_TIMEOUT => 15,
-            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
         ]);
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);

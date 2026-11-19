@@ -58,8 +58,8 @@ final class GateController extends Controller
         $schoolId = school_id();
         $visitorId = (int)($_GET['visitor_id'] ?? 0);
         $db = Database::conn();
-        $visitor = $db->query(
-            'SELECT * FROM gate_visitors WHERE id = ? AND school_id = ?',
+        $visitor = Database::query(
+            'SELECT * FROM visitors WHERE id = ? AND school_id = ?',
             [$visitorId, $schoolId]
         )->fetch();
         if (!$visitor) {
@@ -68,12 +68,12 @@ final class GateController extends Controller
         }
         $school = school_row() ?? [];
         $html = PdfService::gatePassHtml($school, [
-            'visitor_name' => $visitor['name'] ?? '-',
+            'visitor_name' => $visitor['full_name'] ?? '-',
             'phone' => $visitor['phone'] ?? '-',
-            'host_name' => $visitor['host'] ?? '-',
+            'host_name' => $visitor['host_name'] ?? '-',
             'purpose' => $visitor['purpose'] ?? '-',
-            'time_out' => '-',
-            'vehicle_reg' => $visitor['plate'] ?? '-',
+            'time_out' => $visitor['time_out'] ?? $visitor['time_in'] ?? '-',
+            'vehicle_reg' => $visitor['vehicle_plate'] ?? '-',
         ]);
         PdfService::output($html, 'gate_pass_'.$visitorId.'.pdf');
     }

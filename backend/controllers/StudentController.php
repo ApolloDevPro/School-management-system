@@ -470,7 +470,12 @@ final class StudentController extends Controller
         audit('students', 'import', 'students', null, 'Imported students from CSV', null, [
             'created' => $result['created'], 'error_count' => count($result['errors']),
         ]);
-        $this->respond(true, 'Imported '.$result['created'].' student(s).'.(count($result['errors']) ? ' '.count($result['errors']).' error(s) skipped.' : ''), 'students');
+        if ($result['errors']) {
+            $message = 'No students were imported. ' . count($result['errors']) . ' row(s) need correction: '
+                . implode(' ', array_slice($result['errors'], 0, 5));
+            $this->respond(false, $message, 'students', [], ['csv_file' => $message]);
+        }
+        $this->respond(true, 'Imported '.$result['created'].' student(s).', 'students');
     }
 
     public function studentIdCard(): void
@@ -478,7 +483,7 @@ final class StudentController extends Controller
         $schoolId = school_id();
         $studentId = (int)($_GET['student_id'] ?? 0);
         $db = Database::conn();
-        $student = $db->query(
+        $student = Database::query(
             'SELECT s.*, c.name AS class_name, st.name AS stream_name, h.name AS house_name,
                     y.name AS academic_year
                FROM students s

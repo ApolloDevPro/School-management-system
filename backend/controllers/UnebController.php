@@ -202,7 +202,7 @@ final class UnebController extends Controller
         $data = [
             'level_id' => (int)($_POST['level_id'] ?? 0),
             'academic_year_id' => (int)($_POST['academic_year_id'] ?? 0),
-            'term_id' => (int)($_POST['term_id'] ?? 0),
+            'term_id' => (int)($_POST['term_id'] ?? 0) ?: null,
             'submission_type' => (string)($_POST['submission_type'] ?? 'internal'),
             'status' => (string)($_POST['status'] ?? 'draft'),
             'notes' => trim((string)($_POST['notes'] ?? '')) ?: null,
@@ -230,6 +230,10 @@ final class UnebController extends Controller
             redirect('uneb/ca-submission');
         }
         $scores = UnebModule::casubmissionScores($id);
+        if (!$scores && ($submission['status'] ?? '') !== 'submitted') {
+            UnebModule::seedCaScoreRows($id, $schoolId, (int)$submission['level_id']);
+            $scores = UnebModule::casubmissionScores($id);
+        }
         $levels = UnebModule::levels($schoolId);
         $years = AcademicManagement::years($schoolId);
         $terms = $submission['academic_year_id'] ? AcademicManagement::terms($schoolId, (int)$submission['academic_year_id']) : [];
@@ -259,15 +263,13 @@ final class UnebController extends Controller
         }
 
         $scores = [];
-        foreach ($_POST as $key => $val) {
-            if (preg_match('/^ca_score\[(\d+)\]\[(\d+)\]\[ca\]$/', $key, $m)) {
-                $scores[(int)$m[1]][(int)$m[2]]['ca'] = $val === '' ? null : (float)$val;
-            }
-            if (preg_match('/^ca_score\[(\d+)\]\[(\d+)\]\[project\]$/', $key, $m)) {
-                $scores[(int)$m[1]][(int)$m[2]]['project'] = $val === '' ? null : (float)$val;
-            }
-            if (preg_match('/^ca_score\[(\d+)\]\[(\d+)\]\[overall\]$/', $key, $m)) {
-                $scores[(int)$m[1]][(int)$m[2]]['overall'] = $val === '' ? null : (float)$val;
+        foreach ((array)($_POST['ca_score'] ?? []) as $candidateId => $subjectRows) {
+            foreach ((array)$subjectRows as $subjectId => $row) {
+                $scores[(int)$candidateId][(int)$subjectId] = [
+                    'ca' => ($row['ca'] ?? '') === '' ? null : (float)$row['ca'],
+                    'project' => ($row['project'] ?? '') === '' ? null : (float)$row['project'],
+                    'overall' => ($row['overall'] ?? '') === '' ? null : (float)$row['overall'],
+                ];
             }
         }
 
@@ -329,7 +331,8 @@ final class UnebController extends Controller
             CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Accept: application/json'],
             CURLOPT_CONNECTTIMEOUT => 10,
             CURLOPT_TIMEOUT => 30,
-            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
         ]);
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);

@@ -64,6 +64,11 @@ $section = function (string $title): void { ?>
 
 <?php if (Auth::can('academics', 'view')): ?>
     <?php $section('Academics'); $link('academics', 'academics', 'Curriculum & subjects', 'bi-book'); ?>
+    <li>
+      <a class="sidebar-link <?= str_starts_with($route, 'report_cards') ? 'active' : '' ?>" href="<?= url('report_cards') ?>">
+        <span class="sidebar-link-inner"><i class="bi bi-file-earmark-text"></i><span>Report cards</span></span>
+      </a>
+    </li>
 <?php endif; ?>
 
 <?php if (Auth::can('examinations', 'view')): ?>

@@ -1000,7 +1000,8 @@ final class FinanceModel extends Model
         if (!in_array($data['channel'], ['sms', 'email', 'portal', 'print'], true)) {
             throw new DomainException('Choose a valid reminder channel.');
         }
-        return static::transaction(function (PDO $db) use ($schoolId, $data, $actor): int {
+        $delivery = ['channel' => (string)$data['channel'], 'phone' => '', 'email' => '', 'message' => ''];
+        $id = static::transaction(function (PDO $db) use ($schoolId, $data, $actor, &$delivery): int {
             $statement = $db->prepare(
                 "SELECT id, admission_number, first_name, last_name
                    FROM students WHERE id = ? AND school_id = ? AND status = 'active'"
@@ -1073,7 +1074,8 @@ final class FinanceModel extends Model
             }
 
             $statement = $db->prepare(
-                'SELECT g.id, COALESCE(NULLIF(g.full_name, ""), CONCAT(g.first_name, " ", g.last_name)) AS guardian_name
+                'SELECT g.id, g.phone, g.email,
+                        COALESCE(NULLIF(g.full_name, ""), CONCAT(g.first_name, " ", g.last_name)) AS guardian_name
                    FROM student_guardians sg
                    JOIN guardians g ON g.id = sg.guardian_id
                   WHERE sg.student_id = ?
@@ -1095,12 +1097,18 @@ final class FinanceModel extends Model
                 ]);
             }
             $message = mb_substr($message, 0, 500);
+            $delivery = [
+                'channel' => (string)$data['channel'],
+                'phone'   => (string)($guardian['phone'] ?? ''),
+                'email'   => (string)($guardian['email'] ?? ''),
+                'message' => $message,
+            ];
 
             $db->prepare(
                 "INSERT INTO fee_reminders
                     (student_id, guardian_id, invoice_id, academic_year_id, term_id, channel,
-                     balance_at_time, message, sent_at, sent_by, status)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, 'sent')"
+                     balance_at_time, message, sent_by, status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled')"
             )->execute([
                 $student['id'], $guardian ? (int)$guardian['id'] : null, $invoiceId,
                 $data['academic_year_id'], $data['term_id'], $data['channel'],
@@ -1113,6 +1121,46 @@ final class FinanceModel extends Model
                 ]);
             return $id;
         });
+
+        if ($delivery['channel'] === 'sms' || $delivery['channel'] === 'email') {
+            $destination = trim($delivery[$delivery['channel'] === 'sms' ? 'phone' : 'email']);
+            $ok = false;
+            $error = '';
+
+            if ($destination === '') {
+                $error = 'No ' . $delivery['channel'] . ' address on file for the guardian.';
+            } elseif ($delivery['channel'] === 'sms') {
+                $result = SmsService::send($destination, $delivery['message']);
+                $ok = (bool)($result['ok'] ?? false);
+                $error = $ok ? '' : (string)($result['error'] ?? 'SMS gateway rejected the message.');
+            } else {
+                $ok = MailService::send(
+                    $destination,
+                    'Fee balance reminder',
+                    '<p>' . nl2br(e($delivery['message'])) . '</p>'
+                );
+                $error = $ok ? '' : 'Email delivery failed.';
+            }
+
+            Database::conn()->prepare(
+                "UPDATE fee_reminders SET status = ?, sent_at = IF(? = 'sent', NOW(), NULL), error_note = ? WHERE id = ?"
+            )->execute([
+                $ok ? 'sent' : 'failed',
+                $ok ? 'sent' : 'failed',
+                $ok ? null : mb_substr($error, 0, 255),
+                $id,
+            ]);
+
+            if (!$ok) {
+                throw new DomainException('Reminder saved but delivery failed: ' . $error);
+            }
+        } else {
+            Database::conn()->prepare(
+                "UPDATE fee_reminders SET status = 'sent', sent_at = NOW() WHERE id = ?"
+            )->execute([$id]);
+        }
+
+        return $id;
     }
 
     public static function receipts(int $schoolId): array

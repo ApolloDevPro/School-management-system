@@ -12,7 +12,7 @@ final class BackupController extends Controller
         }
         $schoolId = school_id();
 
-        $backups = Database::conn()->query(
+        $backups = Database::query(
             'SELECT b.*, u.full_name AS performed_by_name
                FROM data_backups b
                LEFT JOIN users u ON u.id = b.performed_by
@@ -45,20 +45,22 @@ final class BackupController extends Controller
         $filename = 'ssms_backup_' . date('Ymd_His') . '.sql';
         $filePath = self::BACKUP_DIR . '/' . $filename;
 
-        $db = Database::conn();
-        $dsnParts = [];
-        parse_str(parse_url('mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4', PHP_URL_QUERY) ?? '', $dsnParts);
-        $host = DB_HOST;
-        $dbName = DB_NAME;
-        $user = DB_USER;
-        $pass = DB_PASS;
+        // Keep credentials out of the command line by using a temporary option file.
+        $cnf = tempnam(sys_get_temp_dir(), 'ssmsdump');
+        if ($cnf === false) {
+            $this->respond(false, 'Could not create a temporary MySQL option file.', 'security');
+        }
+        $quote = static fn (string $value): string => '"' . str_replace(['\\', '"'], ['\\\\', '\\"'], $value) . '"';
+        file_put_contents(
+            $cnf,
+            "[client]\nhost={$quote(DB_HOST)}\nuser={$quote(DB_USER)}\npassword={$quote(DB_PASS)}\n"
+        );
+        @chmod($cnf, 0600);
 
         $cmd = sprintf(
-            'mysqldump -h %s -u %s %s %s --single-transaction --routines --triggers > "%s" 2>&1',
-            escapeshellarg($host),
-            escapeshellarg($user),
-            $pass !== '' ? '-p' . escapeshellarg($pass) : '',
-            escapeshellarg($dbName),
+            'mysqldump --defaults-extra-file=%s %s --single-transaction --routines --triggers --result-file=%s 2>&1',
+            escapeshellarg($cnf),
+            escapeshellarg(DB_NAME),
             escapeshellarg($filePath)
         );
 
@@ -66,6 +68,7 @@ final class BackupController extends Controller
         $outputCapture = [];
         $exitCode = null;
         @exec($cmd, $outputCapture, $exitCode);
+        @unlink($cnf);
         $output = implode("\n", $outputCapture);
         $finished = date('Y-m-d H:i:s');
 
@@ -110,7 +113,7 @@ final class BackupController extends Controller
         $id = (int)($_GET['id'] ?? 0);
         $schoolId = school_id();
 
-        $row = Database::conn()->query(
+        $row = Database::query(
             'SELECT * FROM data_backups WHERE id = ? AND (school_id = ? OR school_id IS NULL) AND status = \'success\'',
             [$id, $schoolId]
         )->fetch();
@@ -135,7 +138,7 @@ final class BackupController extends Controller
         $id = (int)($_POST['id'] ?? 0);
         $schoolId = school_id();
 
-        $row = Database::conn()->query(
+        $row = Database::query(
             'SELECT * FROM data_backups WHERE id = ? AND (school_id = ? OR school_id IS NULL)',
             [$id, $schoolId]
         )->fetch();

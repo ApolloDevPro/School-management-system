@@ -105,7 +105,7 @@ final class BudgetController extends Controller
             return;
         }
         $budgetId = (int)($_GET['budget_id'] ?? 0);
-        $lines = Database::conn()->query(
+        $lines = Database::query(
             'SELECT bl.*, a.account_code, a.account_name, a.account_type
                FROM budget_lines bl
                JOIN gl_accounts a ON a.id = bl.account_id AND a.school_id = ?

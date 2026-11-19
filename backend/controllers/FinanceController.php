@@ -220,20 +220,6 @@ final class FinanceController extends Controller
         }
     }
 
-    public function compliance(): void
-    {
-        $schoolId = school_id();
-        $this->render('finance/compliance', [
-            'pageTitle' => 'Government compliance and capitation',
-            'activeNav' => 'finance',
-            'years' => AcademicYear::forSchool($schoolId),
-            'terms' => FinanceModel::termsForSchool($schoolId),
-            'grants' => FinanceModel::grants($schoolId),
-            'expenditures' => FinanceModel::grantExpenditures($schoolId),
-            'returns' => FinanceModel::emisReturns($schoolId),
-        ]);
-    }
-
     public function storeGrant(): void
     {
         try {
@@ -583,9 +569,315 @@ final class FinanceController extends Controller
                 'channel' => $channel,
                 'message' => $message,
             ], Auth::user());
-            $this->respond(true, 'Fee reminder recorded as sent.', 'finance');
+            $message = in_array($channel, ['sms', 'email'], true)
+                ? 'Fee reminder sent via ' . strtoupper($channel) . '.'
+                : 'Fee reminder recorded.';
+            $this->respond(true, $message, 'finance');
         } catch (DomainException|InvalidArgumentException $error) {
             $this->respond(false, $error->getMessage(), 'finance', [], [$field => $error->getMessage()]);
+        }
+    }
+
+    public function bankReconciliation(): void
+    {
+        if (!$this->allowed('finance', 'view')) {
+            return;
+        }
+        $schoolId = school_id();
+        $db = Database::conn();
+
+        $accounts = $db->query(
+            'SELECT * FROM bank_accounts WHERE school_id = ? AND status = \'active\' ORDER BY bank_name, account_name',
+            [$schoolId]
+        )->fetchAll();
+        $accountId = (int)($_GET['bank_account_id'] ?? ($accounts[0]['id'] ?? 0));
+        $periodStart = trim((string)($_GET['period_start'] ?? ''));
+        $periodEnd = trim((string)($_GET['period_end'] ?? ''));
+
+        $reconciliations = $db->query(
+            'SELECT br.*, ba.bank_name, ba.account_number, u.full_name AS reconciled_by_name
+               FROM bank_reconciliations br
+               JOIN bank_accounts ba ON ba.id = br.bank_account_id
+               LEFT JOIN users u ON u.id = br.reconciled_by
+              WHERE br.bank_account_id = ?
+              ORDER BY br.period_end DESC, br.id DESC
+              LIMIT 50',
+            [$accountId > 0 ? $accountId : 0]
+        )->fetchAll();
+
+        $unmatchedTransactions = [];
+        $unmatchedPayments = [];
+        $unmatchedExpenses = [];
+        if ($accountId > 0 && $periodStart !== '' && $periodEnd !== '') {
+            $unmatchedTransactions = $db->query(
+                'SELECT * FROM bank_transactions
+                  WHERE bank_account_id = ? AND is_reconciled = 0
+                    AND transaction_date BETWEEN ? AND ?
+                  ORDER BY transaction_date DESC, id DESC',
+                [$accountId, $periodStart, $periodEnd]
+            )->fetchAll();
+            $unmatchedPayments = $db->query(
+                'SELECT p.*, s.admission_number, s.first_name, s.last_name
+                   FROM payments p
+                   JOIN students s ON s.id = p.student_id
+                  WHERE p.school_id = ? AND p.channel = \'bank\'
+                    AND p.payment_date BETWEEN ? AND ?
+                    AND p.status = \'verified\'
+                    AND NOT EXISTS (SELECT 1 FROM bank_transactions bt WHERE bt.payment_id = p.id)
+                  ORDER BY p.payment_date DESC',
+                [$schoolId, $periodStart, $periodEnd]
+            )->fetchAll();
+            $unmatchedExpenses = $db->query(
+                'SELECT e.* FROM expenses e
+                  WHERE e.school_id = ? AND e.payment_method = \'bank\'
+                    AND e.expense_date BETWEEN ? AND ?
+                    AND e.approval_status = \'approved\'
+                    AND NOT EXISTS (SELECT 1 FROM bank_transactions bt WHERE bt.expense_id = e.id)
+                  ORDER BY e.expense_date DESC',
+                [$schoolId, $periodStart, $periodEnd]
+            )->fetchAll();
+        }
+
+        $this->render('finance/bank_reconciliation', [
+            'pageTitle' => 'Bank Reconciliation',
+            'activeNav' => 'finance',
+            'accounts' => $accounts,
+            'accountId' => $accountId,
+            'periodStart' => $periodStart,
+            'periodEnd' => $periodEnd,
+            'reconciliations' => $reconciliations,
+            'unmatchedTransactions' => $unmatchedTransactions,
+            'unmatchedPayments' => $unmatchedPayments,
+            'unmatchedExpenses' => $unmatchedExpenses,
+        ]);
+    }
+
+    public function saveBankAccount(): void
+    {
+        if (!$this->allowed('finance', 'edit')) {
+            return;
+        }
+        $schoolId = school_id();
+        $db = Database::conn();
+        $id = (int)($_POST['id'] ?? 0);
+        $bankName = trim((string)($_POST['bank_name'] ?? ''));
+        $accountName = trim((string)($_POST['account_name'] ?? ''));
+        $accountNumber = trim((string)($_POST['account_number'] ?? ''));
+        $branchName = trim((string)($_POST['branch_name'] ?? ''));
+        $swiftCode = trim((string)($_POST['swift_code'] ?? ''));
+        $currency = (string)($_POST['currency'] ?? 'UGX');
+        $openingBalance = $this->optionalAmount($_POST['opening_balance'] ?? null, 'Opening balance');
+        $currentBalance = $this->optionalAmount($_POST['current_balance'] ?? null, 'Current balance');
+        $isDefault = isset($_POST['is_default']) ? 1 : 0;
+        $status = (string)($_POST['status'] ?? 'active');
+
+        if ($bankName === '' || mb_strlen($bankName) > 100
+            || $accountName === '' || mb_strlen($accountName) > 140
+            || $accountNumber === '' || mb_strlen($accountNumber) > 40
+            || mb_strlen($branchName) > 80 || mb_strlen($swiftCode) > 20
+            || !in_array($currency, ['UGX', 'USD', 'EUR', 'KES', 'TZS'], true)
+            || !in_array($status, ['active', 'closed', 'frozen'], true)
+            || ($openingBalance !== null && $openingBalance < 0)
+            || ($currentBalance !== null && $currentBalance < 0)) {
+            $this->respond(false, 'Enter valid bank account details.', 'finance');
+            return;
+        }
+
+        $db->beginTransaction();
+        try {
+            if ($id > 0) {
+                $exists = $db->query(
+                    'SELECT id FROM bank_accounts WHERE id = ? AND school_id = ?',
+                    [$id, $schoolId]
+                )->fetch();
+                if (!$exists) {
+                    throw new DomainException('Bank account not found.');
+                }
+                $db->prepare(
+                    'UPDATE bank_accounts SET bank_name = ?, account_name = ?, account_number = ?,
+                        branch_name = ?, swift_code = ?, currency = ?, opening_balance = ?,
+                        current_balance = ?, status = ?
+                      WHERE id = ? AND school_id = ?'
+                )->execute([
+                    $bankName, $accountName, $accountNumber, $branchName, $swiftCode, $currency,
+                    $openingBalance ?? 0, $currentBalance ?? 0, $status, $id, $schoolId
+                ]);
+                if ($isDefault) {
+                    $db->prepare(
+                        'UPDATE bank_accounts SET is_default = 0 WHERE school_id = ? AND id <> ?'
+                    )->execute([$schoolId, $id]);
+                    $db->prepare(
+                        'UPDATE bank_accounts SET is_default = 1 WHERE id = ? AND school_id = ?'
+                    )->execute([$id, $schoolId]);
+                }
+                audit('finance', 'update_bank_account', 'bank_accounts', $id, 'Updated bank account ' . $accountNumber);
+                $this->respond(true, 'Bank account updated.', 'finance');
+            } else {
+                if ($isDefault) {
+                    $db->prepare('UPDATE bank_accounts SET is_default = 0 WHERE school_id = ?')->execute([$schoolId]);
+                }
+                $db->prepare(
+                    'INSERT INTO bank_accounts
+                        (school_id, bank_name, account_name, account_number, branch_name, swift_code,
+                         currency, opening_balance, current_balance, is_default, status)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                )->execute([
+                    $schoolId, $bankName, $accountName, $accountNumber, $branchName, $swiftCode,
+                    $currency, $openingBalance ?? 0, $currentBalance ?? 0, $isDefault, $status
+                ]);
+                $newId = (int)$db->lastInsertId();
+                audit('finance', 'create_bank_account', 'bank_accounts', $newId, 'Created bank account ' . $accountNumber);
+                $this->respond(true, 'Bank account created.', 'finance');
+            }
+            $db->commit();
+        } catch (Throwable $error) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            $this->respond(false, $error->getMessage(), 'finance');
+        }
+    }
+
+    public function saveBankTransaction(): void
+    {
+        if (!$this->allowed('finance', 'edit')) {
+            return;
+        }
+        $schoolId = school_id();
+        $db = Database::conn();
+
+        $bankAccountId = $this->positiveInt($_POST['bank_account_id'] ?? null, 'Bank account');
+        $account = $db->query(
+            'SELECT id, currency FROM bank_accounts WHERE id = ? AND school_id = ? AND status = \'active\'',
+            [$bankAccountId, $schoolId]
+        )->fetch();
+        if (!$account) {
+            $this->respond(false, 'Choose an active bank account.', 'finance');
+            return;
+        }
+
+        $transactionDate = $this->date($_POST['transaction_date'] ?? null, 'Transaction date');
+        $valueDate = $this->optionalDate($_POST['value_date'] ?? null, 'Value date');
+        $description = $this->text($_POST['description'] ?? '', 'Description', 255);
+        $deposit = $this->optionalAmount($_POST['deposit'] ?? null, 'Deposit');
+        $withdrawal = $this->optionalAmount($_POST['withdrawal'] ?? null, 'Withdrawal');
+        $reference = $this->optionalText($_POST['reference'] ?? '', 80);
+        $source = (string)($_POST['source'] ?? 'manual');
+        $paymentId = $this->optionalInt($_POST['payment_id'] ?? null);
+        $expenseId = $this->optionalInt($_POST['expense_id'] ?? null);
+
+        if ($deposit !== null && $withdrawal !== null) {
+            $this->respond(false, 'Enter either a deposit or a withdrawal, not both.', 'finance');
+            return;
+        }
+        if ($deposit === null && $withdrawal === null) {
+            $this->respond(false, 'Enter a deposit or withdrawal amount.', 'finance');
+            return;
+        }
+        if (!in_array($source, ['manual', 'import', 'system'], true)) {
+            $this->respond(false, 'Invalid source.', 'finance');
+            return;
+        }
+
+        $db->beginTransaction();
+        try {
+            $db->prepare(
+                'INSERT INTO bank_transactions
+                    (bank_account_id, transaction_date, value_date, description, deposit, withdrawal,
+                     reference, source, payment_id, expense_id, created_by)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            )->execute([
+                $bankAccountId, $transactionDate, $valueDate, $description,
+                $deposit ?? 0, $withdrawal ?? 0, $reference, $source, $paymentId, $expenseId,
+                (int)(Auth::user()['id'] ?? 0)
+            ]);
+            $newId = (int)$db->lastInsertId();
+            audit('finance', 'create_bank_transaction', 'bank_transactions', $newId, 'Added bank transaction: ' . $description);
+            $db->commit();
+            $this->respond(true, 'Bank transaction recorded.', 'finance');
+        } catch (Throwable $error) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            $this->respond(false, $error->getMessage(), 'finance');
+        }
+    }
+
+    public function reconcileBank(): void
+    {
+        if (!$this->allowed('finance', 'approve')) {
+            return;
+        }
+        $schoolId = school_id();
+        $db = Database::conn();
+
+        $bankAccountId = $this->positiveInt($_POST['bank_account_id'] ?? null, 'Bank account');
+        $periodStart = $this->date($_POST['period_start'] ?? null, 'Period start');
+        $periodEnd = $this->date($_POST['period_end'] ?? null, 'Period end');
+        $statementBalance = $this->amount($_POST['statement_balance'] ?? null, 'Statement balance');
+        $notes = $this->optionalText($_POST['notes'] ?? null, 1000);
+
+        if ($periodEnd < $periodStart) {
+            $this->respond(false, 'Period end must be on or after period start.', 'finance');
+            return;
+        }
+
+        $db->beginTransaction();
+        try {
+            $existing = $db->query(
+                'SELECT id FROM bank_reconciliations WHERE bank_account_id = ? AND period_start = ? AND period_end = ? AND status <> \'completed\'',
+                [$bankAccountId, $periodStart, $periodEnd]
+            )->fetch();
+            if ($existing) {
+                throw new DomainException('An unreconciled reconciliation already exists for this account and period.');
+            }
+
+            $account = $db->query('SELECT opening_balance, current_balance FROM bank_accounts WHERE id = ?', [$bankAccountId])->fetch();
+            $bookBalance = (float)($account['current_balance'] ?? 0);
+
+            $matchedCount = 0;
+            $unmatchedCount = 0;
+
+            $matchedTxns = $db->query(
+                'SELECT id FROM bank_transactions
+                  WHERE bank_account_id = ? AND is_reconciled = 1
+                    AND transaction_date BETWEEN ? AND ?',
+                [$bankAccountId, $periodStart, $periodEnd]
+            )->fetchAll();
+            $matchedCount = count($matchedTxns);
+
+            $unmatchedTxns = $db->query(
+                'SELECT id FROM bank_transactions
+                  WHERE bank_account_id = ? AND is_reconciled = 0
+                    AND transaction_date BETWEEN ? AND ?',
+                [$bankAccountId, $periodStart, $periodEnd]
+            )->fetchAll();
+            $unmatchedCount = count($unmatchedTxns);
+
+            $difference = round($statementBalance - $bookBalance, 2);
+
+            $db->prepare(
+                'INSERT INTO bank_reconciliations
+                    (bank_account_id, period_start, period_end, statement_balance, book_balance,
+                     difference, unmatched_count, reconciled_by, reconciled_at, status, notes)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), \'completed\', ?)'
+            )->execute([
+                $bankAccountId, $periodStart, $periodEnd, $statementBalance, $bookBalance,
+                $difference, $unmatchedCount, (int)(Auth::user()['id'] ?? 0), $notes
+            ]);
+            $reconId = (int)$db->lastInsertId();
+
+            audit('finance', 'complete_bank_reconciliation', 'bank_reconciliations', $reconId,
+                'Completed bank reconciliation for period ' . $periodStart . ' to ' . $periodEnd,
+                null, ['statement_balance' => $statementBalance, 'book_balance' => $bookBalance, 'difference' => $difference]);
+
+            $db->commit();
+            $this->respond(true, 'Bank reconciliation completed. Difference: ' . number_format($difference, 2) . '.', 'finance');
+        } catch (Throwable $error) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            $this->respond(false, $error->getMessage(), 'finance');
         }
     }
 
@@ -690,7 +982,7 @@ final class FinanceController extends Controller
     {
         $id = (int)($_GET['id'] ?? 0);
         $db = Database::conn();
-        $inv = $db->query(
+        $inv = Database::query(
             'SELECT i.*, s.admission_number, s.first_name, s.last_name, c.name AS class_name
                FROM fee_invoices i
                JOIN students s ON s.id = i.student_id
@@ -701,7 +993,7 @@ final class FinanceController extends Controller
         if (!$inv) {
             $this->respond(false, 'Invoice not found.', 'finance');
         }
-        $items = $db->query(
+        $items = Database::query(
             'SELECT item_name, amount FROM fee_invoice_items WHERE invoice_id = ? ORDER BY sort_order, id',
             [$id]
         );
@@ -714,9 +1006,9 @@ final class FinanceController extends Controller
     {
         $id = (int)($_GET['id'] ?? 0);
         $db = Database::conn();
-        $rec = $db->query(
+        $rec = Database::query(
             'SELECT r.*, s.admission_number, s.first_name, s.last_name,
-                    p.payment_reference, p.channel, p.method_label, p.payer_name, p.payer_phone,
+                    p.payment_reference, p.channel, r.method_label, p.payer_name, p.payer_phone,
                     p.payment_date, p.received_by, p.external_reference,
                     u.full_name AS received_by_name,
                     y.name AS year_name, t.name AS term_name,
@@ -726,7 +1018,7 @@ final class FinanceController extends Controller
                JOIN students s ON s.id = r.student_id
                LEFT JOIN payments p ON p.id = r.payment_id
                LEFT JOIN users u ON u.id = p.received_by
-               LEFT JOIN fee_invoices i ON i.id = r.invoice_id OR i.id = p.invoice_id
+               LEFT JOIN fee_invoices i ON i.id = p.invoice_id
                LEFT JOIN academic_years y ON y.id = i.academic_year_id
                LEFT JOIN terms t ON t.id = i.term_id
               WHERE r.id = ? AND r.school_id = ?',
@@ -746,7 +1038,7 @@ final class FinanceController extends Controller
         $items = [];
         $invoiceId = (int)($rec['invoice_id'] ?? 0);
         if ($invoiceId > 0) {
-            $items = $db->query(
+            $items = Database::query(
                 'SELECT item_name, amount, discount_amount, net_amount, source
                    FROM fee_invoice_items
                   WHERE invoice_id = ?
@@ -754,12 +1046,12 @@ final class FinanceController extends Controller
                 [$invoiceId]
             );
         } elseif ((int)($rec['payment_id'] ?? 0) > 0) {
-            $payment = $db->query(
+            $payment = Database::query(
                 'SELECT invoice_id FROM payments WHERE id = ? AND school_id = ?',
                 [(int)$rec['payment_id'], school_id()]
             )->fetch();
             if ($payment && (int)$payment['invoice_id'] > 0) {
-                $items = $db->query(
+                $items = Database::query(
                     'SELECT item_name, amount, discount_amount, net_amount, source
                        FROM fee_invoice_items
                       WHERE invoice_id = ?
@@ -806,7 +1098,7 @@ final class FinanceController extends Controller
         }
 
         $db = Database::conn();
-        $rec = $db->query(
+        $rec = Database::query(
             'SELECT id, receipt_number, is_void FROM receipts WHERE id = ? AND school_id = ?',
             [$id, $schoolId]
         )->fetch();
@@ -833,7 +1125,7 @@ final class FinanceController extends Controller
         $schoolId = school_id();
 
         $db = Database::conn();
-        $rec = $db->query(
+        $rec = Database::query(
             'SELECT receipt_number, printed_count FROM receipts WHERE id = ? AND school_id = ?',
             [$id, $schoolId]
         )->fetch();
@@ -856,7 +1148,7 @@ final class FinanceController extends Controller
         $schoolId = school_id();
 
         $db = Database::conn();
-        $rec = $db->query(
+        $rec = Database::query(
             'SELECT r.*, s.admission_number, s.first_name, s.last_name,
                     g.email AS guardian_email, g.phone AS guardian_phone
                FROM receipts r
@@ -898,7 +1190,7 @@ final class FinanceController extends Controller
         $schoolId = school_id();
 
         $db = Database::conn();
-        $rec = $db->query(
+        $rec = Database::query(
             'SELECT r.*, s.admission_number, s.first_name, s.last_name,
                     g.phone AS guardian_phone
                FROM receipts r
@@ -935,7 +1227,7 @@ final class FinanceController extends Controller
     {
         $schoolId = school_id();
         $db = Database::conn();
-        $receipts = $db->query(
+        $receipts = Database::query(
             'SELECT r.*, s.admission_number, s.first_name, s.last_name,
                     p.channel, p.payment_date, u.full_name AS received_by_name
                FROM receipts r
@@ -967,7 +1259,7 @@ final class FinanceController extends Controller
         $yearId = (int)($_GET['year_id'] ?? 0);
         $termId = (int)($_GET['term_id'] ?? 0);
         $db = Database::conn();
-        $student = $db->query(
+        $student = Database::query(
             'SELECT s.*, c.name AS class_name, st.name AS stream_name
                FROM students s
                LEFT JOIN classes c ON c.id = s.current_class_id
@@ -979,7 +1271,7 @@ final class FinanceController extends Controller
             $this->respond(false, 'Student not found.', 'finance');
             return;
         }
-        $balances = $db->query(
+        $balances = Database::query(
             'SELECT i.total_amount, i.paid_amount, i.balance,
                     y.name AS year_name, t.name AS term_name
                FROM fee_invoices i
@@ -1017,7 +1309,7 @@ final class FinanceController extends Controller
         $yearId = (int)($_GET['year_id'] ?? 0);
         $termId = (int)($_GET['term_id'] ?? 0);
         $db = Database::conn();
-        $student = $db->query(
+        $student = Database::query(
             'SELECT s.*, c.name AS class_name, st.name AS stream_name
                FROM students s
                LEFT JOIN classes c ON c.id = s.current_class_id
@@ -1029,7 +1321,7 @@ final class FinanceController extends Controller
             $this->respond(false, 'Student not found.', 'finance');
             return;
         }
-        $balances = $db->query(
+        $balances = Database::query(
             'SELECT i.total_amount, i.paid_amount, i.balance, i.due_date,
                     y.name AS year_name, t.name AS term_name
                FROM fee_invoices i

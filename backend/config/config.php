@@ -36,6 +36,7 @@ define('APP_NAME', $_ENV['APP_NAME'] ?? $_SERVER['APP_NAME'] ?? 'SSMS');
 define('APP_TAGLINE', $_ENV['APP_TAGLINE'] ?? $_SERVER['APP_TAGLINE'] ?? 'Secondary School Management System');
 define('APP_TIMEZONE', $_ENV['APP_TIMEZONE'] ?? $_SERVER['APP_TIMEZONE'] ?? 'Africa/Kampala');
 define('APP_URL', rtrim($_ENV['APP_URL'] ?? $_SERVER['APP_URL'] ?? '', '/'));
+define('APP_ENV', strtolower($_ENV['APP_ENV'] ?? $_SERVER['APP_ENV'] ?? 'production'));
 
 define('BASE_URL', rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/'));
 

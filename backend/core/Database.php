@@ -17,4 +17,11 @@ final class Database
         }
         return self::$pdo;
     }
+
+    public static function query(string $sql, array $params = []): PDOStatement
+    {
+        $statement = self::conn()->prepare($sql);
+        $statement->execute($params);
+        return $statement;
+    }
 }

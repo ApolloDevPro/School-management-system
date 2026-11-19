@@ -45,6 +45,7 @@ final class Auth
                 'school_id' => (int)$matched['school_id'],
                 'expires_at' => time() + 600,
             ];
+            $_SESSION['pending_2fa_attempts'] = 0;
             return [true, 'Enter your verification code to continue.', 'two_factor'];
         }
 
@@ -73,11 +74,11 @@ final class Auth
             return false;
         }
         $user = User::find($userId);
-        if (!$user) {
-            unset($_SESSION['pending_2fa']);
+        if (!$user || !(int)$user['is_active']) {
+            unset($_SESSION['pending_2fa'], $_SESSION['pending_2fa_attempts']);
             return false;
         }
-        unset($_SESSION['pending_2fa']);
+        unset($_SESSION['pending_2fa'], $_SESSION['pending_2fa_attempts']);
         self::login($user);
         return true;
     }
@@ -107,6 +108,11 @@ final class Auth
             'username'             => $user['username'],
             'full_name'            => $user['full_name'],
             'user_type'            => $user['user_type'],
+            'email'                => $user['email'] ?? null,
+            'phone'                => $user['phone'] ?? null,
+            'staff_id'             => !empty($user['staff_id']) ? (int)$user['staff_id'] : null,
+            'guardian_id'          => !empty($user['guardian_id']) ? (int)$user['guardian_id'] : null,
+            'student_id'           => !empty($user['student_id']) ? (int)$user['student_id'] : null,
             'role_id'              => $role ? (int)$role['id'] : null,
             'role_name'            => $role['name'] ?? 'No role assigned',
             'role_slug'            => $role['slug'] ?? '',

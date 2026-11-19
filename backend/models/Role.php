@@ -5,9 +5,16 @@ final class Role extends Model
 {
     protected static string $table = 'roles';
 
-    public static function allActive(): array
+    public static function allActive(?int $schoolId = null): array
     {
-        return static::query('SELECT * FROM roles WHERE is_active = 1 ORDER BY name');
+        $sql = 'SELECT * FROM roles WHERE is_active = 1';
+        $params = [];
+        if ($schoolId !== null) {
+            $sql .= ' AND school_id = ?';
+            $params[] = $schoolId;
+        }
+        $sql .= ' ORDER BY name';
+        return static::query($sql, $params);
     }
 
     public static function findBySlug(string $slug, ?int $schoolId = null): ?array

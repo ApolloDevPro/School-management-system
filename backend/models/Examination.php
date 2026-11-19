@@ -465,6 +465,13 @@ final class Examination extends Model
         }
 
         if ($ignoreScheduleId !== null) {
+            $sql .= ' AND es.id <> ?';
+            $params[] = $ignoreScheduleId;
+        }
+        $sql .= ' ORDER BY es.start_time';
+
+        return static::query($sql, $params);
+    }
 
     // ========================================================================
     // Check if all marks are entered for an exam
@@ -517,11 +524,6 @@ final class Examination extends Model
 
         return $result;
     }
-            $sql .= ' AND es.id <> ?';
-            $params[] = $ignoreScheduleId;
-        }
-
-        $sql .= ' ORDER BY es.start_time';
 
     // ========================================================================
     // Class statistics for an exam
@@ -599,6 +601,21 @@ final class Examination extends Model
                 $subjectStats['count'] = $count;
             }
 
+            $stats['subjects'][] = $subjectStats;
+        }
+
+        if (count($stats['subjects']) > 0) {
+            $allAvgs = array_column($stats['subjects'], 'average');
+            $allAvgs = array_filter($allAvgs, fn($v) => $v > 0);
+            if (!empty($allAvgs)) {
+                $stats['class_average'] = round(array_sum($allAvgs) / count($allAvgs), 2);
+            }
+            $totalPassed = array_sum(array_column($stats['subjects'], 'pass_rate'));
+            $stats['pass_rate'] = count($stats['subjects']) > 0 ? round($totalPassed / count($stats['subjects']), 2) : 0.0;
+        }
+
+        return $stats;
+    }
 
     // ========================================================================
     // Get results for a student in an exam
@@ -639,25 +656,6 @@ final class Examination extends Model
             'exam' => $exam,
             'results' => $results,
         ];
-    }
-}
-            $stats['subjects'][] = $subjectStats;
-        }
-
-        if (count($stats['subjects']) > 0) {
-            $allAvgs = array_column($stats['subjects'], 'average');
-            $allAvgs = array_filter($allAvgs, fn($v) => $v > 0);
-            if (!empty($allAvgs)) {
-                $stats['class_average'] = round(array_sum($allAvgs) / count($allAvgs), 2);
-            }
-            $totalPassed = array_sum(array_column($stats['subjects'], 'pass_rate'));
-            $stats['pass_rate'] = count($stats['subjects']) > 0 ? round($totalPassed / count($stats['subjects']), 2) : 0.0;
-        }
-
-        return $stats;
-    }
-
-        return static::query($sql, $params);
     }
 
     // ========================================================================
@@ -799,3 +797,4 @@ final class Examination extends Model
             throw $error;
         }
     }
+}
