@@ -254,7 +254,7 @@ final class ReportCardController extends Controller
     private function renderPdfHtml(array $card): string
     {
         return '<!doctype html><html><head><meta charset="utf-8"><title>Report Card</title>'
-            . PdfService::CSS
+            . '<style>' . PdfService::CSS . '</style>'
             . '</head><body>'
             . $this->renderCardHtml($card)
             . '</body></html>';
@@ -265,7 +265,7 @@ final class ReportCardController extends Controller
         $back = url('report_cards', ['class_id' => $classId, 'stream_id' => $streamId, 'exam_id' => (int)$exam['id']]);
 
         $html = '<!doctype html><html><head><meta charset="utf-8"><title>Report Cards - ' . e((string)$exam['name']) . '</title>'
-            . PdfService::CSS
+            . '<style>' . PdfService::CSS . '</style>'
             . '<style>
                 body { background: #eef2f7; }
                 .print-toolbar { position: sticky; top: 0; z-index: 20; background: #1e3a8a; color: #ffffff;

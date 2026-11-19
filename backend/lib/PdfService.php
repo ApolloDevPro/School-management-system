@@ -56,11 +56,13 @@ final class PdfService
 
     public static function output(string $html, string $filename = 'document.pdf', bool $download = true): void
     {
+        $safeName = self::safeFilename($filename);
+
         $pdf = self::renderDompdf($html);
         if ($pdf !== null) {
             if ($download) {
                 header('Content-Type: application/pdf');
-                header('Content-Disposition: attachment; filename="'.basename($filename).'"');
+                header('Content-Disposition: attachment; filename="'.$safeName.'"');
                 header('Cache-Control: no-cache');
             }
             echo $pdf;
@@ -69,7 +71,7 @@ final class PdfService
 
         if ($download) {
             header('Content-Type: text/html; charset=utf-8');
-            header('Content-Disposition: attachment; filename="'.basename($filename, '.pdf').'.html"');
+            header('Content-Disposition: attachment; filename="'.substr($safeName, 0, -4).'.html"');
             header('Cache-Control: no-cache');
         }
         echo '<!doctype html><html><head><meta charset="utf-8"><title>'.e($filename).'</title>'
@@ -82,6 +84,24 @@ final class PdfService
             .'<p><strong>Filename:</strong> '.e($filename).'</p>'
             .'<p>To preview the formatted document now, open this page in your browser and press Ctrl+P (Print to PDF).</p>'
             .'</div></body></html>';
+    }
+
+    /**
+     * Keep download names readable while removing path separators, spaces and
+     * other characters that browsers or file systems dislike.
+     */
+    private static function safeFilename(string $filename): string
+    {
+        $name = str_replace(['\\', '/', '"', "'", "\r", "\n"], '-', trim($filename));
+        $name = preg_replace('/[^A-Za-z0-9._-]+/', '-', $name) ?? 'document.pdf';
+        $name = trim(preg_replace('/-+/', '-', $name) ?? $name, '.-');
+        if ($name === '') {
+            $name = 'document.pdf';
+        }
+        if (!str_ends_with(strtolower($name), '.pdf')) {
+            $name .= '.pdf';
+        }
+        return $name;
     }
 
     private static function renderDompdf(string $html): ?string
@@ -98,13 +118,22 @@ final class PdfService
         if ($autoload === null) {
             return null;
         }
-        require $autoload;
+        require_once $autoload;
 
         if (!class_exists(\Dompdf\Dompdf::class)) {
             return null;
         }
 
-        $dompdf = new \Dompdf\Dompdf();
+        // Uploads such as the school logo use paths relative to the project
+        // root, so point Dompdf at that folder for local image lookups.
+        $projectRoot = dirname(__DIR__, 2);
+        $options = new \Dompdf\Options();
+        $options->setChroot($projectRoot);
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('isRemoteEnabled', false);
+
+        $dompdf = new \Dompdf\Dompdf($options);
+        $dompdf->setBasePath($projectRoot . DIRECTORY_SEPARATOR);
         $dompdf->loadHtml($html);
         $dompdf->setPaper('A4', 'portrait');
         $dompdf->render();
@@ -507,6 +536,154 @@ final class PdfService
         </div>';
 
         return self::html('Result Slip', $body, ['footer' => 'Result Slip &middot; '.e($school['name'] ?? '')]);
+    }
+
+    public static function transcriptHtml(array $student, array $exam, array $results, array $school, ?array $summary = null): string
+    {
+        $rows = '';
+        $total = 0.0;
+        $count = 0;
+        foreach ($results as $r) {
+            $pct = (float)($r['weighted_percent'] ?? $r['percentage'] ?? $r['mark_percent'] ?? 0);
+            $total += $pct;
+            $count++;
+            $rows .= '<tr>'
+                .'<td style="width:28%">'.e($r['subject_name'] ?? '-').'</td>'
+                .'<td style="width:10%">'.e($r['subject_code'] ?? '-').'</td>'
+                .'<td class="text-center" style="width:8%">'.e($r['subject_level'] ?? '-').'</td>'
+                .'<td class="text-center" style="width:10%">'.($r['ca_mark'] !== null ? number_format((float)$r['ca_mark'],1) : '—').'</td>'
+                .'<td class="text-center" style="width:10%">'.($r['exam_mark'] !== null ? number_format((float)$r['exam_mark'],1) : '—').'</td>'
+                .'<td class="text-right" style="width:10%">'.number_format($pct,1).'%</td>'
+                .'<td class="text-center" style="width:8%"><strong>'.e($r['grade_code'] ?? '-').'</strong></td>'
+                .'<td style="width:16%">'.e($r['grade_name'] ?? '-').'</td>'
+                .'</tr>';
+        }
+        if ($rows === '') {
+            $rows = '<tr><td colspan="8" class="text-center text-muted">No results recorded for this examination.</td></tr>';
+        }
+        $average = $count > 0 ? round($total / $count, 1) : 0.0;
+
+        $summaryBlock = '';
+        if ($summary) {
+            $summaryBlock = '<div class="stat-row">
+                <div class="stat-col"><div class="stat-label">Subjects taken</div><div class="stat-value">'.(int)($summary['subjects_taken'] ?? $count).'</div></div>
+                <div class="stat-col"><div class="stat-label">Subjects passed</div><div class="stat-value">'.(int)($summary['subjects_passed'] ?? 0).'</div></div>
+                <div class="stat-col"><div class="stat-label">Average</div><div class="stat-value">'.number_format((float)($summary['average_percent'] ?? $average), 1).'%</div></div>
+                <div class="stat-col"><div class="stat-label">Total points</div><div class="stat-value">'.($summary['total_points'] !== null ? number_format((float)$summary['total_points'], 1) : '—').'</div></div>
+            </div>';
+        }
+
+        $body = '
+        <div style="font-size:13pt;font-weight:700;color:#1e3a8a;text-align:center;margin:16px 0;letter-spacing:2px;">ACADEMIC TRANSCRIPT</div>
+
+        <table class="pdf-table" style="margin-top:0;">
+          <tbody>
+            <tr><td style="width:26%"><strong>Student:</strong></td><td>'.e(trim(($student['first_name'] ?? '').' '.($student['last_name'] ?? ''))).'</td>
+                <td style="width:20%"><strong>Admission No.:</strong></td><td>'.e($student['admission_number'] ?? '-').'</td></tr>
+            <tr><td><strong>Class / Stream:</strong></td><td>'.e($student['class_name'] ?? '-').' / '.e($student['stream_name'] ?? '-').'</td>
+                <td><strong>Examination:</strong></td><td>'.e($exam['name'] ?? '-').'</td></tr>
+            <tr><td><strong>Academic Year:</strong></td><td>'.e($exam['year_name'] ?? '-').'</td>
+                <td><strong>Term:</strong></td><td>'.e($exam['term_name'] ?? '-').'</td></tr>
+          </tbody>
+        </table>
+
+        '.$summaryBlock.'
+
+        <table class="pdf-table">
+          <thead>
+            <tr>
+              <th>Subject</th><th>Code</th><th class="text-center">Level</th>
+              <th class="text-center">CA</th><th class="text-center">Exam</th>
+              <th class="text-right">Total %</th><th class="text-center">Grade</th>
+              <th>Grade Name</th>
+            </tr>
+          </thead>
+          <tbody>'.$rows.'</tbody>
+        </table>
+
+        <div style="margin-top:16px;border-top:2px solid #1e3a8a;padding-top:10px;font-size:8pt;color:#6b7280;display:flex;justify-content:space-between;">
+          <div>Class Teacher: ____________________</div>
+          <div>Head Teacher: ____________________</div>
+          <div>Date: '.date('d M Y').'</div>
+        </div>
+        <div class="text-muted" style="margin-top:8px;">This transcript reflects results recorded in the school system as at '.date('d M Y').'.</div>';
+
+        return self::html('Academic Transcript', $body, ['footer' => 'Academic Transcript &middot; '.e($school['name'] ?? '')]);
+    }
+
+    public static function certificateEligibilityHtml(
+        array $student,
+        array $exam,
+        array $results,
+        array $school,
+        bool $eligible,
+        string $resultCode,
+        string $reason,
+        ?array $summary = null
+    ): string {
+        $rows = '';
+        foreach ($results as $r) {
+            $pct = (float)($r['weighted_percent'] ?? $r['percentage'] ?? 0);
+            $rows .= '<tr>'
+                .'<td>'.e($r['subject_name'] ?? '-').'</td>'
+                .'<td>'.e($r['subject_code'] ?? '-').'</td>'
+                .'<td class="text-center"><strong>'.e($r['grade_code'] ?? '-').'</strong></td>'
+                .'<td>'.e($r['grade_name'] ?? '-').'</td>'
+                .'<td class="text-right">'.number_format($pct, 1).'%</td>'
+                .'</tr>';
+        }
+        if ($rows === '') {
+            $rows = '<tr><td colspan="5" class="text-center text-muted">No results recorded for this examination.</td></tr>';
+        }
+
+        $summaryBlock = '';
+        if ($summary) {
+            $summaryBlock = '<div class="stat-row">
+                <div class="stat-col"><div class="stat-label">Subjects taken</div><div class="stat-value">'.(int)($summary['subjects_taken'] ?? 0).'</div></div>
+                <div class="stat-col"><div class="stat-label">Subjects passed</div><div class="stat-value">'.(int)($summary['subjects_passed'] ?? 0).'</div></div>
+                <div class="stat-col"><div class="stat-label">Average</div><div class="stat-value">'.number_format((float)($summary['average_percent'] ?? 0), 1).'%</div></div>
+            </div>';
+        }
+
+        $colour = $eligible ? '#166534' : '#92400e';
+        $background = $eligible ? '#f0fdf4' : '#fffbeb';
+        $border = $eligible ? '#bbf7d0' : '#fde68a';
+
+        $body = '
+        <div style="font-size:13pt;font-weight:700;color:#1e3a8a;text-align:center;margin:16px 0;letter-spacing:2px;">UCE CERTIFICATE ELIGIBILITY</div>
+
+        <table class="pdf-table" style="margin-top:0;">
+          <tbody>
+            <tr><td style="width:26%"><strong>Student:</strong></td><td>'.e(trim(($student['first_name'] ?? '').' '.($student['last_name'] ?? ''))).'</td>
+                <td style="width:20%"><strong>Admission No.:</strong></td><td>'.e($student['admission_number'] ?? '-').'</td></tr>
+            <tr><td><strong>Class / Stream:</strong></td><td>'.e($student['class_name'] ?? '-').' / '.e($student['stream_name'] ?? '-').'</td>
+                <td><strong>Examination:</strong></td><td>'.e($exam['name'] ?? '-').'</td></tr>
+          </tbody>
+        </table>
+
+        <div style="border:1px solid '.$border.';background:'.$background.';border-radius:6px;padding:10px 12px;margin:12px 0;color:'.$colour.';">
+          <div style="font-size:11pt;font-weight:700;">Result code: '.e($resultCode).'</div>
+          <div style="font-size:9pt;margin-top:3px;">'.e($reason).'</div>
+        </div>
+
+        '.$summaryBlock.'
+
+        <table class="pdf-table">
+          <thead>
+            <tr><th style="width:40%">Subject</th><th style="width:14%">Code</th>
+                <th class="text-center" style="width:12%">Grade</th>
+                <th style="width:20%">Grade Name</th><th class="text-right" style="width:14%">%</th></tr>
+          </thead>
+          <tbody>'.$rows.'</tbody>
+        </table>
+
+        <div class="text-muted" style="margin-top:12px;">UNEB\'s own result remains the official record. Fee clearance is advisory and never blocks national examinations.</div>
+        <div style="margin-top:20px;border-top:2px solid #1e3a8a;padding-top:10px;font-size:8pt;color:#6b7280;display:flex;justify-content:space-between;">
+          <div>Head Teacher: ____________________</div>
+          <div>Date: '.date('d M Y').'</div>
+        </div>';
+
+        return self::html('UCE Certificate Eligibility', $body, ['footer' => 'Certificate Eligibility &middot; '.e($school['name'] ?? '')]);
     }
 
     // ========================================================================

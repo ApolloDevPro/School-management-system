@@ -97,6 +97,7 @@
         </div>
         <div class="modal-body">
           <input type="hidden" name="id" value="0">
+          <div class="form-section"><i class="bi bi-card-text"></i> Task details</div>
           <div class="mb-3">
             <label class="form-label">Task name</label>
             <input class="form-control" name="name" required maxlength="140" placeholder="e.g. Fee reminder">
@@ -110,6 +111,7 @@
             <input class="form-control" name="handler_class" required maxlength="160" placeholder="e.g. FeeReminderJob">
             <div class="form-text">The PHP class that implements the task logic.</div>
           </div>
+          <div class="form-section"><i class="bi bi-gear"></i> Schedule</div>
           <div class="mb-3">
             <label class="form-label">Handler method</label>
             <input class="form-control" name="handler_method" value="run" maxlength="60" placeholder="run">

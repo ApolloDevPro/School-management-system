@@ -1171,13 +1171,5 @@ button:focus-visible,
   .app-card, .card { border: 1px solid #cbd5e1 !important; box-shadow: none !important; }
 }
 
-/* Mark required fields once, unless the view already prints a red asterisk. */
-.form-label:not(:has(.text-danger)):has(+ input[required])::after,
-.form-label:not(:has(.text-danger)):has(+ select[required])::after,
-.form-label:not(:has(.text-danger)):has(+ textarea[required])::after,
-.form-label:not(:has(.text-danger)):has(+ .input-group input[required])::after,
-.form-label:not(:has(.text-danger)):has(+ .input-group select[required])::after {
-  content: " *";
-  color: #dc2626;
-  font-weight: 700;
-}
+/* Required-field markers are applied by the shared form script and styled in
+   css/forms.css, so every label is marked exactly once. */

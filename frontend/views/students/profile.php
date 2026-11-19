@@ -323,6 +323,7 @@
                 <div class="mt-2"><img src="<?= e(asset($student['photo_path'])) ?>" alt="Current photo" class="rounded border" style="width:72px;height:72px;object-fit:cover;"></div>
               <?php endif; ?>
             </div>
+            <div class="form-section"><i class="bi bi-person-vcard"></i> Personal details</div>
             <div class="col-md-3">
               <label class="form-label" for="e_admission">Admission no.</label>
               <input class="form-control" id="e_admission" name="admission_number" maxlength="40" value="<?= e($student['admission_number']) ?>" required>
@@ -377,6 +378,7 @@
 <?php endforeach; ?>
               </select>
             </div>
+            <div class="form-section"><i class="bi bi-mortarboard"></i> Background</div>
             <div class="col-md-4">
               <label class="form-label" for="e_religion">Religion</label>
               <input class="form-control" id="e_religion" name="religion" maxlength="60" value="<?= e($student['religion'] ?? '') ?>">

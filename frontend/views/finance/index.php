@@ -23,6 +23,7 @@
 <?php else: ?>
         <form method="post" action="<?= url('finance/store-invoice') ?>">
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-person-vcard"></i> Student and period</div>
           <div class="mb-3">
             <label class="form-label" for="invoice_student">Student</label>
             <select class="form-select" id="invoice_student" name="student_id" required>
@@ -51,10 +52,12 @@
               </select>
             </div>
           </div>
+          <div class="form-section"><i class="bi bi-cash-coin"></i> Charge</div>
           <div class="mb-3">
             <label class="form-label" for="invoice_item">Fee item</label>
             <input class="form-control" id="invoice_item" name="item_name" maxlength="140" required placeholder="e.g. Term tuition">
           </div>
+          <div class="form-section"><i class="bi bi-calendar-range"></i> Dates and notes</div>
           <div class="row g-3 mb-3">
             <div class="col-md-4">
               <label class="form-label" for="invoice_amount">Amount (UGX)</label>
@@ -90,6 +93,7 @@
 <?php else: ?>
         <form method="post" action="<?= url('finance/record-payment') ?>">
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-receipt"></i> Invoice</div>
           <div class="mb-3">
             <label class="form-label" for="payment_invoice">Invoice</label>
             <select class="form-select" id="payment_invoice" name="invoice_id" required>
@@ -98,6 +102,7 @@
 <?php endforeach; ?>
             </select>
           </div>
+          <div class="form-section"><i class="bi bi-wallet2"></i> Payment</div>
           <div class="row g-3 mb-3">
             <div class="col-md-4">
               <label class="form-label" for="payment_amount">Amount (UGX)</label>
@@ -117,6 +122,7 @@
               </select>
             </div>
           </div>
+          <div class="form-section"><i class="bi bi-person-lines-fill"></i> Payer and reference</div>
           <div class="row g-3 mb-3">
             <div class="col-md-4">
               <label class="form-label" for="payment_channel">Channel if no method selected</label>
@@ -630,6 +636,7 @@ if ($balanceYearId !== null) {
 <?php else: ?>
         <form method="post" action="<?= url('finance/clearances/save') ?>" data-ajax>
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-person-vcard"></i> Student and period</div>
           <div class="mb-2">
             <label class="form-label">Student <span class="text-danger">*</span></label>
             <select class="form-select" name="student_id" required>
@@ -661,6 +668,7 @@ if ($balanceYearId !== null) {
               <span class="invalid-feedback d-block" data-error-for="term_id"></span>
             </div>
           </div>
+          <div class="form-section"><i class="bi bi-clipboard-check"></i> Decision</div>
           <div class="row g-2 mb-2">
             <div class="col">
               <label class="form-label">Clearance type <span class="text-danger">*</span></label>
@@ -684,6 +692,7 @@ if ($balanceYearId !== null) {
               <span class="invalid-feedback d-block" data-error-for="status"></span>
             </div>
           </div>
+          <div class="form-section"><i class="bi bi-chat-left-text"></i> Notes</div>
           <div class="mb-2">
             <label class="form-label">Reason / note</label>
             <input class="form-control" name="reason" maxlength="255">
@@ -774,6 +783,7 @@ if ($balanceYearId !== null) {
 <?php else: ?>
         <form method="post" action="<?= url('finance/reminders/send') ?>" data-ajax>
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-person-vcard"></i> Recipient</div>
           <div class="mb-2">
             <label class="form-label">Student <span class="text-danger">*</span></label>
             <select class="form-select" name="student_id" required>
@@ -805,6 +815,7 @@ if ($balanceYearId !== null) {
               <span class="invalid-feedback d-block" data-error-for="term_id"></span>
             </div>
           </div>
+          <div class="form-section"><i class="bi bi-envelope-paper"></i> Reminder</div>
           <div class="mb-2">
             <label class="form-label">Against invoice (optional)</label>
             <select class="form-select" name="invoice_id">

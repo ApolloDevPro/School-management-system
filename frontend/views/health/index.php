@@ -8,6 +8,7 @@
       <div class="card-body">
         <form method="post" action="<?= url('health/medical/save') ?>">
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-person-vcard"></i> Learner profile</div>
           <div class="mb-3"><label class="form-label">Student</label><select class="form-select" name="student_id" required><option value="">Choose…</option>
 <?php foreach ($students as $student): ?><option value="<?= (int)$student['id'] ?>"><?= e($student['admission_number'] . ' — ' . $student['last_name'] . ' ' . $student['first_name']) ?></option><?php endforeach; ?>
           </select></div>
@@ -15,10 +16,12 @@
           <div class="mb-3"><label class="form-label">Allergies</label><textarea class="form-control" name="allergies" rows="2" maxlength="10000"></textarea></div>
           <div class="mb-3"><label class="form-label">Chronic conditions</label><textarea class="form-control" name="chronic_conditions" rows="2" maxlength="10000"></textarea></div>
           <div class="mb-3"><label class="form-label">Current medication</label><textarea class="form-control" name="current_medication" rows="2" maxlength="10000"></textarea></div>
+          <div class="form-section"><i class="bi bi-heart-pulse"></i> Conditions</div>
           <div class="row g-2">
             <div class="col-5"><label class="form-label">Disability status</label><select class="form-select" name="disability_status"><?php foreach (['none','physical','visual','hearing','intellectual','multiple'] as $value): ?><option value="<?= $value ?>"><?= e(ucfirst($value)) ?></option><?php endforeach; ?></select></div>
             <div class="col"><label class="form-label">Disability notes</label><input class="form-control" name="disability_notes" maxlength="255"></div>
           </div>
+          <div class="form-section"><i class="bi bi-shield-lock"></i> Access control</div>
           <div class="mt-3"><label class="form-label">Restricted note</label><textarea class="form-control" name="restricted_note" rows="2" maxlength="10000"></textarea></div>
           <div class="form-check my-3"><input class="form-check-input" type="checkbox" name="is_confidential" id="health_confidential" checked><label class="form-check-label" for="health_confidential">Mark profile confidential</label></div>
           <button class="btn btn-primary">Save medical profile</button>
@@ -54,10 +57,12 @@
     <div class="card app-card"><div class="card-header">Record sickbay visit</div><div class="card-body">
       <form method="post" action="<?= url('health/sickbay/record') ?>">
         <?= csrf_field() ?>
+        <div class="form-section"><i class="bi bi-clipboard-heart"></i> Visit details</div>
         <div class="mb-2"><label class="form-label">Student</label><select class="form-select" name="student_id" required><option value="">Choose…</option><?php foreach ($students as $student): ?><option value="<?= (int)$student['id'] ?>"><?= e($student['admission_number'] . ' — ' . $student['last_name'] . ' ' . $student['first_name']) ?></option><?php endforeach; ?></select></div>
         <div class="row g-2"><div class="col"><label class="form-label">Date</label><input class="form-control" type="date" name="visit_date" value="<?= date('Y-m-d') ?>" required></div><div class="col"><label class="form-label">Time in</label><input class="form-control" type="time" name="time_in" value="<?= date('H:i') ?>" required></div></div>
         <div class="mt-2"><label class="form-label">Symptoms</label><textarea class="form-control" name="symptoms" rows="2" maxlength="20000"></textarea></div>
         <div class="row g-2 mt-1"><div class="col"><label class="form-label">Temperature °C</label><input class="form-control" type="number" step="0.1" min="25" max="50" name="temperature_c"></div><div class="col"><label class="form-label">Diagnosis</label><input class="form-control" name="diagnosis" maxlength="500"></div></div>
+        <div class="form-section"><i class="bi bi-bandaid"></i> Treatment</div>
         <div class="mt-2"><label class="form-label">Treatment given</label><textarea class="form-control" name="treatment_given" rows="2" maxlength="20000"></textarea></div>
         <div class="row g-2 mt-1"><div class="col"><label class="form-label">Referral</label><select class="form-select" name="referred_to"><?php foreach (['none','hospital','specialist','parent','clinic'] as $value): ?><option value="<?= $value ?>"><?= e(ucfirst($value)) ?></option><?php endforeach; ?></select></div><div class="col"><label class="form-label">Visit status</label><select class="form-select" name="status"><?php foreach (['in_progress','discharged','referred','admitted'] as $value): ?><option value="<?= $value ?>" <?= $value === 'discharged' ? 'selected' : '' ?>><?= e(str_replace('_', ' ', ucfirst($value))) ?></option><?php endforeach; ?></select></div></div>
         <div class="form-check my-3"><input class="form-check-input" type="checkbox" name="parent_informed" id="health_parent"><label class="form-check-label" for="health_parent">Parent informed</label></div>

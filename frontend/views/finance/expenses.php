@@ -56,6 +56,7 @@ $canDelete = $canDelete ?? false;
             </tbody>
           </table>
 <?php endif; ?>
+        </div>
       </div>
     </div>
   </div>
@@ -72,6 +73,7 @@ $canDelete = $canDelete ?? false;
         <?= csrf_field() ?>
         <input type="hidden" name="id" id="expense_id" value="">
         <div class="modal-body">
+          <div class="form-section"><i class="bi bi-journal-text"></i> Account and department</div>
           <div class="row g-3">
             <div class="col-md-4">
               <label class="form-label" for="exp_voucher">Voucher Number</label>
@@ -104,6 +106,9 @@ $canDelete = $canDelete ?? false;
                 <?php endforeach; ?>
               </select>
             </div>
+          </div>
+          <div class="form-section"><i class="bi bi-cash-stack"></i> Amount and payee</div>
+          <div class="row g-3">
             <div class="col-md-4">
               <label class="form-label" for="exp_date">Expense Date <span class="text-danger">*</span></label>
               <input class="form-control" id="exp_date" name="expense_date" type="date" value="<?= date('Y-m-d') ?>" required>
@@ -120,6 +125,9 @@ $canDelete = $canDelete ?? false;
               <label class="form-label" for="exp_amount">Amount (UGX) <span class="text-danger">*</span></label>
               <input class="form-control" id="exp_amount" name="amount" type="number" min="0.01" step="0.01" required>
             </div>
+          </div>
+          <div class="form-section"><i class="bi bi-tags"></i> Category and payment</div>
+          <div class="row g-3">
             <div class="col-md-4">
               <label class="form-label" for="exp_category">Category</label>
               <select class="form-select" id="exp_category" name="category">

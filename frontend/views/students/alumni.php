@@ -64,6 +64,7 @@
 
         <form method="post" action="<?= url('students/alumni/store') ?>">
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-mortarboard"></i> Student record</div>
           <div class="mb-3">
             <label class="form-label" for="al_student">Student (completed / graduated)</label>
             <select class="form-select" id="al_student" name="student_id" required>
@@ -86,6 +87,7 @@
               </select>
             </div>
           </div>
+          <div class="form-section"><i class="bi bi-telephone"></i> Contact</div>
           <div class="row g-3 mb-3">
             <div class="col-6">
               <label class="form-label" for="al_phone">Phone</label>
@@ -96,6 +98,7 @@
               <input class="form-control" id="al_email" name="email" type="email">
             </div>
           </div>
+          <div class="form-section"><i class="bi bi-briefcase"></i> Background</div>
           <div class="mb-3">
             <label class="form-label" for="al_occupation">Occupation</label>
             <input class="form-control" id="al_occupation" name="occupation">

@@ -15,6 +15,7 @@
 <?php else: ?>
         <form method="post" action="<?= url('promotions/store') ?>">
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-calendar-range"></i> Batch details</div>
           <div class="mb-3">
             <label class="form-label" for="p_name">Batch name</label>
             <input class="form-control" id="p_name" name="name" maxlength="120" placeholder="End of 2026 promotion" required>
@@ -35,6 +36,7 @@
 <?php endforeach; ?>
             </select>
           </div>
+          <div class="form-section"><i class="bi bi-clipboard-check"></i> Promotion rules</div>
           <div class="mb-3">
             <label class="form-label" for="p_rules">Promotion rules / criteria</label>
             <textarea class="form-control" id="p_rules" name="promotion_rules" rows="2" placeholder="e.g. Passed at least 6 subjects"></textarea>

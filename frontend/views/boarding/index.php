@@ -14,6 +14,7 @@
       <div class="card-body">
         <form method="post" action="<?= url('boarding/register') ?>" data-ajax>
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-person-vcard"></i> Student details</div>
           <div class="mb-2">
             <label class="form-label">Student <span class="text-danger">*</span></label>
             <select class="form-select" name="student_id" required>
@@ -24,6 +25,7 @@
             </select>
             <span class="invalid-feedback d-block" data-error-for="student_id"></span>
           </div>
+          <div class="form-section"><i class="bi bi-door-open"></i> Placement</div>
           <div class="row g-2 mb-2">
             <div class="col">
               <label class="form-label">Academic year <span class="text-danger">*</span></label>

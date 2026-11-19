@@ -183,11 +183,12 @@ final class ReportsController extends Controller
         }
 
         return '<!doctype html><html><head><meta charset="utf-8"><title>'.e($title).'</title>'
-            . PdfService::CSS
+            . '<style>'.PdfService::CSS.'</style>'
             . '</head><body>'
             . '<div class="pdf-header">'
+            . '<div style="display:flex;align-items:center;gap:10px">'.$logo
             . '<div><div class="pdf-title">'.e($school['name'] ?? APP_NAME).' — '.e($title).'</div>'
-            . '<div class="pdf-sub">'.e(date('d M Y')).' &middot; Period: '.e($dateFrom).' to '.e($dateTo).'</div></div>'
+            . '<div class="pdf-sub">'.e(date('d M Y')).' &middot; Period: '.e($dateFrom).' to '.e($dateTo).'</div></div></div>'
             . '<div class="school-info">'.e($school['name'] ?? '').'<br>'.e($school['physical_address'] ?? '').'<br>'.e($school['phone'] ?? '').' &middot; '.e($school['email'] ?? '').'</div>'
             . '</div>'
             . ($body ? '<table class="pdf-table" style="margin-top:16px">'.$head.$body.'</table>' : '<p style="margin-top:24px;color:#64748b">No data available for the selected period.</p>')

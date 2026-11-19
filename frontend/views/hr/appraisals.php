@@ -58,6 +58,7 @@
         </div>
         <div class="modal-body">
           <input type="hidden" name="id" value="0">
+          <div class="form-section"><i class="bi bi-person-badge"></i> Staff and period</div>
           <div class="row g-3">
             <div class="col-md-4">
               <label class="form-label">Staff member</label>
@@ -108,6 +109,7 @@
               <input class="form-control" type="date" name="appraisal_date">
             </div>
           </div>
+          <div class="form-section"><i class="bi bi-journal-check"></i> Assessment</div>
           <div class="mb-3">
             <label class="form-label">Assessment criteria (key = value)</label>
             <div id="criteriaRows" class="row g-2">
@@ -137,6 +139,7 @@
     </div>
   </div>
 </div>
+<?php endif; ?>
 
 <script>
   function addCriteriaRow() {
@@ -146,7 +149,7 @@
     row.innerHTML = `
       <div class="col-md-6"><input class="form-control" name="criteria[]" placeholder="Criterion"></div>
       <div class="col-md-5"><input class="form-control" name="criteria[]" placeholder="Rating / comment"></div>
-      <div class="col-md-1 d-flex align-items-end"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.row.g-2.mb-2).remove()"><i class="bi bi-trash"></i></button></div>
+      <div class="col-md-1 d-flex align-items-end"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.row.g-2.mb-2').remove()"><i class="bi bi-trash"></i></button></div>
     `;
     container.appendChild(row);
   }

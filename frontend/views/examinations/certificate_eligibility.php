@@ -70,8 +70,9 @@
     </div>
     <?php endif; ?>
 
-    <div class="mt-3">
+    <div class="mt-3 d-flex flex-wrap gap-2">
       <a class="btn btn-primary" href="<?= url('examinations/transcript', ['student_id' => (int)$student['id'], 'exam_id' => (int)$exam['id']]) ?>"><i class="bi bi-file-earmark-text"></i> View transcript</a>
+      <a class="btn btn-outline-danger" href="<?= url('examinations/certificate-eligibility', ['student_id' => (int)$student['id'], 'exam_id' => (int)$exam['id'], 'format' => 'pdf']) ?>"><i class="bi bi-download"></i> Download eligibility PDF</a>
     </div>
   </div>
 </div>

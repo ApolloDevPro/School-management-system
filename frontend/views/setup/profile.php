@@ -12,6 +12,7 @@
 <?php endif; ?>
     <form method="post" action="<?= url('setup/profile') ?>" enctype="multipart/form-data">
       <?= csrf_field() ?>
+      <div class="form-section"><i class="bi bi-building"></i> School identity</div>
       <div class="row g-3">
         <div class="col-lg-8">
           <div class="row g-3">
@@ -67,6 +68,7 @@
         </div>
 
         <div class="col-lg-4">
+          <div class="form-section"><i class="bi bi-file-earmark-text"></i> Registration and logo</div>
           <div class="row g-3">
             <div class="col-md-6 col-lg-12">
               <label class="form-label" for="p_reg">Registration number</label>

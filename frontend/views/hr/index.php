@@ -11,12 +11,14 @@
       <div class="card-body">
         <form method="post" action="<?= url('hr/staff/store') ?>">
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-person-badge"></i> Staff identity</div>
           <div class="mb-2"><label class="form-label">Staff number</label><input class="form-control" name="staff_number" maxlength="40" required></div>
           <div class="row g-2">
             <div class="col"><label class="form-label">First name</label><input class="form-control" name="first_name" maxlength="60" required></div>
             <div class="col"><label class="form-label">Last name</label><input class="form-control" name="last_name" maxlength="60" required></div>
           </div>
           <div class="mb-2 mt-2"><label class="form-label">Middle name</label><input class="form-control" name="middle_name" maxlength="60"></div>
+          <div class="form-section"><i class="bi bi-envelope"></i> Contact and role</div>
           <div class="row g-2">
             <div class="col"><label class="form-label">Position</label><input class="form-control" name="position" maxlength="120"></div>
             <div class="col"><label class="form-label">Phone</label><input class="form-control" name="phone" maxlength="40"></div>
@@ -26,6 +28,7 @@
             <div class="col"><label class="form-label">Employment type</label><select class="form-select" name="employment_type"><option value="teaching">Teaching</option><option value="non_teaching">Non-teaching</option></select></div>
             <div class="col"><label class="form-label">Status</label><select class="form-select" name="employment_status"><option value="active">Active</option><option value="probation">Probation</option><option value="contract">Contract</option></select></div>
           </div>
+          <div class="form-section"><i class="bi bi-briefcase"></i> Employment</div>
           <div class="row g-2 mt-1">
             <div class="col"><label class="form-label">Appointment date</label><input class="form-control" type="date" name="date_of_appointment"></div>
             <div class="col"><label class="form-label">Qualification</label><input class="form-control" name="highest_qualification" maxlength="140"></div>
@@ -104,7 +107,7 @@
           <div class="col-6"><label class="form-label">Name</label><input class="form-control" name="name" maxlength="60" required></div>
           <div class="col-6"><label class="form-label">Code</label><input class="form-control" name="code" maxlength="20" required></div>
           <div class="col-6"><label class="form-label">Days per year</label><input class="form-control" type="number" min="0" max="366" name="days_per_year" value="0" required></div>
-          <div class="col-6 d-flex align-items-end"><div><div class="form-check"><input class="form-check-input" type="checkbox" name="is_paid" checked><label class="form-check-label">Paid leave</label></div><div class="form-check"><input class="form-check-input" type="checkbox" name="requires_document"><label class="form-check-label">Requires document</label></div></div></div>
+          <div class="col-6 d-flex align-items-end"><div><div class="form-check"><input class="form-check-input" type="checkbox" name="is_paid" id="lt_paid" checked><label class="form-check-label" for="lt_paid">Paid leave</label></div><div class="form-check"><input class="form-check-input" type="checkbox" name="requires_document" id="lt_doc"><label class="form-check-label" for="lt_doc">Requires document</label></div></div></div>
           <div class="col-12"><button class="btn btn-outline-primary btn-sm">Add leave type</button></div>
         </form>
       </div>

@@ -654,4 +654,123 @@
     window.setInterval(tick, 1000);
   });
 
+  /* ------------------------------------------------------ form experience */
+
+  // Find the visible label that belongs to a control, whether it is linked by
+  // for/id, wrapped around the control, or sits in the same field column.
+  function formLabelFor(control) {
+    if (control.id) {
+      var linked = document.querySelector('label[for="' + cssEscape(control.id) + '"]');
+      if (linked) { return linked; }
+    }
+    var wrapping = control.closest('label');
+    if (wrapping) { return wrapping; }
+    var parent = control.parentElement;
+    for (var depth = 0; parent && depth < 3; depth++) {
+      var label = parent.querySelector('label');
+      if (label) { return label; }
+      parent = parent.parentElement;
+    }
+    return null;
+  }
+
+  // Give every form the same finishing touches without touching each view:
+  // required labels marked once, data-entry cards flagged for styling, action
+  // rows grouped into a consistent footer and a hint about the asterisk.
+  function enhanceForms() {
+    document.querySelectorAll('form').forEach(function (form) {
+      if (form.hasAttribute('data-no-form-enhance')) { return; }
+
+      var inTable = !!form.closest('td');
+      var modal = form.closest('.modal');
+      var inline = inTable || form.classList.contains('d-inline');
+      var controls = Array.prototype.filter.call(
+        form.querySelectorAll('input, select, textarea'),
+        function (el) {
+          var type = (el.getAttribute('type') || '').toLowerCase();
+          return ['hidden', 'submit', 'button', 'reset'].indexOf(type) === -1;
+        }
+      );
+      if (!controls.length) { return; }
+
+      var requiredCount = 0;
+      controls.forEach(function (control) {
+        if (!control.required) { return; }
+        control.setAttribute('aria-required', 'true');
+        requiredCount++;
+        var type = (control.getAttribute('type') || '').toLowerCase();
+        if (type === 'checkbox' || type === 'radio') { return; }
+        var label = formLabelFor(control);
+        if (!label || label.querySelector('.text-danger, .req')) { return; }
+        // Skip labels that already print an asterisk as plain text.
+        if (/\*\s*$/.test(label.textContent)) { return; }
+        label.classList.add('is-required');
+      });
+
+      if (inline || modal) { return; }
+
+      var method = (form.getAttribute('method') || 'get').toLowerCase();
+      if (method === 'post' && controls.length >= 3) {
+        var card = form.closest('.card');
+        if (card) { card.classList.add('form-surface'); }
+      }
+      if (method !== 'post' || controls.length < 4) { return; }
+
+      // The action row is the last block that holds buttons but no fields.
+      var last = form.lastElementChild;
+      if (!last) { return; }
+
+      var bareSubmit = last.matches('button[type="submit"], input[type="submit"], .btn');
+      if (bareSubmit && form.classList.contains('row') === false) {
+        var bar = document.createElement('div');
+        bar.className = 'form-actions';
+        form.insertBefore(bar, last);
+        bar.appendChild(last);
+        last = bar;
+      } else if (!last.matches('.form-actions')) {
+        var hasFields = last.querySelector('input:not([type="hidden"]), select, textarea');
+        var hasButton = last.querySelector('button[type="submit"], input[type="submit"], .btn');
+        if (!last.matches('button, input, select, textarea') && !hasFields && hasButton) {
+          last.classList.add('form-actions');
+        } else {
+          return;
+        }
+      }
+
+      if (requiredCount >= 3 && !last.querySelector('.form-note')) {
+        var note = document.createElement('span');
+        note.className = 'form-note';
+        note.innerHTML = 'Fields marked <span class="req">*</span> are required.';
+        last.insertBefore(note, last.firstChild);
+      }
+    });
+  }
+
+  enhanceForms();
+
+  // Put the cursor in the first sensible field whenever a form modal opens.
+  document.querySelectorAll('.modal').forEach(function (modalEl) {
+    modalEl.addEventListener('shown.bs.modal', function () {
+      var form = modalEl.querySelector('form');
+      if (!form || form.hasAttribute('data-no-autofocus')) { return; }
+
+      var target = form.querySelector('[autofocus]');
+      if (!target) {
+        target = Array.prototype.find.call(
+          form.querySelectorAll('input, select, textarea'),
+          function (el) {
+            var type = (el.getAttribute('type') || '').toLowerCase();
+            return type !== 'hidden' && type !== 'file' && !el.disabled
+              && !el.readOnly && el.offsetParent !== null;
+          }
+        );
+      }
+      if (target) {
+        window.setTimeout(function () {
+          target.focus({ preventScroll: true });
+        }, 60);
+      }
+    });
+  });
+
 })();

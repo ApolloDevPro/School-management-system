@@ -54,6 +54,7 @@ $canDelete = $canDelete ?? false;
             </tbody>
           </table>
 <?php endif; ?>
+        </div>
       </div>
     </div>
   </div>
@@ -70,6 +71,7 @@ $canDelete = $canDelete ?? false;
         <?= csrf_field() ?>
         <input type="hidden" name="id" id="fund_id" value="">
         <div class="modal-body">
+          <div class="form-section"><i class="bi bi-wallet2"></i> Fund details</div>
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label" for="fund_name">Fund Name <span class="text-danger">*</span></label>
@@ -79,6 +81,9 @@ $canDelete = $canDelete ?? false;
               <label class="form-label" for="fund_opening">Opening Balance (UGX) <span class="text-danger">*</span></label>
               <input class="form-control" id="fund_opening" name="opening_balance" type="number" min="0" step="0.01" required>
             </div>
+          </div>
+          <div class="form-section"><i class="bi bi-cash-stack"></i> Custody and balance</div>
+          <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label" for="fund_custodian">Custodian (Staff)</label>
               <select class="form-select" id="fund_custodian" name="custodian_staff_id">
@@ -97,6 +102,9 @@ $canDelete = $canDelete ?? false;
                 <?php endforeach; ?>
               </select>
             </div>
+          </div>
+          <div class="form-section"><i class="bi bi-calendar-range"></i> Dates and status</div>
+          <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label" for="fund_opened">Opened On</label>
               <input class="form-control" id="fund_opened" name="opened_on" type="date" value="<?= date('Y-m-d') ?>">

@@ -41,11 +41,13 @@ $statusColor   = fn(string $s): string => match($s) { 'approved' => 'success', '
       <div class="card-body">
         <form method="post" action="<?= url('inventory/requests/create') ?>" data-ajax>
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-file-earmark-text"></i> Request details</div>
           <div class="mb-2">
             <label class="form-label">Justification <span class="text-danger">*</span></label>
             <textarea class="form-control" name="justification" rows="3" required maxlength="1000"></textarea>
             <span class="invalid-feedback d-block" data-error-for="justification"></span>
           </div>
+          <div class="form-section"><i class="bi bi-calendar-range"></i> Timing &amp; cost</div>
           <div class="row g-2 mb-2">
             <div class="col">
               <label class="form-label">Needed by</label>

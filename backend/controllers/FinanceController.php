@@ -592,7 +592,7 @@ final class FinanceController extends Controller
         $schoolId = school_id();
         $db = Database::conn();
 
-        $accounts = $db->query(
+        $accounts = Database::query(
             'SELECT * FROM bank_accounts WHERE school_id = ? AND status = \'active\' ORDER BY bank_name, account_name',
             [$schoolId]
         )->fetchAll();
@@ -600,7 +600,7 @@ final class FinanceController extends Controller
         $periodStart = trim((string)($_GET['period_start'] ?? ''));
         $periodEnd = trim((string)($_GET['period_end'] ?? ''));
 
-        $reconciliations = $db->query(
+        $reconciliations = Database::query(
             'SELECT br.*, ba.bank_name, ba.account_number, u.full_name AS reconciled_by_name
                FROM bank_reconciliations br
                JOIN bank_accounts ba ON ba.id = br.bank_account_id
@@ -615,14 +615,14 @@ final class FinanceController extends Controller
         $unmatchedPayments = [];
         $unmatchedExpenses = [];
         if ($accountId > 0 && $periodStart !== '' && $periodEnd !== '') {
-            $unmatchedTransactions = $db->query(
+            $unmatchedTransactions = Database::query(
                 'SELECT * FROM bank_transactions
                   WHERE bank_account_id = ? AND is_reconciled = 0
                     AND transaction_date BETWEEN ? AND ?
                   ORDER BY transaction_date DESC, id DESC',
                 [$accountId, $periodStart, $periodEnd]
             )->fetchAll();
-            $unmatchedPayments = $db->query(
+            $unmatchedPayments = Database::query(
                 'SELECT p.*, s.admission_number, s.first_name, s.last_name
                    FROM payments p
                    JOIN students s ON s.id = p.student_id
@@ -633,7 +633,7 @@ final class FinanceController extends Controller
                   ORDER BY p.payment_date DESC',
                 [$schoolId, $periodStart, $periodEnd]
             )->fetchAll();
-            $unmatchedExpenses = $db->query(
+            $unmatchedExpenses = Database::query(
                 'SELECT e.* FROM expenses e
                   WHERE e.school_id = ? AND e.payment_method = \'bank\'
                     AND e.expense_date BETWEEN ? AND ?
@@ -692,7 +692,7 @@ final class FinanceController extends Controller
         $db->beginTransaction();
         try {
             if ($id > 0) {
-                $exists = $db->query(
+                $exists = Database::query(
                     'SELECT id FROM bank_accounts WHERE id = ? AND school_id = ?',
                     [$id, $schoolId]
                 )->fetch();
@@ -753,7 +753,7 @@ final class FinanceController extends Controller
         $db = Database::conn();
 
         $bankAccountId = $this->positiveInt($_POST['bank_account_id'] ?? null, 'Bank account');
-        $account = $db->query(
+        $account = Database::query(
             'SELECT id, currency FROM bank_accounts WHERE id = ? AND school_id = ? AND status = \'active\'',
             [$bankAccountId, $schoolId]
         )->fetch();
@@ -830,7 +830,7 @@ final class FinanceController extends Controller
 
         $db->beginTransaction();
         try {
-            $existing = $db->query(
+            $existing = Database::query(
                 'SELECT id FROM bank_reconciliations WHERE bank_account_id = ? AND period_start = ? AND period_end = ? AND status <> \'completed\'',
                 [$bankAccountId, $periodStart, $periodEnd]
             )->fetch();
@@ -838,13 +838,13 @@ final class FinanceController extends Controller
                 throw new DomainException('An unreconciled reconciliation already exists for this account and period.');
             }
 
-            $account = $db->query('SELECT opening_balance, current_balance FROM bank_accounts WHERE id = ?', [$bankAccountId])->fetch();
+            $account = Database::query('SELECT opening_balance, current_balance FROM bank_accounts WHERE id = ?', [$bankAccountId])->fetch();
             $bookBalance = (float)($account['current_balance'] ?? 0);
 
             $matchedCount = 0;
             $unmatchedCount = 0;
 
-            $matchedTxns = $db->query(
+            $matchedTxns = Database::query(
                 'SELECT id FROM bank_transactions
                   WHERE bank_account_id = ? AND is_reconciled = 1
                     AND transaction_date BETWEEN ? AND ?',
@@ -852,7 +852,7 @@ final class FinanceController extends Controller
             )->fetchAll();
             $matchedCount = count($matchedTxns);
 
-            $unmatchedTxns = $db->query(
+            $unmatchedTxns = Database::query(
                 'SELECT id FROM bank_transactions
                   WHERE bank_account_id = ? AND is_reconciled = 0
                     AND transaction_date BETWEEN ? AND ?',
@@ -1002,7 +1002,7 @@ final class FinanceController extends Controller
         $items = Database::query(
             'SELECT item_name, amount FROM fee_invoice_items WHERE invoice_id = ? ORDER BY sort_order, id',
             [$id]
-        );
+        )->fetchAll();
         $school = school_row() ?? [];
         $html = PdfService::invoiceHtml($inv, $items, $school);
         PdfService::output($html, 'invoice_'.$inv['invoice_number'].'.pdf');
@@ -1050,7 +1050,7 @@ final class FinanceController extends Controller
                   WHERE invoice_id = ?
                   ORDER BY sort_order, id',
                 [$invoiceId]
-            );
+            )->fetchAll();
         } elseif ((int)($rec['payment_id'] ?? 0) > 0) {
             $payment = Database::query(
                 'SELECT invoice_id FROM payments WHERE id = ? AND school_id = ?',
@@ -1063,7 +1063,7 @@ final class FinanceController extends Controller
                       WHERE invoice_id = ?
                       ORDER BY sort_order, id',
                     [(int)$payment['invoice_id']]
-                );
+                )->fetchAll();
                 $invoiceId = (int)$payment['invoice_id'];
             }
         }

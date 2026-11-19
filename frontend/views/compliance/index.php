@@ -25,6 +25,7 @@ $grantStatus = fn(string $s): string => match($s) {
       <div class="card-body">
         <form method="post" action="<?= url('compliance/emis/create') ?>" data-ajax>
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-file-earmark-text"></i> Return details</div>
           <div class="mb-2">
             <label class="form-label">Return type <span class="text-danger">*</span></label>
             <select class="form-select" name="return_type" required>
@@ -135,6 +136,7 @@ $grantStatus = fn(string $s): string => match($s) {
       <div class="card-body">
         <form method="post" action="<?= url('compliance/grants/create') ?>" data-ajax>
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-cash-coin"></i> Grant details</div>
           <div class="mb-2">
             <label class="form-label">Grant type <span class="text-danger">*</span></label>
             <select class="form-select" name="grant_type" required>

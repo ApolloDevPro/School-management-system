@@ -13,6 +13,7 @@
       <div class="card-body">
         <form method="post" action="<?= url('students/documents/upload') ?>" enctype="multipart/form-data">
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-person-badge"></i> Student</div>
           <div class="mb-3">
             <label class="form-label" for="doc_student">Student</label>
             <select class="form-select" id="doc_student" name="student_id" required>
@@ -24,6 +25,7 @@
 <?php endforeach; ?>
             </select>
           </div>
+          <div class="form-section"><i class="bi bi-file-earmark-text"></i> Document</div>
           <div class="mb-3">
             <label class="form-label" for="doc_type">Document type</label>
             <select class="form-select" id="doc_type" name="doc_type">

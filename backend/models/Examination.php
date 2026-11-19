@@ -651,9 +651,9 @@ final class Examination extends Model
                JOIN subjects sub ON sub.id = sr.subject_id
                LEFT JOIN marks m ON m.exam_id = sr.exam_id AND m.student_id = sr.student_id
                    AND m.subject_id = sr.subject_id
-              WHERE sr.exam_id = ? AND sr.student_id = ? AND sr.school_id = ?
+              WHERE sr.exam_id = ? AND sr.student_id = ?
               ORDER BY sr.weighted_percent DESC',
-            [$examId, $studentId, $schoolId]
+            [$examId, $studentId]
         );
 
         return [

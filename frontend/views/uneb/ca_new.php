@@ -13,6 +13,7 @@
       <div class="card-body">
         <form method="post" action="<?= url('uneb/save-ca-submission') ?>" data-ajax>
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-calendar-range"></i> Submission details</div>
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label" for="ca_level">UNEB Level <span class="text-danger">*</span></label>

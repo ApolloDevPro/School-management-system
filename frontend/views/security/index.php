@@ -100,6 +100,7 @@ $isAdmin  = Auth::can('administration', 'view');
       <div class="card-body">
         <form method="post" action="<?= url('security/tickets/create') ?>" data-ajax>
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-life-preserver"></i> Ticket details</div>
           <div class="mb-2">
             <label class="form-label">Subject <span class="text-danger">*</span></label>
             <input class="form-control" name="subject" maxlength="255" required>

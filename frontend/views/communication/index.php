@@ -13,6 +13,7 @@ $catColor = fn(string $c): string => match($c) { 'academic'=>'primary','financia
       <div class="card-body">
         <form method="post" action="<?= url('communication/store') ?>" data-ajax>
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-chat-dots"></i> Message</div>
           <div class="mb-2">
             <label class="form-label">Title <span class="text-danger">*</span></label>
             <input class="form-control" name="title" maxlength="255" required>
@@ -23,6 +24,7 @@ $catColor = fn(string $c): string => match($c) { 'academic'=>'primary','financia
             <textarea class="form-control" name="body" rows="4" required></textarea>
             <span class="invalid-feedback d-block" data-error-for="body"></span>
           </div>
+          <div class="form-section"><i class="bi bi-people"></i> Audience</div>
           <div class="row g-2 mb-3">
             <div class="col">
               <label class="form-label">Category</label>

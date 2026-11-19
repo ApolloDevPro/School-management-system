@@ -62,6 +62,7 @@ $canAdd = $canAdd ?? false;
 <?php endforeach; ?>
             </tbody>
           </table>
+        </div>
 <?php endif; ?>
       </div>
     </div>

@@ -26,6 +26,7 @@
           <?= csrf_field() ?>
           <input type="hidden" name="id" value="<?= (int)($edit['id'] ?? 0) ?>">
           <input type="hidden" name="academic_year_id" value="<?= $yearId ?>">
+          <div class="form-section"><i class="bi bi-calendar-range"></i> Term details</div>
           <div class="mb-3">
             <label class="form-label" for="t_name">Term name</label>
             <input class="form-control" id="t_name" name="name" maxlength="30" value="<?= e($edit['name'] ?? '') ?>" placeholder="Term 1" <?= $canEdit ? 'required' : 'disabled' ?>>
@@ -48,6 +49,7 @@
               <input class="form-control" id="t_end" name="end_date" type="date" value="<?= e($edit['end_date'] ?? '') ?>" <?= $canEdit ? 'required' : 'disabled' ?>>
             </div>
           </div>
+          <div class="form-section"><i class="bi bi-calendar-range"></i> Key dates</div>
           <div class="row g-3 mb-3">
             <div class="col-6">
               <label class="form-label" for="t_report">Report date</label>

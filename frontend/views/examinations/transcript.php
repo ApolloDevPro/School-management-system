@@ -82,8 +82,9 @@
       </div>
     </div>
 
-    <div class="mt-3">
+    <div class="mt-3 d-flex flex-wrap gap-2">
       <a class="btn btn-primary" href="<?= url('report_cards/pdf', ['student_id' => (int)$student['id'], 'exam_id' => (int)$exam['id']]) ?>" target="_blank"><i class="bi bi-file-earmark-pdf"></i> Print report card</a>
+      <a class="btn btn-outline-danger" href="<?= url('examinations/transcript', ['student_id' => (int)$student['id'], 'exam_id' => (int)$exam['id'], 'format' => 'pdf']) ?>"><i class="bi bi-download"></i> Download transcript PDF</a>
     </div>
     <?php endif; ?>
   </div>

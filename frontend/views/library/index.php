@@ -15,6 +15,7 @@
       <div class="card-body">
         <form method="post" action="<?= url('library/books/store') ?>" data-ajax>
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-journal-bookmark"></i> Book details</div>
           <div class="mb-2">
             <label class="form-label">Title <span class="text-danger">*</span></label>
             <input class="form-control" name="title" maxlength="200" required>
@@ -25,6 +26,7 @@
             <input class="form-control" name="author" maxlength="160" required>
             <span class="invalid-feedback d-block" data-error-for="author"></span>
           </div>
+          <div class="form-section"><i class="bi bi-collection"></i> Catalogue</div>
           <div class="mb-2">
             <label class="form-label">ISBN</label>
             <input class="form-control" name="isbn" maxlength="30">
@@ -210,6 +212,7 @@
       <div class="card-body">
         <form method="post" action="<?= url('library/borrowings/issue') ?>" data-ajax>
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-book-half"></i> Book and borrower</div>
           <div class="mb-2">
             <label class="form-label">Book <span class="text-danger">*</span></label>
             <select class="form-select" name="book_id" required>
@@ -250,6 +253,7 @@
             </select>
             <span class="invalid-feedback d-block" data-error-for="staff_id"></span>
           </div>
+          <div class="form-section"><i class="bi bi-calendar-range"></i> Loan dates</div>
           <div class="row g-2 mb-2">
             <div class="col">
               <label class="form-label">Issue date <span class="text-danger">*</span></label>
@@ -416,6 +420,7 @@
       <div class="card-body">
         <form method="post" action="<?= url('library/fines/store') ?>" data-ajax>
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-cash-coin"></i> Fine details</div>
           <div class="mb-2">
             <label class="form-label">Fine type <span class="text-danger">*</span></label>
             <select class="form-select" name="fine_type" required>
@@ -436,6 +441,7 @@
             <span class="invalid-feedback d-block" data-error-for="borrowing_id"></span>
           </div>
           <div id="fineBorrowerBlock">
+            <div class="form-section"><i class="bi bi-person-lines-fill"></i> Borrower</div>
             <div class="mb-2">
               <label class="form-label">Borrower type</label>
               <select class="form-select" name="borrower_type" id="fineBorrowerType">
@@ -465,6 +471,7 @@
               <span class="invalid-feedback d-block" data-error-for="staff_id"></span>
             </div>
           </div>
+          <div class="form-section"><i class="bi bi-receipt"></i> Charge and reason</div>
           <div class="row g-2 mb-2">
             <div class="col-7">
               <label class="form-label">Amount (UGX) <span class="text-danger">*</span></label>

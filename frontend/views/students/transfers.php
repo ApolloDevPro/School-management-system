@@ -20,6 +20,7 @@
       <div class="card-body">
         <form method="post" action="<?= url('students/transfers/store') ?>">
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-person-badge"></i> Student transfer</div>
           <div class="mb-3">
             <label class="form-label" for="t_student">Student</label>
             <select class="form-select" id="t_student" name="student_id" required>
@@ -36,6 +37,7 @@
               <option value="out">Transfer out (leaving us)</option>
             </select>
           </div>
+          <div class="form-section"><i class="bi bi-building"></i> Destination details</div>
           <div class="mb-3">
             <label class="form-label" for="t_school">Other school</label>
             <input class="form-control" id="t_school" name="other_school_name" maxlength="160" required>

@@ -10,6 +10,7 @@
       <div class="card-body">
         <form method="post" action="<?= url('gate/checkin') ?>" data-ajax>
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-person-vcard"></i> Visitor details</div>
           <div class="mb-2">
             <label class="form-label">Full name <span class="text-danger">*</span></label>
             <input class="form-control" name="full_name" maxlength="160" required placeholder="Visitor's full name">
@@ -25,6 +26,7 @@
               <input class="form-control" name="organisation" maxlength="160">
             </div>
           </div>
+          <div class="form-section"><i class="bi bi-door-open"></i> Visit details</div>
           <div class="mb-2">
             <label class="form-label">Person visiting <span class="text-danger">*</span></label>
             <input class="form-control" name="host_name" maxlength="160" required placeholder="Name of staff / student">

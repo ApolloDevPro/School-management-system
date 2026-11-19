@@ -37,6 +37,7 @@
           <?= csrf_field() ?>
           <input type="hidden" name="id" value="<?= (int)($curriculumEdit['id'] ?? 0) ?>">
           <div class="row g-2">
+            <div class="col-12"><div class="form-section"><i class="bi bi-diagram-3"></i> Curriculum details</div></div>
             <div class="col-md-8">
               <label class="form-label" for="curriculum_name">Name</label>
               <input class="form-control" id="curriculum_name" name="name" maxlength="120" required value="<?= e($curriculumEdit['name'] ?? '') ?>" placeholder="Uganda Lower Secondary Curriculum">
@@ -103,6 +104,7 @@
           <?= csrf_field() ?>
           <input type="hidden" name="id" value="<?= (int)($subjectEdit['id'] ?? 0) ?>">
           <div class="row g-2">
+            <div class="col-12"><div class="form-section"><i class="bi bi-book"></i> Subject identity</div></div>
             <div class="col-md-3">
               <label class="form-label" for="subject_code">Code</label>
               <input class="form-control text-uppercase" id="subject_code" name="code" maxlength="20" required value="<?= e($subjectEdit['code'] ?? '') ?>" placeholder="MTC">
@@ -115,9 +117,9 @@
               <label class="form-label" for="subject_short_name">Short name</label>
               <input class="form-control" id="subject_short_name" name="short_name" maxlength="30" value="<?= e($subjectEdit['short_name'] ?? '') ?>">
             </div>
+            <div class="col-12"><div class="form-section"><i class="bi bi-sliders"></i> Classification</div></div>
             <div class="col-md-4">
-              <label class="form-label" for="subject_level">Level</label>
-              <select class="form-select" id="subject_level" name="level">
+              <label class="form-label" for="subject_level">Level</label>              <select class="form-select" id="subject_level" name="level">
 <?php foreach (['O-Level', 'A-Level', 'Both'] as $level): ?>
                 <option value="<?= e($level) ?>" <?= ($subjectEdit['level'] ?? 'O-Level') === $level ? 'selected' : '' ?>><?= e($level) ?></option>
 <?php endforeach; ?>
@@ -140,6 +142,7 @@
 <?php endforeach; ?>
               </select>
             </div>
+            <div class="col-12"><div class="form-section"><i class="bi bi-award"></i> UNEB and ordering</div></div>
             <div class="col-md-4">
               <label class="form-label" for="subject_uneb">UNEB code</label>
               <input class="form-control" id="subject_uneb" name="uneb_subject_code" maxlength="20" value="<?= e($subjectEdit['uneb_subject_code'] ?? '') ?>">
@@ -386,6 +389,7 @@
       <input type="hidden" name="id" value="<?= (int)($schemeEdit['id'] ?? 0) ?>">
       <input type="hidden" name="academic_year_id" value="<?= $yearId ?>">
       <div class="row g-2">
+        <div class="col-12"><div class="form-section"><i class="bi bi-person-workspace"></i> Teaching assignment</div></div>
         <div class="col-md-3">
           <label class="form-label" for="scheme_staff">Teacher</label>
           <select class="form-select" id="scheme_staff" name="staff_id" required>
@@ -435,6 +439,7 @@
           <label class="form-label" for="scheme_week_start">Week starting</label>
           <input class="form-control" id="scheme_week_start" name="week_starting" type="date" value="<?= e($schemeEdit['week_starting'] ?? '') ?>">
         </div>
+        <div class="col-12"><div class="form-section"><i class="bi bi-journal-text"></i> Lesson plan</div></div>
         <div class="col-md-7">
           <label class="form-label" for="scheme_topic">Topic</label>
           <input class="form-control" id="scheme_topic" name="topic" maxlength="180" required value="<?= e($schemeEdit['topic'] ?? '') ?>">
@@ -518,6 +523,7 @@
           <?= csrf_field() ?>
           <input type="hidden" name="academic_year_id" value="<?= $yearId ?>">
           <div class="row g-2">
+            <div class="col-12"><div class="form-section"><i class="bi bi-calendar3"></i> Timetable details</div></div>
             <div class="col-12">
               <label class="form-label" for="timetable_name">Timetable name</label>
               <input class="form-control" id="timetable_name" name="name" maxlength="120" required placeholder="S.1 Blue — Term 1">
@@ -600,6 +606,7 @@
           <?= csrf_field() ?>
           <input type="hidden" name="timetable_id" value="<?= (int)$timetable['id'] ?>">
           <div class="row g-2">
+            <div class="col-12"><div class="form-section"><i class="bi bi-clock-history"></i> Schedule</div></div>
             <div class="col-md-6">
               <label class="form-label" for="slot_day">Day</label>
               <select class="form-select" id="slot_day" name="day_of_week" required>
@@ -631,6 +638,7 @@
               <label class="form-label" for="slot_end">End time</label>
               <input class="form-control" id="slot_end" name="end_time" type="time" value="08:40" required>
             </div>
+            <div class="col-12"><div class="form-section"><i class="bi bi-easel"></i> Lesson</div></div>
             <div class="col-12">
               <label class="form-label" for="slot_subject">Subject</label>
               <select class="form-select" id="slot_subject" name="subject_id" required>
@@ -776,6 +784,7 @@ ksort($periodTimes);
           <?= csrf_field() ?>
           <input type="hidden" name="academic_year_id" value="<?= $yearId ?>">
           <div class="row g-2">
+            <div class="col-12"><div class="form-section"><i class="bi bi-people"></i> Audience</div></div>
             <div class="col-md-6">
               <label class="form-label" for="homework_staff">Teacher</label>
               <select class="form-select" id="homework_staff" name="staff_id" required>
@@ -817,6 +826,7 @@ ksort($periodTimes);
 <?php endforeach; ?>
               </select>
             </div>
+            <div class="col-12"><div class="form-section"><i class="bi bi-journal-check"></i> Assignment</div></div>
             <div class="col-12">
               <label class="form-label" for="homework_title">Title</label>
               <input class="form-control" id="homework_title" name="title" maxlength="180" required placeholder="Algebra exercises 3">
@@ -826,6 +836,7 @@ ksort($periodTimes);
               <label class="form-label" for="homework_description">Description</label>
               <textarea class="form-control" id="homework_description" name="description" rows="2"></textarea>
             </div>
+            <div class="col-12"><div class="form-section"><i class="bi bi-calendar-event"></i> Schedule and marks</div></div>
             <div class="col-md-4">
               <label class="form-label" for="homework_assigned">Assigned date</label>
               <input class="form-control" id="homework_assigned" name="assigned_date" type="date" value="<?= e(date('Y-m-d')) ?>" required>
@@ -839,13 +850,16 @@ ksort($periodTimes);
               <label class="form-label" for="homework_marks">Total marks</label>
               <input class="form-control" id="homework_marks" name="total_marks" type="number" min="0" max="999999.99" step="0.01" placeholder="Optional">
             </div>
-            <div class="col-12 d-flex align-items-center gap-3">
-              <select class="form-select" name="status" style="width:auto" aria-label="Homework status">
-                <option value="published">Published</option>
-                <option value="draft">Draft</option>
+            <div class="col-12">
+              <label class="form-label" for="homework_status">Publish status</label>
+              <select class="form-select" id="homework_status" name="status">
+                <option value="published">Published to students</option>
+                <option value="draft">Keep as draft</option>
               </select>
-              <button class="btn btn-primary" type="submit">Assign homework</button>
             </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-primary" type="submit">Assign homework</button>
           </div>
         </form>
 <?php endif; ?>

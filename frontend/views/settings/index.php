@@ -71,6 +71,7 @@ $groupLabels = [
       <?php endif; ?>
     </div>
     <div class="card-body">
+      <div class="form-section"><i class="bi <?= e($groupIcons[$group] ?? 'bi-sliders') ?>"></i> <?= e($groupLabels[$group] ?? ucwords(str_replace('_', ' ', $group))) ?></div>
       <div class="row g-3">
 <?php foreach ($rows as $row): ?>
 <?php   $editable = $canEdit && (int)$row['is_editable']; ?>

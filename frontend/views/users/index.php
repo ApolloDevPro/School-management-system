@@ -112,6 +112,7 @@
           <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
+          <div class="form-section"><i class="bi bi-person-vcard"></i> Account details</div>
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label" for="f_username">Username</label>

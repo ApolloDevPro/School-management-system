@@ -24,6 +24,7 @@
 <?php endif; ?>
         <form method="post" action="<?= url('students/discipline/store') ?>">
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-person-badge"></i> Student</div>
           <div class="mb-3">
             <label class="form-label" for="d_student">Student</label>
             <select class="form-select" id="d_student" name="student_id" required>
@@ -35,6 +36,7 @@
 <?php endforeach; ?>
             </select>
           </div>
+          <div class="form-section"><i class="bi bi-calendar-range"></i> Incident</div>
           <div class="row g-3 mb-3">
             <div class="col-6">
               <label class="form-label" for="d_date">Date</label>
@@ -72,6 +74,7 @@
               </select>
             </div>
           </div>
+          <div class="form-section"><i class="bi bi-shield-check"></i> Sanction</div>
           <div class="mb-3">
             <label class="form-label" for="d_sanction">Sanction</label>
             <select class="form-select" id="d_sanction" name="sanction">

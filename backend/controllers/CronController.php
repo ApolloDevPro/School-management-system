@@ -17,13 +17,13 @@ final class CronController extends Controller
         $schoolId = school_id();
         $db = Database::conn();
 
-        $jobs = $db->query(
+        $jobs = Database::query(
             'SELECT * FROM cron_jobs WHERE (school_id = ? OR school_id IS NULL)
              ORDER BY is_active DESC, next_run_at ASC, name',
             [$schoolId]
         )->fetchAll();
 
-        $logs = $db->query(
+        $logs = Database::query(
             'SELECT cjl.*, cj.name AS job_name
                FROM cron_job_logs cjl
                JOIN cron_jobs cj ON cj.id = cjl.job_id
@@ -72,7 +72,7 @@ final class CronController extends Controller
         $db->beginTransaction();
         try {
             if ($id > 0) {
-                $exists = $db->query(
+                $exists = Database::query(
                     'SELECT id FROM cron_jobs WHERE id = ? AND (school_id = ? OR school_id IS NULL)',
                     [$id, $schoolId]
                 )->fetch();
@@ -140,7 +140,7 @@ final class CronController extends Controller
         $schoolId = school_id();
 
         $db = Database::conn();
-        $job = $db->query(
+        $job = Database::query(
             'SELECT * FROM cron_jobs WHERE id = ? AND (school_id = ? OR school_id IS NULL) AND is_active = 1',
             [$id, $schoolId]
         )->fetch();

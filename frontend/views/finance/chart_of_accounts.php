@@ -62,6 +62,7 @@ $canDelete = $canDelete ?? false;
             </tbody>
           </table>
 <?php endif; ?>
+        </div>
       </div>
     </div>
   </div>
@@ -78,6 +79,7 @@ $canDelete = $canDelete ?? false;
         <?= csrf_field() ?>
         <input type="hidden" name="id" id="account_id" value="">
         <div class="modal-body">
+          <div class="form-section"><i class="bi bi-person-vcard"></i> Account identity</div>
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label" for="coa_account_code">Account Code <span class="text-danger">*</span></label>
@@ -87,6 +89,9 @@ $canDelete = $canDelete ?? false;
               <label class="form-label" for="coa_account_name">Account Name <span class="text-danger">*</span></label>
               <input class="form-control" id="coa_account_name" name="account_name" maxlength="140" required>
             </div>
+          </div>
+          <div class="form-section"><i class="bi bi-tags"></i> Classification</div>
+          <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label" for="coa_account_type">Account Type <span class="text-danger">*</span></label>
               <select class="form-select" id="coa_account_type" name="account_type" required>
@@ -103,6 +108,9 @@ $canDelete = $canDelete ?? false;
                 <option value="0">None (top level)</option>
               </select>
             </div>
+          </div>
+          <div class="form-section"><i class="bi bi-sliders"></i> Opening balance</div>
+          <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label" for="coa_description">Description</label>
               <input class="form-control" id="coa_description" name="description" maxlength="255">

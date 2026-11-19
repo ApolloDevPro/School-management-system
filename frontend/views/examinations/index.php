@@ -47,6 +47,7 @@
         <form method="post" action="<?= url('examinations/save') ?>" class="row g-2">
           <?= csrf_field() ?>
           <input type="hidden" name="id" value="<?= (int)($exam['id'] ?? 0) ?>">
+          <div class="col-12"><div class="form-section"><i class="bi bi-journal-bookmark"></i> Exam details</div></div>
           <div class="col-md-8">
             <label class="form-label">Name</label>
             <input class="form-control" name="name" maxlength="120" required value="<?= e($exam['name'] ?? '') ?>">
@@ -75,6 +76,7 @@
 <?php endforeach; ?>
             </select>
           </div>
+          <div class="col-12"><div class="form-section"><i class="bi bi-sliders"></i> Scope and marking</div></div>
           <div class="col-md-5">
             <label class="form-label">Level</label>
             <select class="form-select" name="level_scope">
@@ -87,6 +89,7 @@
             <label class="form-label">Maximum mark</label>
             <input class="form-control" type="number" min="1" max="32767" name="max_mark" required value="<?= (int)($exam['max_mark'] ?? 100) ?>">
           </div>
+          <div class="col-12"><div class="form-section"><i class="bi bi-calendar-range"></i> Schedule window</div></div>
           <div class="col-md-2">
             <label class="form-label">Start</label>
             <input class="form-control" type="date" name="start_date" value="<?= e($exam['start_date'] ?? '') ?>">
@@ -117,6 +120,7 @@
         <form method="post" action="<?= url('examinations/schedule') ?>" class="row g-2">
           <?= csrf_field() ?>
           <input type="hidden" name="exam_id" value="<?= (int)$exam['id'] ?>">
+          <div class="col-12"><div class="form-section"><i class="bi bi-file-earmark-text"></i> Paper</div></div>
           <div class="col-md-6">
             <label class="form-label">Class</label>
             <select class="form-select" name="class_id" required onchange="this.form.dataset.classChanged='1';window.location='<?= e(url('examinations', ['exam_id' => (int)$exam['id']])) ?>&class_id='+encodeURIComponent(this.value)">
@@ -150,6 +154,7 @@
             <label class="form-label">Paper date</label>
             <input class="form-control" type="date" name="paper_date" required>
           </div>
+          <div class="col-12"><div class="form-section"><i class="bi bi-clock"></i> Timing and marks</div></div>
           <div class="col-md-4">
             <label class="form-label">Start time</label>
             <input class="form-control" type="time" name="start_time" required>

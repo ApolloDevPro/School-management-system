@@ -130,6 +130,7 @@
       <input type="hidden" name="bank_account_id" value="<?= (int)$accountId ?>">
       <input type="hidden" name="period_start" value="<?= e($periodStart) ?>">
       <input type="hidden" name="period_end" value="<?= e($periodEnd) ?>">
+      <div class="form-section"><i class="bi bi-bank"></i> Bank statement</div>
       <div class="col-md-4">
         <label class="form-label">Statement balance</label>
         <input class="form-control" type="number" step="0.01" name="statement_balance" required min="0">
@@ -182,6 +183,7 @@
   </div>
 </div>
 <?php endif; ?>
+<?php endif; ?>
 
 <div class="modal fade" id="bankAccountModal" tabindex="-1">
   <div class="modal-dialog">
@@ -194,6 +196,7 @@
         </div>
         <div class="modal-body">
           <input type="hidden" name="id" value="0">
+          <div class="form-section"><i class="bi bi-bank"></i> Account details</div>
           <div class="mb-3">
             <label class="form-label">Bank name</label>
             <input class="form-control" name="bank_name" required maxlength="100">
@@ -222,6 +225,7 @@
               <option value="EUR">EUR</option>
             </select>
           </div>
+          <div class="form-section"><i class="bi bi-cash-stack"></i> Opening balances</div>
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label">Opening balance</label>
@@ -257,6 +261,7 @@
         </div>
         <div class="modal-body">
           <input type="hidden" name="bank_account_id" value="<?= (int)$accountId ?>">
+          <div class="form-section"><i class="bi bi-calendar-range"></i> Transaction dates</div>
           <div class="mb-3">
             <label class="form-label">Transaction date</label>
             <input class="form-control" type="date" name="transaction_date" required>
@@ -269,6 +274,7 @@
             <label class="form-label">Description</label>
             <input class="form-control" name="description" required maxlength="255">
           </div>
+          <div class="form-section"><i class="bi bi-cash-stack"></i> Amounts</div>
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label">Deposit</label>

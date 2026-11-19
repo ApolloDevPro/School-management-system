@@ -313,7 +313,7 @@ final class HrController extends Controller
         $schoolId = school_id();
         $db = Database::conn();
 
-        $vacancies = $db->query(
+        $vacancies = Database::query(
             'SELECT v.*, d.name AS department_name,
                     (SELECT COUNT(*) FROM job_applications ja WHERE ja.vacancy_id = v.id) AS application_count
                FROM vacancies v
@@ -323,7 +323,7 @@ final class HrController extends Controller
             [$schoolId]
         )->fetchAll();
 
-        $applications = $db->query(
+        $applications = Database::query(
             'SELECT ja.*, v.title AS vacancy_title, v.status AS vacancy_status
                FROM job_applications ja
                LEFT JOIN vacancies v ON v.id = ja.vacancy_id
@@ -390,7 +390,7 @@ final class HrController extends Controller
         $db->beginTransaction();
         try {
             if ($id > 0) {
-                $exists = $db->query('SELECT id FROM vacancies WHERE id = ? AND school_id = ?', [$id, $schoolId])->fetch();
+                $exists = Database::query('SELECT id FROM vacancies WHERE id = ? AND school_id = ?', [$id, $schoolId])->fetch();
                 if (!$exists) {
                     throw new DomainException('Vacancy not found.');
                 }
@@ -449,7 +449,7 @@ final class HrController extends Controller
             return;
         }
 
-        $vacancy = $db->query('SELECT title FROM vacancies WHERE id = ? AND school_id = ?', [$id, $schoolId])->fetch();
+        $vacancy = Database::query('SELECT title FROM vacancies WHERE id = ? AND school_id = ?', [$id, $schoolId])->fetch();
         if (!$vacancy) {
             $this->respond(false, 'Vacancy not found.', 'hr');
             return;
@@ -498,7 +498,7 @@ final class HrController extends Controller
         }
 
         if ($vacancyId !== null) {
-            $vacancy = $db->query('SELECT id FROM vacancies WHERE id = ? AND school_id = ?', [$vacancyId, $schoolId])->fetch();
+            $vacancy = Database::query('SELECT id FROM vacancies WHERE id = ? AND school_id = ?', [$vacancyId, $schoolId])->fetch();
             if (!$vacancy) {
                 $this->respond(false, 'Vacancy not found.', 'hr');
                 return;
@@ -508,7 +508,7 @@ final class HrController extends Controller
         $db->beginTransaction();
         try {
             if ($id > 0) {
-                $exists = $db->query('SELECT id FROM job_applications WHERE id = ? AND school_id = ?', [$id, $schoolId])->fetch();
+                $exists = Database::query('SELECT id FROM job_applications WHERE id = ? AND school_id = ?', [$id, $schoolId])->fetch();
                 if (!$exists) {
                     throw new DomainException('Application not found.');
                 }
@@ -579,7 +579,7 @@ final class HrController extends Controller
         ];
         $newStatus = $statusMap[$action];
 
-        $application = $db->query(
+        $application = Database::query(
             'SELECT ja.*, v.title AS vacancy_title FROM job_applications ja
                LEFT JOIN vacancies v ON v.id = ja.vacancy_id
               WHERE ja.id = ? AND ja.school_id = ?',
@@ -628,9 +628,9 @@ final class HrController extends Controller
         $schoolId = school_id();
         $db = Database::conn();
 
-        $appraisals = $db->query(
+        $appraisals = Database::query(
             'SELECT sa.*, s.first_name, s.last_name, s.staff_number,
-                    ua.full_name AS appraiser_name
+                    TRIM(CONCAT_WS(\' \', ua.first_name, ua.last_name)) AS appraiser_name
                FROM staff_appraisals sa
                JOIN staff s ON s.id = sa.staff_id
                LEFT JOIN staff ua ON ua.id = sa.appraised_by
@@ -696,12 +696,12 @@ final class HrController extends Controller
             return;
         }
 
-        $staff = $db->query('SELECT id FROM staff WHERE id = ? AND school_id = ?', [$staffId, $schoolId])->fetch();
+        $staff = Database::query('SELECT id FROM staff WHERE id = ? AND school_id = ?', [$staffId, $schoolId])->fetch();
         if (!$staff) {
             $this->respond(false, 'Staff member not found in this school.', 'hr');
             return;
         }
-        $appraiser = $db->query('SELECT id FROM staff WHERE id = ? AND school_id = ?', [$appraisedBy, $schoolId])->fetch();
+        $appraiser = Database::query('SELECT id FROM staff WHERE id = ? AND school_id = ?', [$appraisedBy, $schoolId])->fetch();
         if (!$appraiser) {
             $this->respond(false, 'Appraiser not found in this school.', 'hr');
             return;
@@ -710,7 +710,7 @@ final class HrController extends Controller
         $db->beginTransaction();
         try {
             if ($id > 0) {
-                $exists = $db->query(
+                $exists = Database::query(
                     'SELECT sa.id FROM staff_appraisals sa JOIN staff s ON s.id = sa.staff_id
                       WHERE sa.id = ? AND s.school_id = ?',
                     [$id, $schoolId]

@@ -16,6 +16,7 @@
         <form method="post" action="<?= url('setup/classes/save') ?>">
           <?= csrf_field() ?>
           <input type="hidden" name="id" value="<?= (int)($edit['id'] ?? 0) ?>">
+          <div class="form-section"><i class="bi bi-mortarboard"></i> Class details</div>
           <div class="row g-3 mb-3">
             <div class="col-6">
               <label class="form-label" for="c_name">Class name</label>
@@ -29,6 +30,7 @@
               </select>
             </div>
           </div>
+          <div class="form-section"><i class="bi bi-sliders"></i> Ordering and status</div>
           <div class="row g-3 mb-3">
             <div class="col-6">
               <label class="form-label" for="c_order">Order</label>

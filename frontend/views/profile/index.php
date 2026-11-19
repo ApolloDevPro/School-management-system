@@ -14,6 +14,7 @@
       <div class="card-body">
         <form method="post" action="<?= url('profile/update') ?>" data-ajax>
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-person-vcard"></i> Account details</div>
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label" for="p_username">Username</label>
@@ -29,6 +30,9 @@
               <input class="form-control" id="p_full_name" name="full_name" value="<?= e($profile['full_name'] ?? '') ?>" maxlength="140" required>
               <div class="invalid-feedback" data-error-for="full_name"></div>
             </div>
+          </div>
+          <div class="form-section"><i class="bi bi-telephone"></i> Contact</div>
+          <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label" for="p_email">Email</label>
               <input class="form-control" id="p_email" name="email" type="email" value="<?= e($profile['email'] ?? '') ?>" maxlength="120">

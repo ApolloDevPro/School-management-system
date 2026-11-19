@@ -56,6 +56,7 @@ $canDelete = $canDelete ?? false;
             </tbody>
           </table>
 <?php endif; ?>
+        </div>
       </div>
     </div>
   </div>
@@ -72,6 +73,7 @@ $canDelete = $canDelete ?? false;
         <?= csrf_field() ?>
         <input type="hidden" name="id" id="budget_id" value="">
         <div class="modal-body">
+          <div class="form-section"><i class="bi bi-file-earmark-text"></i> Budget details</div>
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label" for="budget_name">Budget Name <span class="text-danger">*</span></label>
@@ -112,6 +114,9 @@ $canDelete = $canDelete ?? false;
                 <?php endforeach; ?>
               </select>
             </div>
+          </div>
+          <div class="form-section"><i class="bi bi-cash-stack"></i> Amount and status</div>
+          <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label" for="budget_amount">Total Amount (UGX)</label>
               <input class="form-control" id="budget_amount" name="total_amount" type="number" min="0" step="0.01" required>

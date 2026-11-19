@@ -32,6 +32,7 @@
       <span class="fw-semibold"><?= e($current['name']) ?></span>
       <span class="text-muted small"><?= e($current['description'] ?: '') ?></span>
     </div>
+    <div class="form-section"><i class="bi bi-shield-lock"></i> Permission matrix</div>
     <div class="table-responsive">
       <table class="table table-sm align-middle mb-0">
         <thead>

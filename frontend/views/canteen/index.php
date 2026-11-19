@@ -10,6 +10,7 @@
       <div class="card-body">
         <form method="post" action="<?= url('canteen/products/store') ?>" data-ajax>
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-box-seam"></i> Product details</div>
           <div class="mb-2">
             <label class="form-label">Product name <span class="text-danger">*</span></label>
             <input class="form-control" name="name" maxlength="160" required>
@@ -31,6 +32,7 @@
               <input class="form-control" name="unit" maxlength="40" placeholder="piece / bottle…">
             </div>
           </div>
+          <div class="form-section"><i class="bi bi-cash-stack"></i> Pricing</div>
           <div class="row g-2 mb-2">
             <div class="col">
               <label class="form-label">Cost price</label>
@@ -42,6 +44,7 @@
               <span class="invalid-feedback d-block" data-error-for="selling_price"></span>
             </div>
           </div>
+          <div class="form-section"><i class="bi bi-box-seam"></i> Stock levels</div>
           <div class="row g-2 mb-3">
             <div class="col">
               <label class="form-label">Opening stock</label>

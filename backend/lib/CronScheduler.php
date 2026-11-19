@@ -20,7 +20,7 @@ final class CronScheduler
     {
         $db = Database::conn();
         $now = date('Y-m-d H:i:s');
-        return $db->query(
+        return Database::query(
             "SELECT * FROM " . self::DUE_TABLE . "
                WHERE is_active = 1
                  AND (next_run_at IS NULL OR next_run_at <= ?)

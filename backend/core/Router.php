@@ -40,7 +40,8 @@ final class Router
         if ($method === 'POST') {
             $token = $_POST['_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null);
             if (!Csrf::check($token)) {
-                $this->reject('Your session expired. Refresh the page and try again.', 419, Auth::check() ? 'dashboard' : 'login');
+                // Apache maps the non-standard 419 status to 500, so send 403.
+                $this->reject('Your session expired. Refresh the page and try again.', 403, Auth::check() ? 'dashboard' : 'login');
             }
         }
 

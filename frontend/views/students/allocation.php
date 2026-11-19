@@ -36,6 +36,7 @@
 <?php if ($fromClass > 0 && $toClass > 0): ?>
     <form method="post" action="<?= url('students/allocation/save') ?>">
       <?= csrf_field() ?>
+      <div class="form-section"><i class="bi bi-people"></i> Add all selected students</div>
       <input type="hidden" name="class_id" value="<?= $toClass ?>">
       <div class="row g-3 mb-3">
         <div class="col-md-4">

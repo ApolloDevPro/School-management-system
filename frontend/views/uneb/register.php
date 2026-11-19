@@ -16,6 +16,7 @@ $canAdd = $canAdd ?? false;
       <div class="card-body">
         <form method="post" action="<?= url('uneb/save-candidate') ?>" data-ajax>
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-person-vcard"></i> Candidate details</div>
           <div class="row g-3">
             <div class="col-md-4">
               <label class="form-label" for="index_number">UNEB Index Number <span class="text-danger">*</span></label>
@@ -68,6 +69,7 @@ $canAdd = $canAdd ?? false;
               <input class="form-control" id="notes" name="notes" maxlength="255">
             </div>
           </div>
+          <div class="form-section"><i class="bi bi-journal-text"></i> Subjects entered</div>
           <div class="row g-3 mt-4">
             <div class="col-12">
               <label class="form-label">Subjects Entered</label>

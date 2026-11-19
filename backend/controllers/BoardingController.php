@@ -81,16 +81,16 @@ final class BoardingController extends Controller
             return;
         }
         $registration = Database::query(
-            'SELECT br.*, d.name AS dormitory_name, d.bed_number, w.first_name AS warden_first, w.last_name AS warden_last,
+            'SELECT br.*, d.name AS dormitory_name, w.first_name AS warden_first, w.last_name AS warden_last,
                     y.name AS year_name, t.name AS term_name
                FROM boarding_registrations br
                LEFT JOIN dormitories d ON d.id = br.dormitory_id
                LEFT JOIN staff w ON w.id = d.warden_staff_id
-               LEFT JOIN academic_years y ON y.id = br.year_id
+               LEFT JOIN academic_years y ON y.id = br.academic_year_id
                LEFT JOIN terms t ON t.id = br.term_id
-              WHERE br.student_id = ? AND br.school_id = ?
+              WHERE br.student_id = ?
               ORDER BY br.id DESC LIMIT 1',
-            [$studentId, $schoolId]
+            [$studentId]
         )->fetch();
         $school = school_row() ?? [];
         $wardenName = $registration ? ($registration['warden_first'].' '.$registration['warden_last']) : '-';

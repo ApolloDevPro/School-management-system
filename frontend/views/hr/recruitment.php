@@ -105,6 +105,7 @@
         </div>
         <div class="modal-body">
           <input type="hidden" name="id" value="0">
+          <div class="form-section"><i class="bi bi-briefcase"></i> Vacancy details</div>
           <div class="mb-3">
             <label class="form-label">Vacancy title</label>
             <input class="form-control" name="title" required maxlength="140">
@@ -143,6 +144,7 @@
             <label class="form-label">Experience required</label>
             <input class="form-control" name="experience_required" maxlength="80">
           </div>
+          <div class="form-section"><i class="bi bi-cash-coin"></i> Salary and dates</div>
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label">Salary min (UGX)</label>
@@ -180,6 +182,7 @@
     </div>
   </div>
 </div>
+<?php endif; ?>
 
 <div class="modal fade" id="appModal" tabindex="-1">
   <div class="modal-dialog">
@@ -200,6 +203,7 @@
             <label class="form-label">Vacancy</label>
             <input class="form-control" readonly>
           </div>
+          <div class="form-section"><i class="bi bi-journal-check"></i> Decision</div>
           <div class="mb-3">
             <label class="form-label">Action</label>
             <select class="form-select" name="action" required>
@@ -252,6 +256,7 @@
         </div>
         <div class="modal-body">
           <input type="hidden" name="id" value="0">
+          <div class="form-section"><i class="bi bi-briefcase"></i> Vacancy</div>
           <div class="mb-3">
             <label class="form-label">Vacancy</label>
             <select class="form-select" name="vacancy_id" required>
@@ -260,6 +265,7 @@
 <?php endforeach; ?>
             </select>
           </div>
+          <div class="form-section"><i class="bi bi-person-vcard"></i> Applicant</div>
           <div class="mb-3">
             <label class="form-label">Full name</label>
             <input class="form-control" name="full_name" required maxlength="140">
@@ -272,6 +278,7 @@
             <label class="form-label">Phone</label>
             <input class="form-control" name="phone" maxlength="40">
           </div>
+          <div class="form-section"><i class="bi bi-mortarboard"></i> Qualifications</div>
           <div class="mb-3">
             <label class="form-label">Qualification</label>
             <input class="form-control" name="qualification" maxlength="160">

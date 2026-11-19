@@ -92,7 +92,7 @@ final class TransportController extends Controller
               WHERE sra.route_id = ? AND sra.status = \'active\'
               ORDER BY s.last_name, s.first_name',
             [$routeId]
-        );
+        )->fetchAll();
         $students = array_map(function ($s, $i) {
             $s['no'] = $i + 1;
             return $s;
@@ -148,7 +148,7 @@ final class TransportController extends Controller
         $db->beginTransaction();
         try {
             if ($id > 0) {
-                $exists = $db->query('SELECT id FROM vehicles WHERE id = ? AND school_id = ?', [$id, $schoolId])->fetch();
+                $exists = Database::query('SELECT id FROM vehicles WHERE id = ? AND school_id = ?', [$id, $schoolId])->fetch();
                 if (!$exists) {
                     throw new DomainException('Vehicle not found.');
                 }
@@ -240,7 +240,7 @@ final class TransportController extends Controller
         $db->beginTransaction();
         try {
             if ($id > 0) {
-                $exists = $db->query('SELECT id FROM drivers WHERE id = ? AND school_id = ?', [$id, $schoolId])->fetch();
+                $exists = Database::query('SELECT id FROM drivers WHERE id = ? AND school_id = ?', [$id, $schoolId])->fetch();
                 if (!$exists) {
                     throw new DomainException('Driver not found.');
                 }

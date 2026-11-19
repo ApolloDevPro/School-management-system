@@ -21,6 +21,7 @@
       <div class="card-body">
         <form method="post" action="<?= url('admissions/store') ?>">
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-person-badge"></i> Applicant details</div>
           <div class="row g-3 mb-3">
             <div class="col-md-6">
               <label class="form-label" for="ap_first">First name</label>

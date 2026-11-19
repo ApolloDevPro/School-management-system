@@ -10,6 +10,7 @@
       <div class="card-body">
         <form method="post" action="<?= url('cocurricular/clubs/store') ?>" data-ajax>
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-trophy"></i> Club details</div>
           <div class="mb-2">
             <label class="form-label">Club name <span class="text-danger">*</span></label>
             <input class="form-control" name="name" maxlength="160" required>

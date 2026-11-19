@@ -376,9 +376,9 @@ final class ExaminationController extends Controller
                    JOIN subjects sub ON sub.id = sr.subject_id
                    LEFT JOIN marks m ON m.exam_id = sr.exam_id AND m.student_id = sr.student_id
                        AND m.subject_id = sr.subject_id
-                  WHERE sr.exam_id = ? AND sr.student_id = ? AND sr.school_id = ?
+                  WHERE sr.exam_id = ? AND sr.student_id = ?
                   ORDER BY sub.name',
-                [$examId, $studentId, $schoolId]
+                [$examId, $studentId]
             );
         }
 
@@ -388,6 +388,19 @@ final class ExaminationController extends Controller
                 'SELECT * FROM result_summaries WHERE exam_id = ? AND student_id = ?',
                 [$examId, $studentId]
             );
+        }
+
+        if (($_GET['format'] ?? '') === 'pdf') {
+            if (!$exam) {
+                $this->respond(false, 'No examination records found for this student.', 'examinations');
+                return;
+            }
+            $school = school_row() ?? [];
+            PdfService::output(
+                PdfService::transcriptHtml($student, $exam, $results, $school, $summary),
+                'transcript_'.$student['admission_number'].'.pdf'
+            );
+            return;
         }
 
         $this->render('examinations/transcript', [
@@ -437,9 +450,9 @@ final class ExaminationController extends Controller
                     sub.category AS subject_category, sub.level AS subject_level
                FROM subject_results sr
                JOIN subjects sub ON sub.id = sr.subject_id
-              WHERE sr.exam_id = ? AND sr.student_id = ? AND sr.school_id = ?
+              WHERE sr.exam_id = ? AND sr.student_id = ?
               ORDER BY sub.name',
-            [$examId, $studentId, $schoolId]
+            [$examId, $studentId]
         );
 
         $summary = Examination::one(
@@ -476,6 +489,15 @@ final class ExaminationController extends Controller
             $resultCode = 'Result 2';
             $eligible = false;
             $reason = 'Transcript only: missed compulsory subjects, fewer than eight subjects, or missing project work scores.';
+        }
+
+        if (($_GET['format'] ?? '') === 'pdf') {
+            $school = school_row() ?? [];
+            PdfService::output(
+                PdfService::certificateEligibilityHtml($student, $exam, $results, $school, $eligible, (string)$resultCode, $reason, $summary),
+                'certificate_eligibility_'.$student['admission_number'].'.pdf'
+            );
+            return;
         }
 
         $this->render('examinations/certificate_eligibility', [
@@ -542,7 +564,7 @@ final class ExaminationController extends Controller
               WHERE es.exam_id = ?
               ORDER BY es.paper_date, es.start_time, c.name, sub.name',
             [$examId]
-        );
+        )->fetchAll();
         $school = school_row() ?? [];
         $html = PdfService::examTimetableHtml($school, $exam, $schedules, [
             'academic_year' => $exam['year_name'] ?? '-',
@@ -589,10 +611,10 @@ final class ExaminationController extends Controller
                JOIN subjects sub ON sub.id = sr.subject_id
                LEFT JOIN marks m ON m.exam_id = sr.exam_id AND m.student_id = sr.student_id
                    AND m.subject_id = sr.subject_id
-              WHERE sr.exam_id = ? AND sr.student_id = ? AND sr.school_id = ?
+              WHERE sr.exam_id = ? AND sr.student_id = ?
               ORDER BY sr.weighted_percent DESC',
-            [$examId, $studentId, $schoolId]
-        );
+            [$examId, $studentId]
+        )->fetchAll();
         $school = school_row() ?? [];
         $html = PdfService::resultSlipHtml($student, $exam, $results, $school, [
             'academic_year' => $exam['year_name'] ?? '-',

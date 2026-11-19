@@ -111,6 +111,7 @@
     </div>
   </div>
 <?php endif; ?>
+</div>
 <?php endif; ?>
 <?php else: ?>
   <div class="alert alert-secondary">Choose a student above to manage their subjects.</div>

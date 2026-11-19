@@ -57,6 +57,7 @@ $canAdd = $canAdd ?? false;
           </table>
 <?php endif; ?>
       </div>
+      </div>
     </div>
   </div>
 </div>
@@ -71,6 +72,7 @@ $canAdd = $canAdd ?? false;
       <form method="post" action="<?= url('uneb/save-result') ?>" data-ajax>
         <?= csrf_field() ?>
         <div class="modal-body">
+          <div class="form-section"><i class="bi bi-person-vcard"></i> Candidate details</div>
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label" for="result_level">UNEB Level <span class="text-danger">*</span></label>
@@ -100,6 +102,9 @@ $canAdd = $canAdd ?? false;
                 <option value="female">Female</option>
               </select>
             </div>
+          </div>
+          <div class="form-section"><i class="bi bi-award"></i> Results</div>
+          <div class="row g-3">
             <div class="col-md-4">
               <label class="form-label" for="result_code">Result Code</label>
               <select class="form-select" id="result_code" name="result_code">
@@ -119,6 +124,9 @@ $canAdd = $canAdd ?? false;
                 <label class="form-check-label" for="result_ca_submitted">CA scores submitted to UNEB</label>
               </div>
             </div>
+          </div>
+          <div class="form-section"><i class="bi bi-journal-text"></i> Notes</div>
+          <div class="row g-3">
             <div class="col-12">
               <label class="form-label" for="result_subjects">Subject Results (summary)</label>
               <textarea class="form-control" id="result_subjects" name="subject_results" rows="3" maxlength="500" placeholder="e.g. Math: B, English: C, Physics: A"></textarea>

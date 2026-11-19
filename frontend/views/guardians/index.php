@@ -19,6 +19,8 @@
         <form method="post" action="<?= url($edit ? 'guardians/update' : 'guardians/store') ?>">
           <?= csrf_field() ?>
           <?php if ($edit): ?><input type="hidden" name="id" value="<?= (int)$edit['id'] ?>"><?php endif; ?>
+          <div class="form-section"><i class="bi bi-person-badge"></i> Personal details</div>
+          <div class="form-section"><i class="bi bi-telephone"></i> Contact details</div>
           <div class="row g-3 mb-3">
             <div class="col-6">
               <label class="form-label" for="g_first">First name</label>

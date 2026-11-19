@@ -20,6 +20,7 @@
       <div class="card-body">
         <form method="post" action="<?= url('finance/online/gateway') ?>">
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-credit-card"></i> Provider details</div>
           <div class="row g-3 mb-3">
             <div class="col-md-5">
               <label class="form-label" for="gateway_code">Provider code</label>
@@ -51,6 +52,7 @@
               </select>
             </div>
           </div>
+          <div class="form-section"><i class="bi bi-sliders"></i> Environment</div>
           <div class="mb-3">
             <label class="form-label" for="gateway_notes">Notes</label>
             <input class="form-control" id="gateway_notes" name="notes" maxlength="255">
@@ -107,6 +109,7 @@
 <?php else: ?>
     <form method="post" action="<?= url('finance/online/transaction') ?>">
       <?= csrf_field() ?>
+      <div class="form-section"><i class="bi bi-credit-card"></i> Gateway</div>
       <div class="row g-3">
         <div class="col-md-2">
           <label class="form-label" for="txn_gateway">Gateway</label>
@@ -138,6 +141,9 @@
           <label class="form-label" for="txn_payer">Payer name</label>
           <input class="form-control" id="txn_payer" name="payer_name" maxlength="160">
         </div>
+      </div>
+      <div class="form-section"><i class="bi bi-receipt"></i> Matching</div>
+      <div class="row g-3">
         <div class="col-md-4">
           <label class="form-label" for="txn_invoice">Invoice (optional)</label>
           <select class="form-select" id="txn_invoice" name="invoice_id">
@@ -160,6 +166,9 @@
           <label class="form-label" for="txn_phone">Payer phone</label>
           <input class="form-control" id="txn_phone" name="payer_msisdn" maxlength="40">
         </div>
+      </div>
+      <div class="form-section"><i class="bi bi-exclamation-triangle"></i> Outcome</div>
+      <div class="row g-3">
         <div class="col-md-3">
           <label class="form-label" for="txn_failure">Failure reason (if applicable)</label>
           <input class="form-control" id="txn_failure" name="failure_reason" maxlength="255">

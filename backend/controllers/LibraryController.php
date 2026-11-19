@@ -314,7 +314,7 @@ final class LibraryController extends Controller
                 AND b.due_date < CURRENT_DATE
               ORDER BY b.due_date',
             [$studentId]
-        );
+        )->fetchAll();
         $school = school_row() ?? [];
         $html = PdfService::libraryOverdueNoticeHtml($school, $student, $books);
         PdfService::output($html, 'overdue_notice_'.$student['admission_number'].'.pdf');

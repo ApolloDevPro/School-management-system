@@ -80,13 +80,13 @@ final class CanteenController extends Controller
         $guardianId = $this->optionalInt($_POST['guardian_id'] ?? null);
         $paymentId = $this->optionalInt($_POST['payment_id'] ?? null);
 
-        $student = $db->query('SELECT id, admission_number, first_name, last_name FROM students WHERE id = ? AND school_id = ?', [$studentId, $schoolId])->fetch();
+        $student = Database::query('SELECT id, admission_number, first_name, last_name FROM students WHERE id = ? AND school_id = ?', [$studentId, $schoolId])->fetch();
         if (!$student) {
             $this->respond(false, 'Student not found.', 'canteen');
             return;
         }
 
-        $wallet = $db->query('SELECT * FROM student_wallets WHERE student_id = ? AND status = \'active\'', [$studentId])->fetch();
+        $wallet = Database::query('SELECT * FROM student_wallets WHERE student_id = ? AND status = \'active\'', [$studentId])->fetch();
         if (!$wallet) {
             $walletNumber = 'WLT-' . strtoupper(bin2hex(random_bytes(4)));
             $db->prepare('INSERT INTO student_wallets (student_id, wallet_number, balance, status) VALUES (?, ?, 0, \'active\')')
@@ -132,14 +132,14 @@ final class CanteenController extends Controller
         $transactions = [];
 
         if ($studentId > 0) {
-            $student = $db->query('SELECT id, admission_number, first_name, last_name FROM students WHERE id = ? AND school_id = ?', [$studentId, $schoolId])->fetch();
+            $student = Database::query('SELECT id, admission_number, first_name, last_name FROM students WHERE id = ? AND school_id = ?', [$studentId, $schoolId])->fetch();
             if (!$student) {
                 $this->respond(false, 'Student not found.', 'canteen');
                 return;
             }
-            $wallet = $db->query('SELECT * FROM student_wallets WHERE student_id = ?', [$studentId])->fetch();
+            $wallet = Database::query('SELECT * FROM student_wallets WHERE student_id = ?', [$studentId])->fetch();
             if ($wallet) {
-                $transactions = $db->query(
+                $transactions = Database::query(
                     'SELECT wt.*, s.full_name AS performed_by_name
                        FROM wallet_transactions wt
                        LEFT JOIN staff s ON s.id = wt.performed_by
@@ -151,7 +151,7 @@ final class CanteenController extends Controller
             }
         }
 
-        $students = $db->query(
+        $students = Database::query(
             'SELECT s.id, s.admission_number, s.first_name, s.last_name, w.balance
                FROM students s
                LEFT JOIN student_wallets w ON w.student_id = s.id

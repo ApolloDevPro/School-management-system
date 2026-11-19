@@ -10,6 +10,7 @@
       <div class="card-body">
         <form method="post" action="<?= url('transport/routes/store') ?>" data-ajax>
           <?= csrf_field() ?>
+          <div class="form-section"><i class="bi bi-truck"></i> Route details</div>
           <div class="row g-2 mb-2">
             <div class="col-5">
               <label class="form-label">Route code</label>
@@ -25,6 +26,7 @@
             <label class="form-label">Description</label>
             <textarea class="form-control" name="description" rows="2" maxlength="500"></textarea>
           </div>
+          <div class="form-section"><i class="bi bi-cash-stack"></i> Distance &amp; fare</div>
           <div class="row g-2 mb-3">
             <div class="col">
               <label class="form-label">Distance (km)</label>
