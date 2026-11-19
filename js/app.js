@@ -1,9 +1,19 @@
+/**
+ * Shared frontend behaviour.
+ *
+ * One script serves every screen: mobile sidebar, confirmation and error
+ * modals, AJAX form submission with busy buttons, toasts, the users modal and
+ * small niceties (password reveal, autodismiss alerts, back to top).
+ * Everything is delegated from document/window so views can be replaced by
+ * AJAX without rebinding.
+ */
 (function () {
   'use strict';
 
   var token = (window.APP && window.APP.csrf)
     || (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
 
+  /* ------------------------------------------------------- mobile sidebar */
   function setSidebar(open) {
     var sidebar = document.getElementById('appSidebar');
     var backdrop = document.getElementById('sidebarBackdrop');
@@ -28,6 +38,20 @@
     var sideLink = event.target.closest('.app-sidebar .sidebar-link');
     if (sideLink && window.matchMedia('(max-width: 991.98px)').matches) {
       setSidebar(false);
+    }
+
+    var passwordToggle = event.target.closest('[data-toggle-password]');
+    if (passwordToggle) {
+      var target = document.getElementById(passwordToggle.getAttribute('data-toggle-password'));
+      if (target) {
+        var show = target.type === 'password';
+        target.type = show ? 'text' : 'password';
+        var icon = passwordToggle.querySelector('i');
+        if (icon) { icon.className = show ? 'bi bi-eye-slash' : 'bi bi-eye'; }
+        passwordToggle.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+        passwordToggle.setAttribute('title', show ? 'Hide password' : 'Show password');
+      }
+      return;
     }
 
     var modalTrigger = event.target.closest('[data-toggle-modal]');
@@ -57,6 +81,7 @@
     }
   });
 
+  /* --------------------------------------------- modals: forms & confirms */
   function prepareModal(modalEl, payload, isEmpty) {
     var form = modalEl.querySelector('form');
     if (!form) { return; }
@@ -149,19 +174,110 @@
     populateStreams(form);
   });
 
+  var confirmedSubmit = null;
+
+  /* ------------------------------------- form submits, busy state & AJAX */
   document.addEventListener('submit', function (event) {
-    var confirmable = event.target.closest('[data-confirm]');
-    if (confirmable && !window.confirm(confirmable.getAttribute('data-confirm'))) {
+    var form = event.target;
+    if (!form || form.tagName !== 'FORM') { return; }
+
+    // Confirmation can sit on the form or on the submit button that fired it.
+    var message = (event.submitter && event.submitter.getAttribute('data-confirm'))
+      || form.getAttribute('data-confirm');
+
+    if (message && confirmedSubmit !== form) {
       event.preventDefault();
+      friendlyConfirm(message).then(function (confirmed) {
+        if (!confirmed) { return; }
+        confirmedSubmit = form;
+        if (typeof form.requestSubmit === 'function') {
+          form.requestSubmit(event.submitter || undefined);
+        } else {
+          form.submit();
+        }
+        window.setTimeout(function () { confirmedSubmit = null; }, 0);
+      });
+      return;
+    }
+    confirmedSubmit = null;
+
+    var ajaxForm = form.closest('form[data-ajax]');
+    if (ajaxForm) {
+      event.preventDefault();
+      submitAjax(ajaxForm);
       return;
     }
 
-    var form = event.target.closest('form[data-ajax]');
-    if (!form) { return; }
-
-    event.preventDefault();
-    submitAjax(form);
+    // Normal form: prevent double submissions and show that work is happening.
+    startBusy(form, event.submitter);
   });
+
+  function startBusy(form, submitter) {
+    if (form.hasAttribute('data-no-busy')) { return; }
+    var button = submitter || form.querySelector('button[type="submit"], input[type="submit"]');
+    if (!button || button.disabled) { return; }
+    if (button.tagName === 'INPUT') {
+      button.disabled = true;
+      return;
+    }
+    button.dataset.idleHtml = button.innerHTML;
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    button.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Please wait\u2026';
+  }
+
+  function resetBusyButtons() {
+    document.querySelectorAll('button[data-idle-html]').forEach(function (button) {
+      button.innerHTML = button.dataset.idleHtml;
+      button.disabled = false;
+      button.removeAttribute('aria-busy');
+      delete button.dataset.idleHtml;
+    });
+  }
+
+  window.addEventListener('pageshow', resetBusyButtons);
+
+  /**
+   * Friendly confirmation dialog used by every [data-confirm] control.
+   * Falls back to window.confirm when Bootstrap is unavailable.
+   */
+  function friendlyConfirm(message) {
+    if (!window.bootstrap || !bootstrap.Modal) {
+      return Promise.resolve(window.confirm(message));
+    }
+
+    return new Promise(function (resolve) {
+      var destructive = /delete|remove|reject|void|deactivate|withdraw|expire/i.test(message);
+      var host = document.createElement('div');
+      host.innerHTML =
+        '<div class="modal fade" tabindex="-1" aria-hidden="true">'
+        + '<div class="modal-dialog modal-dialog-centered">'
+        + '<div class="modal-content">'
+        + '<div class="modal-header"><h5 class="modal-title">Please confirm</h5>'
+        + '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>'
+        + '<div class="modal-body"><p class="mb-0"></p></div>'
+        + '<div class="modal-footer">'
+        + '<button type="button" class="btn btn-light" data-bs-dismiss="modal" autofocus>Go back</button>'
+        + '<button type="button" class="btn ' + (destructive ? 'btn-danger' : 'btn-primary') + '" data-confirm-yes>Yes, continue</button>'
+        + '</div></div></div></div>';
+
+      var modalEl = host.firstElementChild;
+      modalEl.querySelector('.modal-body p').textContent = message;
+      document.body.appendChild(host);
+
+      var modal = new bootstrap.Modal(modalEl);
+      var confirmed = false;
+      modalEl.querySelector('[data-confirm-yes]').addEventListener('click', function () {
+        confirmed = true;
+        modal.hide();
+      });
+      modalEl.addEventListener('hidden.bs.modal', function () {
+        host.remove();
+        resolve(confirmed);
+      });
+      modal.show();
+    });
+  }
 
   document.querySelectorAll('[data-submit-on-change]').forEach(function (select) {
     select.addEventListener('change', function () {
@@ -173,7 +289,12 @@
     clearErrors();
 
     var button = form.querySelector('button[type="submit"]');
-    if (button) { button.disabled = true; }
+    if (button) {
+      button.dataset.idleHtml = button.innerHTML;
+      button.disabled = true;
+      button.setAttribute('aria-busy', 'true');
+      button.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Saving\u2026';
+    }
 
     fetch(form.action, {
       method: 'POST',
@@ -207,7 +328,12 @@
         toast('danger', 'The request failed. Check your connection and try again.');
       })
       .finally(function () {
-        if (button) { button.disabled = false; }
+        if (button) {
+          button.innerHTML = button.dataset.idleHtml || button.innerHTML;
+          button.disabled = false;
+          button.removeAttribute('aria-busy');
+          delete button.dataset.idleHtml;
+        }
       });
   }
 
@@ -241,6 +367,7 @@
 
     var el = document.createElement('div');
     el.className = 'app-toast app-toast-' + type;
+    el.setAttribute('role', 'status');
     el.textContent = message;
     wrap.appendChild(el);
 
@@ -251,6 +378,7 @@
     }, 4500);
   }
 
+  /* ------------------------------------------------------- users modal */
   function syncUserLinkFields() {
     var form = document.getElementById('userForm');
     if (!form) { return; }
@@ -333,7 +461,17 @@
       lengthMenu: [10, 25, 50, 100],
       order: [[0, 'asc']],
       responsive: true,
-      language: { search: 'Filter:', emptyTable: 'No records to display.' }
+      language: {
+        search: 'Search:',
+        searchPlaceholder: 'Search records\u2026',
+        lengthMenu: 'Show _MENU_ per page',
+        info: 'Showing _START_\u2013_END_ of _TOTAL_',
+        infoEmpty: 'No records',
+        infoFiltered: '(filtered from _MAX_ total)',
+        zeroRecords: 'No matching records. Try a different search.',
+        emptyTable: 'Nothing here yet \u2014 records will appear once they are added.',
+        paginate: { previous: 'Previous', next: 'Next' }
+      }
     });
   });
 
@@ -349,17 +487,31 @@
         datasets: [{
           data: values,
           backgroundColor: ['#2563eb', '#16a34a', '#f59e0b', '#dc2626', '#7c3aed', '#0891b2'],
-          borderWidth: 2,
-          borderColor: '#ffffff'
+          borderWidth: 3,
+          borderColor: '#ffffff',
+          hoverOffset: 6
         }]
       },
       options: {
-        plugins: { legend: { position: 'bottom' } },
-        maintainAspectRatio: false
+        cutout: '68%',
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { usePointStyle: true, boxWidth: 8, boxHeight: 8, padding: 16 }
+          },
+          tooltip: {
+            backgroundColor: '#0f172a',
+            padding: 10,
+            cornerRadius: 8,
+            displayColors: true
+          }
+        }
       }
     });
   }
 
+  /* ------------------------------------------------------------- helpers */
   function readJson(value) {
     try { return JSON.parse(value || 'null'); } catch (error) { return null; }
   }
@@ -372,4 +524,134 @@
     if (window.CSS && window.CSS.escape) { return window.CSS.escape(value); }
     return value.replace(/["\\]/g, '\\$&');
   }
+
+  /* ------------------------------------------------------------ niceties */
+
+  // Success messages clear themselves, but pause while the pointer is over
+  // them so nobody loses the message they are reading.
+  document.querySelectorAll('[data-autodismiss]').forEach(function (alert) {
+    var delay = parseInt(alert.getAttribute('data-autodismiss'), 10) || 8000;
+    var timer = null;
+
+    function dismiss() {
+      if (window.bootstrap && bootstrap.Alert) {
+        bootstrap.Alert.getOrCreateInstance(alert).close();
+      } else {
+        alert.remove();
+      }
+    }
+    function schedule(ms) {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(dismiss, ms);
+    }
+
+    schedule(delay);
+    alert.addEventListener('mouseenter', function () { window.clearTimeout(timer); });
+    alert.addEventListener('mouseleave', function () { schedule(2500); });
+    alert.addEventListener('focusin', function () { window.clearTimeout(timer); });
+  });
+
+  // Back-to-top button, revealed once the page is scrolled.
+  var scrollTop = document.getElementById('scrollTop');
+  if (scrollTop) {
+    var onScroll = function () {
+      scrollTop.classList.toggle('show', window.scrollY > 320);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    scrollTop.addEventListener('click', function () {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
+  // Confirmation fields marked data-match="source-id" must equal the source.
+  document.querySelectorAll('[data-match]').forEach(function (input) {
+    var source = document.getElementById(input.getAttribute('data-match'));
+    if (!source) { return; }
+
+    function check() {
+      var mismatch = input.value !== '' && input.value !== source.value;
+      input.setCustomValidity(mismatch ? 'The passwords do not match.' : '');
+    }
+    input.addEventListener('input', check);
+    source.addEventListener('input', check);
+  });
+
+  // Gentle Caps Lock reminder on password fields.
+  document.querySelectorAll('input[type="password"]').forEach(function (input) {
+    var hint = null;
+    function toggle(on) {
+      if (on && !hint) {
+        hint = document.createElement('div');
+        hint.className = 'help-text';
+        hint.innerHTML = '<i class="bi bi-exclamation-circle"></i><span>Caps Lock is on</span>';
+        (input.closest('.mb-3, .mb-4, .field-group') || input.parentElement).appendChild(hint);
+      } else if (!on && hint) {
+        hint.remove();
+        hint = null;
+      }
+    }
+    ['keydown', 'keyup'].forEach(function (type) {
+      input.addEventListener(type, function (event) {
+        if (typeof event.getModifierState === 'function') {
+          toggle(event.getModifierState('CapsLock'));
+        }
+      });
+    });
+    input.addEventListener('blur', function () { toggle(false); });
+  });
+
+  // Give compact icon-only controls a readable label for tooltips and
+  // screen readers when the surrounding table already explains the action.
+  var ICON_LABELS = {
+    'bi-trash': 'Delete', 'bi-trash3': 'Delete', 'bi-pencil': 'Edit',
+    'bi-pencil-square': 'Edit', 'bi-eye': 'View', 'bi-download': 'Download',
+    'bi-printer': 'Print', 'bi-x-lg': 'Close', 'bi-x-circle': 'Remove',
+    'bi-check2': 'Confirm', 'bi-arrow-repeat': 'Refresh'
+  };
+  document.querySelectorAll('a.btn, button.btn').forEach(function (el) {
+    if (el.hasAttribute('aria-label') || el.hasAttribute('title')) { return; }
+    if (el.textContent.trim() !== '') { return; }
+    var icon = el.querySelector('i.bi');
+    if (!icon) { return; }
+    var cls = Array.prototype.find.call(icon.classList, function (name) {
+      return ICON_LABELS[name];
+    });
+    if (!cls) { return; }
+    el.setAttribute('aria-label', ICON_LABELS[cls]);
+    el.setAttribute('title', ICON_LABELS[cls]);
+  });
+
+  // Top header date and time. The server renders the first value, then this
+  // keeps it ticking in the application timezone without a page reload.
+  document.querySelectorAll('[data-live-datetime]').forEach(function (clock) {
+    var dateEl = clock.querySelector('[data-datetime-date]');
+    var timeEl = clock.querySelector('[data-datetime-time]');
+    if (!dateEl || !timeEl || typeof Intl === 'undefined') { return; }
+
+    var zone = clock.getAttribute('data-timezone') || undefined;
+    var dateFmt;
+    var timeFmt;
+    try {
+      dateFmt = new Intl.DateTimeFormat('en-GB', {
+        weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: zone
+      });
+      timeFmt = new Intl.DateTimeFormat('en-GB', {
+        hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true, timeZone: zone
+      });
+    } catch (error) {
+      return;
+    }
+
+    function tick() {
+      var now = new Date();
+      dateEl.textContent = dateFmt.format(now);
+      timeEl.textContent = timeFmt.format(now).replace(/\b(am|pm)\b/i, function (part) {
+        return part.toUpperCase();
+      });
+    }
+    tick();
+    window.setInterval(tick, 1000);
+  });
+
 })();

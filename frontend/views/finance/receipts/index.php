@@ -54,7 +54,7 @@
                 <button class="btn btn-sm btn-outline-info" data-toggle-modal="smsModal" data-id="<?= (int)$r['id'] ?>" data-student="<?= e($r['first_name'] . ' ' . $r['last_name']) ?>"><i class="bi bi-phone"></i> SMS</button>
                 <button class="btn btn-sm btn-outline-danger" data-toggle-modal="voidModal" data-id="<?= (int)$r['id'] ?>" data-number="<?= e($r['receipt_number']) ?>"><i class="bi bi-trash"></i> Void</button>
               <?php else: ?>
-                <span class="text-muted small">â€”</span>
+                <span class="text-muted small">—</span>
               <?php endif; ?>
             </td>
           </tr>

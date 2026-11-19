@@ -1,3 +1,4 @@
+<?php /* Student register: search, add or edit students, photos and ID cards. */ ?>
 <div class="page-head">
   <div>
     <h1 class="h4 mb-0">Students</h1>

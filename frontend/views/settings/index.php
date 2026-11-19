@@ -1,4 +1,4 @@
-<?php
+<?php /* Runtime settings grouped by section; values live in the settings table. */
 $groupIcons = [
     'general'          => 'bi-gear',
     'numbering'        => 'bi-hash',

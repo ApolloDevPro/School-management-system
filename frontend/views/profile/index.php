@@ -1,3 +1,4 @@
+<?php /* Signed-in user's account details and password shortcut. */ ?>
 <div class="page-head">
   <div>
     <h1 class="h4 mb-0">My account</h1>

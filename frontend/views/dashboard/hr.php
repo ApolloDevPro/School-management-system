@@ -4,38 +4,38 @@ $can = function (string $module, string $action = 'view') use ($user): bool {
     return Auth::can($module, $action);
 };
 ?>
-<div class="page-head">
-  <div>
-    <h1 class="h4 mb-0">HR Dashboard</h1>
-    <p class="text-muted small mb-0">Staff records, leave requests and payroll overview.</p>
-  </div>
-</div>
+<?php
+$headTitle = 'HR Dashboard';
+$headIcon = 'bi-person-badge';
+$headSubtitle = 'Staff records, leave requests and payroll overview.';
+require __DIR__ . '/_head.php';
+?>
 
 <div class="row g-3 mb-4">
   <div class="col-6 col-xl-3">
-    <div class="card stat-card tone-primary">
-      <div class="stat-label">Staff</div>
+    <div class="card stat-card tone-info">
+      <i class="stat-glyph bi bi-person-badge" aria-hidden="true"></i><div class="stat-label">Staff</div>
       <div class="stat-value"><?= number_format($stats['staff']) ?></div>
       <div class="stat-note">Active, probation, contract</div>
     </div>
   </div>
   <div class="col-6 col-xl-3">
-    <div class="card stat-card tone-primary">
-      <div class="stat-label">Pending leave</div>
+    <div class="card stat-card tone-warning">
+      <i class="stat-glyph bi bi-hourglass" aria-hidden="true"></i><div class="stat-label">Pending leave</div>
       <div class="stat-value"><?= number_format($stats['pending_leave']) ?></div>
       <div class="stat-note">Awaiting approval</div>
     </div>
   </div>
   <div class="col-6 col-xl-3">
-    <div class="card stat-card tone-primary">
-      <div class="stat-label">Leave requests</div>
+    <div class="card stat-card tone-warning">
+      <i class="stat-glyph bi bi-calendar-check" aria-hidden="true"></i><div class="stat-label">Leave requests</div>
       <div class="stat-value"><?= number_format($stats['leave_total']) ?></div>
       <div class="stat-note">All requests</div>
     </div>
   </div>
   <div class="col-6 col-xl-3">
-    <div class="card stat-card tone-primary">
-      <div class="stat-label">Departments</div>
+    <div class="card stat-card tone-info">
+      <i class="stat-glyph bi bi-diagram-3" aria-hidden="true"></i><div class="stat-label">Departments</div>
       <div class="stat-value"><?= number_format($stats['departments']) ?></div>
       <div class="stat-note">Active departments</div>
     </div>
@@ -82,7 +82,7 @@ $can = function (string $module, string $action = 'view') use ($user): bool {
 
 <div class="row g-3">
   <div class="col-12">
-    <div class="card app-card">
+    <div class="card app-card dashboard-actions">
       <div class="card-header">Quick actions</div>
       <div class="card-body">
         <div class="row g-2">

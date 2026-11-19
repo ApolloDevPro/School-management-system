@@ -4,12 +4,12 @@ $can = function (string $module, string $action = 'view') use ($user): bool {
     return Auth::can($module, $action);
 };
 ?>
-<div class="page-head">
-  <div>
-    <h1 class="h4 mb-0">Teacher Dashboard</h1>
-    <p class="text-muted small mb-0">Your classes, subjects, attendance and marks at a glance.</p>
-  </div>
-</div>
+<?php
+$headTitle = 'Teacher Dashboard';
+$headIcon = 'bi-easel2';
+$headSubtitle = 'Your classes, subjects, attendance and marks at a glance.';
+require __DIR__ . '/_head.php';
+?>
 
 <?php if (empty($staffLinked)): ?>
 <div class="alert alert-warning">
@@ -21,28 +21,28 @@ $can = function (string $module, string $action = 'view') use ($user): bool {
 <div class="row g-3 mb-4">
   <div class="col-6 col-xl-3">
     <div class="card stat-card tone-primary">
-      <div class="stat-label">Classes</div>
+      <i class="stat-glyph bi bi-easel" aria-hidden="true"></i><div class="stat-label">Classes</div>
       <div class="stat-value"><?= number_format($stats['classes']) ?></div>
       <div class="stat-note">You teach</div>
     </div>
   </div>
   <div class="col-6 col-xl-3">
-    <div class="card stat-card tone-primary">
-      <div class="stat-label">Subjects</div>
+    <div class="card stat-card tone-info">
+      <i class="stat-glyph bi bi-book" aria-hidden="true"></i><div class="stat-label">Subjects</div>
       <div class="stat-value"><?= number_format($stats['subjects']) ?></div>
       <div class="stat-note">Assigned to you</div>
     </div>
   </div>
   <div class="col-6 col-xl-3">
-    <div class="card stat-card tone-primary">
-      <div class="stat-label">Allocations</div>
+    <div class="card stat-card tone-info">
+      <i class="stat-glyph bi bi-diagram-3" aria-hidden="true"></i><div class="stat-label">Allocations</div>
       <div class="stat-value"><?= number_format($stats['allocations']) ?></div>
       <div class="stat-note">Subject &bull; class links</div>
     </div>
   </div>
   <div class="col-6 col-xl-3">
     <div class="card stat-card tone-primary">
-      <div class="stat-label">Students</div>
+      <i class="stat-glyph bi bi-people" aria-hidden="true"></i><div class="stat-label">Students</div>
       <div class="stat-value"><?= number_format($stats['students']) ?></div>
       <div class="stat-note">Across your classes</div>
     </div>
@@ -84,7 +84,7 @@ $can = function (string $module, string $action = 'view') use ($user): bool {
     </div>
   </div>
   <div class="col-lg-4">
-    <div class="card app-card h-100">
+    <div class="card app-card h-100 dashboard-actions">
       <div class="card-header">Quick actions</div>
       <div class="card-body">
         <div class="d-grid gap-2">

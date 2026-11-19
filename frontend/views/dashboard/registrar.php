@@ -4,38 +4,38 @@ $can = function (string $module, string $action = 'view') use ($user): bool {
     return Auth::can($module, $action);
 };
 ?>
-<div class="page-head">
-  <div>
-    <h1 class="h4 mb-0">Registrar Dashboard</h1>
-    <p class="text-muted small mb-0">Admissions, student records, enrolment and class allocation overview.</p>
-  </div>
-</div>
+<?php
+$headTitle = 'Registrar Dashboard';
+$headIcon = 'bi-person-vcard';
+$headSubtitle = 'Admissions, student records, enrolment and class allocation overview.';
+require __DIR__ . '/_head.php';
+?>
 
 <div class="row g-3 mb-4">
   <div class="col-6 col-xl-3">
     <div class="card stat-card tone-primary">
-      <div class="stat-label">Students</div>
+      <i class="stat-glyph bi bi-people" aria-hidden="true"></i><div class="stat-label">Students</div>
       <div class="stat-value"><?= number_format($stats['students']) ?></div>
       <div class="stat-note">All records (not withdrawn)</div>
     </div>
   </div>
   <div class="col-6 col-xl-3">
-    <div class="card stat-card tone-primary">
-      <div class="stat-label">Active</div>
+    <div class="card stat-card tone-success">
+      <i class="stat-glyph bi bi-person-check" aria-hidden="true"></i><div class="stat-label">Active</div>
       <div class="stat-value"><?= number_format($stats['active']) ?></div>
       <div class="stat-note">Currently enrolled</div>
     </div>
   </div>
   <div class="col-6 col-xl-3">
-    <div class="card stat-card tone-primary">
-      <div class="stat-label">Pending applications</div>
+    <div class="card stat-card tone-info">
+      <i class="stat-glyph bi bi-person-plus" aria-hidden="true"></i><div class="stat-label">Pending applications</div>
       <div class="stat-value"><?= number_format($stats['applicants']) ?></div>
       <div class="stat-note">Awaiting decision</div>
     </div>
   </div>
   <div class="col-6 col-xl-3">
     <div class="card stat-card tone-primary">
-      <div class="stat-label">Classes</div>
+      <i class="stat-glyph bi bi-easel" aria-hidden="true"></i><div class="stat-label">Classes</div>
       <div class="stat-value"><?= number_format($stats['classes']) ?></div>
       <div class="stat-note">Active classes</div>
     </div>
@@ -82,7 +82,7 @@ $can = function (string $module, string $action = 'view') use ($user): bool {
 
 <div class="row g-3">
   <div class="col-12">
-    <div class="card app-card">
+    <div class="card app-card dashboard-actions">
       <div class="card-header">Quick actions</div>
       <div class="card-body">
         <div class="row g-2">

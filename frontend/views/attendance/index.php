@@ -1,3 +1,4 @@
+<?php /* Daily attendance: capture for learners and staff, with summaries. */ ?>
 <div class="page-head"><div><h1 class="h4 mb-0">Daily attendance</h1><p class="text-muted small mb-0">Record and update daily learner and staff attendance</p></div></div>
 
 <form method="get" action="<?= url('attendance') ?>" class="card app-card mb-3">

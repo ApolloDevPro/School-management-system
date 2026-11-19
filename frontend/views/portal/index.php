@@ -1,16 +1,14 @@
-<?php
+<?php /* Parent/student portal: own profile (or children), fee, attendance and result snapshots, notices and consent settings. */
 $userType = $profile['user_type'] ?? 'staff';
 $typeBadge = match($userType) { 'student' => 'primary', 'parent' => 'success', default => 'secondary' };
 ?>
-<div class="page-head">
-  <div>
-    <h1 class="h4 mb-0">My portal</h1>
-    <p class="text-muted small mb-0">
-      Self-service access to your records, notices and consent settings.
-      <span class="badge text-bg-<?= $typeBadge ?> ms-1"><?= e(ucfirst($userType)) ?></span>
-    </p>
-  </div>
-</div>
+<?php
+$headTitle = 'My portal';
+$headIcon = 'bi-person-workspace';
+$headSubtitle = 'Self-service access to your records, notices and consent settings.'
+    . ' <span class="badge text-bg-' . $typeBadge . ' ms-1">' . e(ucfirst($userType)) . '</span>';
+require __DIR__ . '/../dashboard/_head.php';
+?>
 
 <?php if (!$profile): ?>
 <!-- No portal profile – staff user viewing the portal -->
@@ -189,7 +187,7 @@ $typeBadge = match($userType) { 'student' => 'primary', 'parent' => 'success', d
 
     <?php if (!in_array($userType, ['parent', 'student'], true)): ?>
     <!-- Quick links -->
-    <div class="card app-card mt-3">
+    <div class="card app-card mt-3 dashboard-actions">
       <div class="card-header">Quick access</div>
       <div class="card-body">
         <div class="row g-2">

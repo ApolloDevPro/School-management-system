@@ -1,3 +1,4 @@
+<?php /* Library: catalogue, copies, borrowing, returns and fines. */ ?>
 <div class="page-head">
   <div>
     <h1 class="h4 mb-0">Library</h1>

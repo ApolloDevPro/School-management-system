@@ -4,38 +4,38 @@ $can = function (string $module, string $action = 'view') use ($user): bool {
     return Auth::can($module, $action);
 };
 ?>
-<div class="page-head">
-  <div>
-    <h1 class="h4 mb-0">Finance Dashboard</h1>
-    <p class="text-muted small mb-0">Fee invoices, payments, outstanding balances and pending verifications.</p>
-  </div>
-</div>
+<?php
+$headTitle = 'Finance Dashboard';
+$headIcon = 'bi-cash-stack';
+$headSubtitle = 'Fee invoices, payments, outstanding balances and pending verifications.';
+require __DIR__ . '/_head.php';
+?>
 
 <div class="row g-3 mb-4">
   <div class="col-6 col-xl-3">
     <div class="card stat-card tone-primary">
-      <div class="stat-label">Invoices</div>
+      <i class="stat-glyph bi bi-receipt" aria-hidden="true"></i><div class="stat-label">Invoices</div>
       <div class="stat-value"><?= number_format($stats['invoices']) ?></div>
       <div class="stat-note">Fee invoices issued</div>
     </div>
   </div>
   <div class="col-6 col-xl-3">
-    <div class="card stat-card tone-primary">
-      <div class="stat-label">Outstanding</div>
+    <div class="card stat-card tone-danger">
+      <i class="stat-glyph bi bi-exclamation-circle" aria-hidden="true"></i><div class="stat-label">Outstanding</div>
       <div class="stat-value stat-money"><?= number_format($stats['outstanding']) ?></div>
       <div class="stat-note"><?= e(school_row()['currency_symbol'] ?? 'Ugx') ?> unpaid balances</div>
     </div>
   </div>
   <div class="col-6 col-xl-3">
-    <div class="card stat-card tone-primary">
-      <div class="stat-label">Paid</div>
+    <div class="card stat-card tone-success">
+      <i class="stat-glyph bi bi-check-circle" aria-hidden="true"></i><div class="stat-label">Paid</div>
       <div class="stat-value stat-money"><?= number_format($stats['paid']) ?></div>
       <div class="stat-note"><?= e(school_row()['currency_symbol'] ?? 'Ugx') ?> received</div>
     </div>
   </div>
   <div class="col-6 col-xl-3">
-    <div class="card stat-card tone-primary">
-      <div class="stat-label">Pending payments</div>
+    <div class="card stat-card tone-warning">
+      <i class="stat-glyph bi bi-hourglass-split" aria-hidden="true"></i><div class="stat-label">Pending payments</div>
       <div class="stat-value"><?= number_format($stats['pending']) ?></div>
       <div class="stat-note">Awaiting verification</div>
     </div>
@@ -109,7 +109,7 @@ $can = function (string $module, string $action = 'view') use ($user): bool {
 
 <div class="row g-3">
   <div class="col-12">
-    <div class="card app-card">
+    <div class="card app-card dashboard-actions">
       <div class="card-header">Quick actions</div>
       <div class="card-body">
         <div class="row g-2">

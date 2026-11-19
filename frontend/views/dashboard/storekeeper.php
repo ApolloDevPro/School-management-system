@@ -4,38 +4,38 @@ $can = function (string $module, string $action = 'view') use ($user): bool {
     return Auth::can($module, $action);
 };
 ?>
-<div class="page-head">
-  <div>
-    <h1 class="h4 mb-0">Inventory Dashboard</h1>
-    <p class="text-muted small mb-0">Stock items, purchase requests and low-stock alerts.</p>
-  </div>
-</div>
+<?php
+$headTitle = 'Inventory Dashboard';
+$headIcon = 'bi-box-seam';
+$headSubtitle = 'Stock items, purchase requests and low-stock alerts.';
+require __DIR__ . '/_head.php';
+?>
 
 <div class="row g-3 mb-4">
   <div class="col-6 col-xl-3">
     <div class="card stat-card tone-primary">
-      <div class="stat-label">Items</div>
+      <i class="stat-glyph bi bi-boxes" aria-hidden="true"></i><div class="stat-label">Items</div>
       <div class="stat-value"><?= number_format($stats['items']) ?></div>
       <div class="stat-note">Catalogued items</div>
     </div>
   </div>
   <div class="col-6 col-xl-3">
-    <div class="card stat-card tone-primary">
-      <div class="stat-label">Low stock</div>
+    <div class="card stat-card tone-warning">
+      <i class="stat-glyph bi bi-box-seam" aria-hidden="true"></i><div class="stat-label">Low stock</div>
       <div class="stat-value stat-<?= $stats['low_stock'] > 0 ? 'warning' : 'success' ?>"><?= number_format($stats['low_stock']) ?></div>
       <div class="stat-note">At or below reorder level</div>
     </div>
   </div>
   <div class="col-6 col-xl-3">
-    <div class="card stat-card tone-primary">
-      <div class="stat-label">Requests</div>
+    <div class="card stat-card tone-warning">
+      <i class="stat-glyph bi bi-clipboard-list" aria-hidden="true"></i><div class="stat-label">Requests</div>
       <div class="stat-value"><?= number_format($stats['requests']) ?></div>
       <div class="stat-note">Purchase requests</div>
     </div>
   </div>
   <div class="col-6 col-xl-3">
-    <div class="card stat-card tone-primary">
-      <div class="stat-label">Draft requests</div>
+    <div class="card stat-card tone-secondary">
+      <i class="stat-glyph bi bi-file-earmark-text" aria-hidden="true"></i><div class="stat-label">Draft requests</div>
       <div class="stat-value"><?= number_format($stats['pending']) ?></div>
       <div class="stat-note">Awaiting approval</div>
     </div>
@@ -111,7 +111,7 @@ $can = function (string $module, string $action = 'view') use ($user): bool {
 
 <div class="row g-3">
   <div class="col-12">
-    <div class="card app-card">
+    <div class="card app-card dashboard-actions">
       <div class="card-header">Quick actions</div>
       <div class="card-body">
         <div class="row g-2">

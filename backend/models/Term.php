@@ -29,6 +29,18 @@ final class Term extends Model
         );
     }
 
+    public static function activeForSchool(int $schoolId): ?array
+    {
+        return static::one(
+            'SELECT t.*, y.name AS year_name, y.school_id
+               FROM terms t
+               JOIN academic_years y ON y.id = t.academic_year_id
+              WHERE y.school_id = ? AND y.is_active = 1 AND t.is_active = 1
+              ORDER BY t.id LIMIT 1',
+            [$schoolId]
+        );
+    }
+
     public static function withYear(): array
     {
         return static::query(

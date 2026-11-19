@@ -1,3 +1,4 @@
+<?php /* Parents & guardians: contact records and the students linked to each one. */ ?>
 <div class="page-head">
   <div>
     <h1 class="h4 mb-0">Parents &amp; guardians</h1>

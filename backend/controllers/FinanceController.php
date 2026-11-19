@@ -1118,7 +1118,7 @@ final class FinanceController extends Controller
         }
 
         $db->prepare(
-            'UPDATE receipts SET is_void = 1, void_reason = ?, delivery_status = \'void\' WHERE id = ?'
+            'UPDATE receipts SET is_void = 1, void_reason = ? WHERE id = ?'
         )->execute([$reason, $id]);
 
         audit('finance', 'receipt_voided', 'receipts', $id, 'Receipt voided: ' . $reason);

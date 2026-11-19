@@ -4,38 +4,38 @@ $can = function (string $module, string $action = 'view') use ($user): bool {
     return Auth::can($module, $action);
 };
 ?>
-<div class="page-head">
-  <div>
-    <h1 class="h4 mb-0">Library Dashboard</h1>
-    <p class="text-muted small mb-0">Books, copies, active borrowings and overdue items.</p>
-  </div>
-</div>
+<?php
+$headTitle = 'Library Dashboard';
+$headIcon = 'bi-journals';
+$headSubtitle = 'Books, copies, active borrowings and overdue items.';
+require __DIR__ . '/_head.php';
+?>
 
 <div class="row g-3 mb-4">
   <div class="col-6 col-xl-3">
     <div class="card stat-card tone-primary">
-      <div class="stat-label">Books</div>
+      <i class="stat-glyph bi bi-journal-bookmark" aria-hidden="true"></i><div class="stat-label">Books</div>
       <div class="stat-value"><?= number_format($stats['books']) ?></div>
       <div class="stat-note">Catalogued titles</div>
     </div>
   </div>
   <div class="col-6 col-xl-3">
-    <div class="card stat-card tone-primary">
-      <div class="stat-label">Total copies</div>
+    <div class="card stat-card tone-info">
+      <i class="stat-glyph bi bi-collection" aria-hidden="true"></i><div class="stat-label">Total copies</div>
       <div class="stat-value"><?= number_format($stats['total_copies']) ?></div>
       <div class="stat-note">Physical items</div>
     </div>
   </div>
   <div class="col-6 col-xl-3">
-    <div class="card stat-card tone-primary">
-      <div class="stat-label">Available</div>
+    <div class="card stat-card tone-success">
+      <i class="stat-glyph bi bi-check-circle" aria-hidden="true"></i><div class="stat-label">Available</div>
       <div class="stat-value"><?= number_format($stats['available']) ?></div>
       <div class="stat-note">On the shelf</div>
     </div>
   </div>
   <div class="col-6 col-xl-3">
-    <div class="card stat-card tone-primary">
-      <div class="stat-label">Overdue</div>
+    <div class="card stat-card tone-danger">
+      <i class="stat-glyph bi bi-journal-x" aria-hidden="true"></i><div class="stat-label">Overdue</div>
       <div class="stat-value stat-<?= $stats['overdue'] > 0 ? 'danger' : 'success' ?>"><?= number_format($stats['overdue']) ?></div>
       <div class="stat-note">Past due date</div>
     </div>
@@ -110,7 +110,7 @@ $can = function (string $module, string $action = 'view') use ($user): bool {
 
 <div class="row g-3">
   <div class="col-12">
-    <div class="card app-card">
+    <div class="card app-card dashboard-actions">
       <div class="card-header">Quick actions</div>
       <div class="card-body">
         <div class="row g-2">

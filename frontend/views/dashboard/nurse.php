@@ -4,38 +4,38 @@ $can = function (string $module, string $action = 'view') use ($user): bool {
     return Auth::can($module, $action);
 };
 ?>
-<div class="page-head">
-  <div>
-    <h1 class="h4 mb-0">Health Dashboard</h1>
-    <p class="text-muted small mb-0">Sickbay visits, medical records and student welfare overview.</p>
-  </div>
-</div>
+<?php
+$headTitle = 'Health Dashboard';
+$headIcon = 'bi-heart-pulse';
+$headSubtitle = 'Sickbay visits, medical records and student welfare overview.';
+require __DIR__ . '/_head.php';
+?>
 
 <div class="row g-3 mb-4">
   <div class="col-6 col-xl-3">
     <div class="card stat-card tone-primary">
-      <div class="stat-label">Students</div>
+      <i class="stat-glyph bi bi-people" aria-hidden="true"></i><div class="stat-label">Students</div>
       <div class="stat-value"><?= number_format($stats['students']) ?></div>
       <div class="stat-note">Active &amp; suspended</div>
     </div>
   </div>
   <div class="col-6 col-xl-3">
-    <div class="card stat-card tone-primary">
-      <div class="stat-label">Sickbay today</div>
+    <div class="card stat-card tone-danger">
+      <i class="stat-glyph bi bi-heart-pulse" aria-hidden="true"></i><div class="stat-label">Sickbay today</div>
       <div class="stat-value"><?= number_format($stats['sickbay_today']) ?></div>
       <div class="stat-note">Visits recorded today</div>
     </div>
   </div>
   <div class="col-6 col-xl-3">
-    <div class="card stat-card tone-primary">
-      <div class="stat-label">Total visits</div>
+    <div class="card stat-card tone-info">
+      <i class="stat-glyph bi bi-arrow-repeat" aria-hidden="true"></i><div class="stat-label">Total visits</div>
       <div class="stat-value"><?= number_format($stats['visits']) ?></div>
       <div class="stat-note">All sickbay records</div>
     </div>
   </div>
   <div class="col-6 col-xl-3">
-    <div class="card stat-card tone-primary">
-      <div class="stat-label">Confidential records</div>
+    <div class="card stat-card tone-danger">
+      <i class="stat-glyph bi bi-file-lock" aria-hidden="true"></i><div class="stat-label">Confidential records</div>
       <div class="stat-value"><?= number_format($stats['confidential']) ?></div>
       <div class="stat-note">Restricted access</div>
     </div>
@@ -82,7 +82,7 @@ $can = function (string $module, string $action = 'view') use ($user): bool {
 
 <div class="row g-3">
   <div class="col-12">
-    <div class="card app-card">
+    <div class="card app-card dashboard-actions">
       <div class="card-header">Quick actions</div>
       <div class="card-body">
         <div class="row g-2">

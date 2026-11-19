@@ -4,38 +4,38 @@ $can = function (string $module, string $action = 'view') use ($user): bool {
     return Auth::can($module, $action);
 };
 ?>
-<div class="page-head">
-  <div>
-    <h1 class="h4 mb-0">Gate Dashboard</h1>
-    <p class="text-muted small mb-0">Visitor registration, gate passes and current on-site visitors.</p>
-  </div>
-</div>
+<?php
+$headTitle = 'Gate Dashboard';
+$headIcon = 'bi-door-open';
+$headSubtitle = 'Visitor registration, gate passes and current on-site visitors.';
+require __DIR__ . '/_head.php';
+?>
 
 <div class="row g-3 mb-4">
   <div class="col-6 col-xl-3">
     <div class="card stat-card tone-primary">
-      <div class="stat-label">Visitors today</div>
+      <i class="stat-glyph bi bi-people" aria-hidden="true"></i><div class="stat-label">Visitors today</div>
       <div class="stat-value"><?= number_format($stats['visitors_today']) ?></div>
       <div class="stat-note">Signed in today</div>
     </div>
   </div>
   <div class="col-6 col-xl-3">
-    <div class="card stat-card tone-primary">
-      <div class="stat-label">Inside now</div>
+    <div class="card stat-card tone-success">
+      <i class="stat-glyph bi bi-person-walking" aria-hidden="true"></i><div class="stat-label">Inside now</div>
       <div class="stat-value"><?= number_format($stats['inside']) ?></div>
       <div class="stat-note">Currently on site</div>
     </div>
   </div>
   <div class="col-6 col-xl-3">
-    <div class="card stat-card tone-primary">
-      <div class="stat-label">Total visitors</div>
+    <div class="card stat-card tone-secondary">
+      <i class="stat-glyph bi bi-people" aria-hidden="true"></i><div class="stat-label">Total visitors</div>
       <div class="stat-value"><?= number_format($stats['total']) ?></div>
       <div class="stat-note">All records</div>
     </div>
   </div>
   <div class="col-6 col-xl-3">
-    <div class="card stat-card tone-primary">
-      <div class="stat-label">Checked out</div>
+    <div class="card stat-card tone-secondary">
+      <i class="stat-glyph bi bi-box-arrow-right" aria-hidden="true"></i><div class="stat-label">Checked out</div>
       <div class="stat-value"><?= number_format($stats['checked_out']) ?></div>
       <div class="stat-note">Completed visits</div>
     </div>
@@ -82,7 +82,7 @@ $can = function (string $module, string $action = 'view') use ($user): bool {
 
 <div class="row g-3">
   <div class="col-12">
-    <div class="card app-card">
+    <div class="card app-card dashboard-actions">
       <div class="card-header">Quick actions</div>
       <div class="card-body">
         <div class="row g-2">

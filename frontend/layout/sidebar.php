@@ -1,12 +1,19 @@
 <?php
+/**
+ * Sidebar navigation.
+ *
+ * Each section is wrapped in Auth::can() checks, so people only see the modules
+ * their role allows. Parent and student accounts get a single "My dashboard"
+ * link straight to the portal instead of the staff menus.
+ */
 $nav = $activeNav ?? '';
 $route = (string)($_GET['r'] ?? '');
 $link = function (string $key, string $r, string $label, string $icon, bool $active = false) use ($nav): void {
     $isActive = $active || $nav === $key;
     ?>
     <li>
-      <a class="sidebar-link <?= $isActive ? 'active' : '' ?>" href="<?= url($r) ?>">
-        <span class="sidebar-link-inner"><i class="bi <?= e($icon) ?>"></i><span><?= $label ?></span></span>
+      <a class="sidebar-link <?= $isActive ? 'active' : '' ?>" href="<?= url($r) ?>"<?= $isActive ? ' aria-current="page"' : '' ?>>
+        <span class="sidebar-link-inner"><i class="bi <?= e($icon) ?>" aria-hidden="true"></i><span><?= $label ?></span></span>
       </a>
     </li>
     <?php
@@ -15,6 +22,7 @@ $section = function (string $title): void { ?>
     <li class="sidebar-section"><?= e($title) ?></li>
 <?php };
 ?>
+<?php /* Brand block: school logo when uploaded, otherwise the school initial. */ ?>
 <nav class="app-sidebar" id="appSidebar" aria-label="Primary">
   <?php $school = school_row(); $logo = $school['logo_path'] ?? null; ?>
   <div class="sidebar-brand">
@@ -32,7 +40,7 @@ $section = function (string $title): void { ?>
   <ul class="sidebar-nav">
     <?php $section('Main');
       $portalUser = in_array(Auth::user()['user_type'] ?? '', ['parent', 'student'], true);
-      $link('dashboard', $portalUser ? 'portal' : 'dashboard', 'Dashboard', 'bi-speedometer2');
+      $link('dashboard', $portalUser ? 'portal' : 'dashboard', $portalUser ? 'My dashboard' : 'Dashboard', 'bi-speedometer2');
     ?>
 
 <?php if (Auth::can('administration', 'view')): ?>
@@ -140,7 +148,7 @@ $section = function (string $title): void { ?>
     <?php $section('Compliance'); $link('compliance', 'compliance', 'Govt. compliance', 'bi-patch-check'); ?>
 <?php endif; ?>
 
-<?php if (Auth::can('portal', 'view')): ?>
+<?php if (Auth::can('portal', 'view') && empty($portalUser)): ?>
     <?php $section('My portal'); $link('portal', 'portal', 'Portal dashboard', 'bi-person-workspace'); ?>
 <?php endif; ?>
 

@@ -1,3 +1,4 @@
+<?php /* User accounts: create, edit, link to staff/guardian/student records and reset passwords. */ ?>
 <div class="page-head">
   <div>
     <h1 class="h4 mb-0">Users</h1>

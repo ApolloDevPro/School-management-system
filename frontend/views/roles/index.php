@@ -1,3 +1,4 @@
+<?php /* Roles and the permission matrix that drives route access. */ ?>
 <div class="page-head">
   <div>
     <h1 class="h4 mb-0">Roles &amp; permissions</h1>

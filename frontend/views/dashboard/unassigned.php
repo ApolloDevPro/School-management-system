@@ -1,12 +1,12 @@
 <?php
 $user = $user ?? Auth::user();
 ?>
-<div class="page-head">
-  <div>
-    <h1 class="h4 mb-0">Dashboard</h1>
-    <p class="text-muted small mb-0">Welcome, <?= e($user['full_name'] ?? '') ?></p>
-  </div>
-</div>
+<?php
+$headTitle = 'Dashboard';
+$headIcon = 'bi-person-badge';
+$headSubtitle = 'Welcome, ' . e($user['full_name'] ?? '');
+require __DIR__ . '/_head.php';
+?>
 
 <div class="card app-card">
   <div class="card-body text-center py-5">

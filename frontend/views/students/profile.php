@@ -1,3 +1,4 @@
+<?php /* Full student profile: bio, guardians, subjects, fees, attendance, results and discipline. */ ?>
 <div class="page-head">
   <div>
     <h1 class="h4 mb-0"><?= e($student['first_name'] . ' ' . $student['last_name']) ?></h1>

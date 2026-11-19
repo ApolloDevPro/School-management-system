@@ -1,8 +1,9 @@
+<?php $minLen = password_min_length(); ?>
 <div class="auth-card card border-0 shadow-sm">
   <div class="card-body p-4 p-md-5">
     <div class="mb-4">
       <h1 class="h4 mb-1 fw-semibold">First-time setup</h1>
-      <p class="text-muted small mb-0">Set the sign-in password for an account that has none yet.</p>
+      <p class="text-muted small mb-0">Choose the account and set its sign-in password. This screen disappears once every account has one.</p>
     </div>
 
     <form method="post" action="<?= url('install') ?>">
@@ -22,16 +23,18 @@
         <label class="form-label" for="install_password">New password</label>
         <div class="input-group">
           <span class="input-group-text"><i class="bi bi-lock"></i></span>
-          <input class="form-control" id="install_password" name="password" type="password" minlength="8" autocomplete="new-password" placeholder="At least 8 characters" required>
+          <input class="form-control" id="install_password" name="password" type="password" minlength="<?= $minLen ?>" autocomplete="new-password" placeholder="At least <?= $minLen ?> characters" required>
+          <button class="password-toggle" type="button" data-toggle-password="install_password" aria-label="Show password" title="Show password"><i class="bi bi-eye"></i></button>
         </div>
         <div class="invalid-feedback" data-error-for="password"></div>
-        <div class="form-text">Use at least 8 characters.</div>
+        <div class="help-text"><i class="bi bi-info-circle"></i><span>Use at least <?= $minLen ?> characters. A memorable phrase is easier and safer than a short word.</span></div>
       </div>
       <div class="mb-4">
         <label class="form-label" for="install_confirm">Confirm password</label>
         <div class="input-group">
           <span class="input-group-text"><i class="bi bi-shield-check"></i></span>
-          <input class="form-control" id="install_confirm" name="confirm" type="password" minlength="8" autocomplete="new-password" placeholder="Re-enter password" required>
+          <input class="form-control" id="install_confirm" name="confirm" type="password" minlength="<?= $minLen ?>" autocomplete="new-password" placeholder="Re-enter the same password" required data-match="install_password">
+          <button class="password-toggle" type="button" data-toggle-password="install_confirm" aria-label="Show password" title="Show password"><i class="bi bi-eye"></i></button>
         </div>
         <div class="invalid-feedback" data-error-for="confirm"></div>
       </div>

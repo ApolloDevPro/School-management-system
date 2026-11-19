@@ -1,4 +1,4 @@
-<?php
+<?php /* Administrator dashboard: enrolment, staffing, fees, attendance and recent activity. */
 $user = Auth::user();
 $can = function (string $module, string $action = 'view'): bool { return Auth::can($module, $action); };
 $currency = e(school_row()['currency_symbol'] ?? 'Ugx');
@@ -7,16 +7,16 @@ if (!$activeYear) { $alerts[] = ['type' => 'warning', 'text' => 'No active acade
 if (!$activeTerm) { $alerts[] = ['type' => 'warning', 'text' => 'No active term set.', 'url' => url('academics'), 'label' => 'Configure term', 'show' => $can('academics', 'edit') || $can('academics', 'view')]; }
 $alerts = array_values(array_filter($alerts, fn($a) => !empty($a['show'])));
 ?>
-<div class="page-head">
-  <div>
-    <h1 class="h4 mb-0">Leadership Dashboard</h1>
-    <p class="text-muted small mb-0">Welcome back, <?= e($user['full_name'] ?? '') ?> &middot; <?= e($user['role_name'] ?? '') ?></p>
-  </div>
-  <div class="text-end">
-    <span class="badge text-bg-<?= $activeYear ? 'success' : 'warning' ?>"><?= $activeYear ? 'Year active' : 'No active year' ?></span>
-    <span class="badge text-bg-<?= $activeTerm ? 'success' : 'warning' ?> ms-2"><?= $activeTerm ? 'Term active' : 'No active term' ?></span>
-  </div>
-</div>
+<?php
+$headTitle = 'Leadership Dashboard';
+$headIcon = 'bi-speedometer2';
+$headSubtitle = 'Welcome back, ' . e($user['full_name'] ?? '') . ' &middot; ' . e($user['role_name'] ?? '');
+$headBadges = '<span class="badge text-bg-' . ($activeYear ? 'success' : 'warning') . '">'
+    . ($activeYear ? 'Year active' : 'No active year') . '</span>'
+    . ' <span class="badge text-bg-' . ($activeTerm ? 'success' : 'warning') . '">'
+    . ($activeTerm ? 'Term active' : 'No active term') . '</span>';
+require __DIR__ . '/_head.php';
+?>
 
 <?php if ($alerts): ?>
 <div class="mb-3">
@@ -30,19 +30,19 @@ $alerts = array_values(array_filter($alerts, fn($a) => !empty($a['show'])));
 <?php endif; ?>
 
 <div class="row g-3 mb-3">
-  <div class="col-6 col-xl-3"><a class="text-decoration-none" href="<?= url('students') ?>"><div class="card stat-card tone-primary h-100"><div class="stat-label">Students</div><div class="stat-value"><?= number_format((int)$stats['students']) ?></div><div class="stat-note">Active enrolment</div></div></a></div>
-  <div class="col-6 col-xl-3"><a class="text-decoration-none" href="<?= url('hr') ?>"><div class="card stat-card tone-primary h-100"><div class="stat-label">Staff</div><div class="stat-value"><?= number_format((int)$stats['staff']) ?></div><div class="stat-note">Teaching &amp; non-teaching</div></div></a></div>
-  <div class="col-6 col-xl-3"><a class="text-decoration-none" href="<?= url('users') ?>"><div class="card stat-card tone-primary h-100"><div class="stat-label">System users</div><div class="stat-value"><?= number_format((int)$stats['users']) ?></div><div class="stat-note">Active accounts</div></div></a></div>
-  <div class="col-6 col-xl-3"><a class="text-decoration-none" href="<?= url('finance') ?>"><div class="card stat-card tone-primary h-100"><div class="stat-label">Fees outstanding</div><div class="stat-value stat-money"><?= number_format((float)$stats['fees']) ?></div><div class="stat-note"><?= $currency ?> &middot; <?= number_format((int)$stats['invoices']) ?> invoices</div></div></a></div>
+  <div class="col-6 col-xl-3"><a class="text-decoration-none" href="<?= url('students') ?>"><div class="card stat-card h-100 tone-primary"><i class="stat-glyph bi bi-people" aria-hidden="true"></i><div class="stat-label">Students</div><div class="stat-value"><?= number_format((int)$stats['students']) ?></div><div class="stat-note">Active enrolment</div></div></a></div>
+  <div class="col-6 col-xl-3"><a class="text-decoration-none" href="<?= url('hr') ?>"><div class="card stat-card h-100 tone-info"><i class="stat-glyph bi bi-person-badge" aria-hidden="true"></i><div class="stat-label">Staff</div><div class="stat-value"><?= number_format((int)$stats['staff']) ?></div><div class="stat-note">Teaching &amp; non-teaching</div></div></a></div>
+  <div class="col-6 col-xl-3"><a class="text-decoration-none" href="<?= url('users') ?>"><div class="card stat-card h-100 tone-primary"><i class="stat-glyph bi bi-shield-lock" aria-hidden="true"></i><div class="stat-label">System users</div><div class="stat-value"><?= number_format((int)$stats['users']) ?></div><div class="stat-note">Active accounts</div></div></a></div>
+  <div class="col-6 col-xl-3"><a class="text-decoration-none" href="<?= url('finance') ?>"><div class="card stat-card h-100 tone-danger"><i class="stat-glyph bi bi-cash-stack" aria-hidden="true"></i><div class="stat-label">Fees outstanding</div><div class="stat-value stat-money"><?= number_format((float)$stats['fees']) ?></div><div class="stat-note"><?= $currency ?> &middot; <?= number_format((int)$stats['invoices']) ?> invoices</div></div></a></div>
 </div>
 
 <div class="row g-3 mb-3">
-  <div class="col-6 col-md-4 col-xl-2"><a class="text-decoration-none" href="<?= url('finance') ?>"><div class="card stat-card h-100"><div class="stat-label">Fees paid</div><div class="stat-value stat-money"><?= number_format((float)$stats['paid']) ?></div><div class="stat-note"><?= $currency ?></div></div></a></div>
-  <div class="col-6 col-md-4 col-xl-2"><a class="text-decoration-none" href="<?= url('admissions') ?>"><div class="card stat-card h-100"><div class="stat-label">Applicants</div><div class="stat-value"><?= number_format((int)$stats['applicants']) ?></div><div class="stat-note">Pending/review</div></div></a></div>
-  <div class="col-6 col-md-4 col-xl-2"><a class="text-decoration-none" href="<?= url('attendance') ?>"><div class="card stat-card h-100"><div class="stat-label">Present today</div><div class="stat-value"><?= number_format((int)$stats['attendance']) ?></div><div class="stat-note">Attendance records</div></div></a></div>
-  <div class="col-6 col-md-4 col-xl-2"><a class="text-decoration-none" href="<?= url('library') ?>"><div class="card stat-card h-100"><div class="stat-label">Overdue books</div><div class="stat-value"><?= number_format((int)$stats['overdue']) ?></div><div class="stat-note">Borrowings</div></div></a></div>
-  <div class="col-6 col-md-4 col-xl-2"><a class="text-decoration-none" href="<?= url('inventory') ?>"><div class="card stat-card h-100"><div class="stat-label">Low stock</div><div class="stat-value"><?= number_format((int)$stats['low_stock']) ?></div><div class="stat-note">Items at/below reorder</div></div></a></div>
-  <div class="col-6 col-md-4 col-xl-2"><a class="text-decoration-none" href="<?= url('security') ?>"><div class="card stat-card h-100"><div class="stat-label">Open tickets</div><div class="stat-value"><?= number_format((int)$stats['tickets']) ?></div><div class="stat-note">Support &amp; security</div></div></a></div>
+  <div class="col-6 col-md-4 col-xl-2"><a class="text-decoration-none" href="<?= url('finance') ?>"><div class="card stat-card h-100 tone-success"><i class="stat-glyph bi bi-wallet2" aria-hidden="true"></i><div class="stat-label">Fees paid</div><div class="stat-value stat-money"><?= number_format((float)$stats['paid']) ?></div><div class="stat-note"><?= $currency ?></div></div></a></div>
+  <div class="col-6 col-md-4 col-xl-2"><a class="text-decoration-none" href="<?= url('admissions') ?>"><div class="card stat-card h-100 tone-info"><i class="stat-glyph bi bi-person-plus" aria-hidden="true"></i><div class="stat-label">Applicants</div><div class="stat-value"><?= number_format((int)$stats['applicants']) ?></div><div class="stat-note">Pending/review</div></div></a></div>
+  <div class="col-6 col-md-4 col-xl-2"><a class="text-decoration-none" href="<?= url('attendance') ?>"><div class="card stat-card h-100 tone-success"><i class="stat-glyph bi bi-check2-circle" aria-hidden="true"></i><div class="stat-label">Present today</div><div class="stat-value"><?= number_format((int)$stats['attendance']) ?></div><div class="stat-note">Attendance records</div></div></a></div>
+  <div class="col-6 col-md-4 col-xl-2"><a class="text-decoration-none" href="<?= url('library') ?>"><div class="card stat-card h-100 tone-danger"><i class="stat-glyph bi bi-journal-x" aria-hidden="true"></i><div class="stat-label">Overdue books</div><div class="stat-value"><?= number_format((int)$stats['overdue']) ?></div><div class="stat-note">Borrowings</div></div></a></div>
+  <div class="col-6 col-md-4 col-xl-2"><a class="text-decoration-none" href="<?= url('inventory') ?>"><div class="card stat-card h-100 tone-warning"><i class="stat-glyph bi bi-box-seam" aria-hidden="true"></i><div class="stat-label">Low stock</div><div class="stat-value"><?= number_format((int)$stats['low_stock']) ?></div><div class="stat-note">Items at/below reorder</div></div></a></div>
+  <div class="col-6 col-md-4 col-xl-2"><a class="text-decoration-none" href="<?= url('security') ?>"><div class="card stat-card h-100 tone-danger"><i class="stat-glyph bi bi-life-preserver" aria-hidden="true"></i><div class="stat-label">Open tickets</div><div class="stat-value"><?= number_format((int)$stats['tickets']) ?></div><div class="stat-note">Support &amp; security</div></div></a></div>
 </div>
 
 <div class="row g-3 mb-3">
@@ -59,7 +59,7 @@ $alerts = array_values(array_filter($alerts, fn($a) => !empty($a['show'])));
     </div>
   </div>
   <div class="col-lg-5">
-    <div class="card app-card h-100">
+    <div class="card app-card h-100 dashboard-actions">
       <div class="card-header">Quick actions</div>
       <div class="card-body">
         <div class="row g-2">

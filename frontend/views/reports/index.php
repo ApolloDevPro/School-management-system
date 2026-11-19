@@ -1,4 +1,4 @@
-﻿<?php
+﻿<?php /* Reports & analytics hub: KPIs, per-module reports and CSV/PDF exports. */
 // ------------------------------------------------------------------ helpers
 $school   = school_row() ?? [];
 $currency = $school['currency_symbol'] ?? 'Ugx';

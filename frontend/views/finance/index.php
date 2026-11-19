@@ -1,3 +1,4 @@
+<?php /* Fees & payments: invoicing, bulk invoices, fee structures, payments, receipts, clearance and exports. */ ?>
 <div class="page-head">
   <div>
     <h1 class="h4 mb-0">Finance &amp; fees</h1>
@@ -25,9 +26,9 @@
           <div class="mb-3">
             <label class="form-label" for="invoice_student">Student</label>
             <select class="form-select" id="invoice_student" name="student_id" required>
-              <option value="">Chooseâ€¦</option>
+              <option value="">Choose…</option>
 <?php foreach ($students as $student): ?>
-              <option value="<?= (int)$student['id'] ?>"><?= e($student['admission_number'] . ' â€” ' . $student['last_name'] . ' ' . $student['first_name']) ?></option>
+              <option value="<?= (int)$student['id'] ?>"><?= e($student['admission_number'] . ' — ' . $student['last_name'] . ' ' . $student['first_name']) ?></option>
 <?php endforeach; ?>
             </select>
           </div>
@@ -93,7 +94,7 @@
             <label class="form-label" for="payment_invoice">Invoice</label>
             <select class="form-select" id="payment_invoice" name="invoice_id" required>
 <?php foreach ($openInvoices as $invoice): ?>
-              <option value="<?= (int)$invoice['id'] ?>"><?= e($invoice['invoice_number'] . ' â€” ' . $invoice['last_name'] . ' ' . $invoice['first_name'] . ' â€” UGX ' . number_format((float)$invoice['balance'], 2)) ?></option>
+              <option value="<?= (int)$invoice['id'] ?>"><?= e($invoice['invoice_number'] . ' — ' . $invoice['last_name'] . ' ' . $invoice['first_name'] . ' — UGX ' . number_format((float)$invoice['balance'], 2)) ?></option>
 <?php endforeach; ?>
             </select>
           </div>
@@ -164,7 +165,7 @@
 <?php else: foreach ($invoices as $invoice): ?>
         <tr>
           <td><?= e($invoice['invoice_number']) ?></td>
-          <td><?= e($invoice['admission_number'] . ' â€” ' . $invoice['last_name'] . ' ' . $invoice['first_name']) ?></td>
+          <td><?= e($invoice['admission_number'] . ' — ' . $invoice['last_name'] . ' ' . $invoice['first_name']) ?></td>
           <td><?= e($invoice['year_name'] . ($invoice['term_name'] ? ' / ' . $invoice['term_name'] : '')) ?></td>
           <td><?= e($invoice['issue_date']) ?></td>
           <td>UGX <?= number_format((float)$invoice['total_amount'], 2) ?></td>
@@ -191,8 +192,8 @@
         <tr><td colspan="6" class="text-center text-muted py-4">No payments have been recorded.</td></tr>
 <?php else: foreach ($payments as $payment): ?>
         <tr>
-          <td><?= e($payment['payment_reference']) ?><div class="small text-muted"><?= e($payment['payment_date']) ?><?= $payment['external_reference'] ? ' Â· ' . e($payment['external_reference']) : '' ?></div></td>
-          <td><?= e($payment['admission_number'] . ' â€” ' . $payment['last_name'] . ' ' . $payment['first_name']) ?><div class="small text-muted"><?= e($payment['invoice_number'] ?? 'No invoice') ?></div></td>
+          <td><?= e($payment['payment_reference']) ?><div class="small text-muted"><?= e($payment['payment_date']) ?><?= $payment['external_reference'] ? ' · ' . e($payment['external_reference']) : '' ?></div></td>
+          <td><?= e($payment['admission_number'] . ' — ' . $payment['last_name'] . ' ' . $payment['first_name']) ?><div class="small text-muted"><?= e($payment['invoice_number'] ?? 'No invoice') ?></div></td>
           <td><?= e(ucwords(str_replace('_', ' ', $payment['channel']))) ?></td>
           <td>UGX <?= number_format((float)$payment['amount_local'], 2) ?></td>
           <td><span class="badge text-bg-<?= $payment['status'] === 'verified' ? 'success' : ($payment['status'] === 'pending' ? 'warning' : 'secondary') ?>"><?= e(ucwords($payment['status'])) ?></span>
@@ -208,7 +209,7 @@
               <button class="btn btn-outline-danger btn-sm" name="result" value="rejected" type="submit">Reject</button>
             </form>
 <?php else: ?>
-            <span class="text-muted small">â€”</span>
+            <span class="text-muted small">—</span>
 <?php endif; ?>
           </td>
         </tr>

@@ -1,3 +1,4 @@
+<?php /* Human resources: staff records, leave administration and draft payroll. */ ?>
 <div class="page-head">
   <div><h1 class="h4 mb-0">HR &amp; payroll</h1><p class="text-muted small mb-0">Staff records, leave administration and draft payroll</p></div>
 </div>

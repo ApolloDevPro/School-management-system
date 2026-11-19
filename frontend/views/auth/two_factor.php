@@ -8,7 +8,8 @@
       <?= csrf_field() ?>
       <div class="mb-4">
         <label class="form-label" for="tf_code">Verification code</label>
-        <input class="form-control form-control-lg text-center" id="tf_code" name="code" inputmode="numeric" pattern="\d{6}" maxlength="6" autocomplete="one-time-code" placeholder="000000" required autofocus>
+        <input class="form-control form-control-lg text-center" id="tf_code" name="code" inputmode="numeric" pattern="\d{6}" maxlength="6" autocomplete="one-time-code" placeholder="000000" aria-describedby="tf_hint" required autofocus>
+        <div class="help-text justify-content-center" id="tf_hint"><i class="bi bi-phone"></i><span>Open your authenticator app and enter the current 6-digit code. It changes every 30 seconds.</span></div>
       </div>
       <button class="btn btn-primary btn-lg w-100" type="submit"><i class="bi bi-shield-check me-1"></i> Verify</button>
     </form>

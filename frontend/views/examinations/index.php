@@ -1,3 +1,4 @@
+<?php /* Examinations: exams, schedules, mark entry, processing, publishing and result sheets. */ ?>
 <div class="page-head">
   <div>
     <h1 class="h4 mb-0">Examinations and assessment</h1>

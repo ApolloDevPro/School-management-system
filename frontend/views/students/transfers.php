@@ -100,7 +100,7 @@
 <?php if ($transfer['direction'] === 'out'): ?>
                   <a class="btn btn-sm btn-outline-secondary" href="<?= url('students/transfers/certificate', ['student_id' => (int)$transfer['student_id']]) ?>" target="_blank"><i class="bi bi-file-earmark-text"></i> Cert</a>
 <?php else: ?>
-                  <span class="text-muted small">â€”</span>
+                  <span class="text-muted small">—</span>
 <?php endif; ?>
                 </td>
               </tr>

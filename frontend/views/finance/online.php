@@ -143,7 +143,7 @@
           <select class="form-select" id="txn_invoice" name="invoice_id">
             <option value="">Unmatched</option>
 <?php foreach ($invoices as $invoice): ?>
-            <option value="<?= (int)$invoice['id'] ?>"><?= e($invoice['invoice_number'] . ' â€” ' . $invoice['last_name'] . ' ' . $invoice['first_name']) ?></option>
+            <option value="<?= (int)$invoice['id'] ?>"><?= e($invoice['invoice_number'] . ' — ' . $invoice['last_name'] . ' ' . $invoice['first_name']) ?></option>
 <?php endforeach; ?>
           </select>
         </div>
@@ -152,7 +152,7 @@
           <select class="form-select" id="txn_student" name="student_id">
             <option value="">Not matched</option>
 <?php foreach ($students as $student): ?>
-            <option value="<?= (int)$student['id'] ?>"><?= e($student['admission_number'] . ' â€” ' . $student['last_name'] . ' ' . $student['first_name']) ?></option>
+            <option value="<?= (int)$student['id'] ?>"><?= e($student['admission_number'] . ' — ' . $student['last_name'] . ' ' . $student['first_name']) ?></option>
 <?php endforeach; ?>
           </select>
         </div>

@@ -10,8 +10,9 @@
         <label class="form-label" for="fp_identity">Username or email</label>
         <div class="input-group input-group-lg">
           <span class="input-group-text"><i class="bi bi-person"></i></span>
-          <input class="form-control" id="fp_identity" name="identity" autocomplete="username" required>
+          <input class="form-control" id="fp_identity" name="identity" autocomplete="username" placeholder="Enter your username or email" required>
         </div>
+        <div class="help-text"><i class="bi bi-info-circle"></i><span>Ask your school administrator if you do not know the username on your account.</span></div>
       </div>
       <button class="btn btn-primary btn-lg w-100" type="submit"><i class="bi bi-send me-1"></i> Send reset link</button>
     </form>

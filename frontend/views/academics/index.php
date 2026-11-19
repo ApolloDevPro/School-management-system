@@ -1,3 +1,4 @@
+<?php /* Academic management: subjects, class allocations, schemes of work, timetables and homework. */ ?>
 <div class="page-head">
   <div>
     <h1 class="h4 mb-0">Academic management</h1>

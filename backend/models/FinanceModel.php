@@ -240,13 +240,14 @@ final class FinanceModel extends Model
                     if (!$invoice || (float)$payment['amount_local'] > (float)$invoice['balance']) {
                         throw new DomainException('The invoice balance no longer covers this payment.');
                     }
+                    $paidAmount = round((float)$invoice['paid_amount'] + (float)$payment['amount_local'], 2);
                     $db->prepare(
                         "UPDATE fee_invoices
-                            SET paid_amount = paid_amount + ?,
-                                balance = GREATEST(total_amount - (paid_amount + ?), 0),
-                                status = CASE WHEN total_amount <= paid_amount + ? THEN 'paid' ELSE 'part_paid' END
+                            SET paid_amount = ?,
+                                balance = GREATEST(total_amount - ?, 0),
+                                status = CASE WHEN total_amount <= ? THEN 'paid' ELSE 'part_paid' END
                           WHERE id = ? AND school_id = ?"
-                    )->execute([$payment['amount_local'], $payment['amount_local'], $payment['amount_local'], $invoice['id'], $schoolId]);
+                    )->execute([$paidAmount, $paidAmount, $paidAmount, $invoice['id'], $schoolId]);
                 }
                 $db->prepare(
                     "UPDATE payments SET status = 'verified', verified_by = ?, verified_at = NOW(), posted_at = NOW()

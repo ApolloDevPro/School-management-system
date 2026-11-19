@@ -1,4 +1,4 @@
-<?php
+<?php /* UNEB candidates and national results. */
 $canAdd = $canAdd ?? false;
 $canEdit = $canEdit ?? false;
 ?>
