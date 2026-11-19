@@ -203,9 +203,12 @@ final class HrController extends Controller
             $this->respond(false, 'Choose a draft payroll period and staff member and enter valid non-negative amounts.', 'hr');
         }
         $gross = round($basic + $allowances, 2);
-        if ($deductions > $gross) {
-            $this->respond(false, 'Deductions cannot exceed gross pay.', 'hr');
+        $tax = HrModule::statutory($gross);
+        $totalDeductions = round($tax['nssf_employee'] + $tax['paye'] + $deductions, 2);
+        if ($totalDeductions > $gross) {
+            $this->respond(false, 'PAYE, NSSF and other deductions exceed gross pay. Reduce the other deductions.', 'hr');
         }
+        $net = round($gross - $totalDeductions, 2);
         $db = Database::conn();
         try {
             $db->beginTransaction();
@@ -213,9 +216,13 @@ final class HrController extends Controller
                 'INSERT INTO payroll_items
                     (payroll_period_id, staff_id, basic_pay, allowances_total, gross_pay,
                      nssf_employee, nssf_employer, paye, other_deductions, total_deductions, net_pay)
-                 VALUES (?, ?, ?, ?, ?, 0, 0, 0, ?, ?, ?)'
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
             );
-            $statement->execute([$periodId, $staffId, $basic, $allowances, $gross, $deductions, $deductions, $gross - $deductions]);
+            $statement->execute([
+                $periodId, $staffId, $basic, $allowances, $gross,
+                $tax['nssf_employee'], $tax['nssf_employer'], $tax['paye'],
+                $deductions, $totalDeductions, $net,
+            ]);
             $id = (int)$db->lastInsertId();
             if ($period['status'] === 'draft') {
                 $db->prepare('UPDATE payroll_periods SET status = \'processing\' WHERE id = ?')->execute([$periodId]);
@@ -231,7 +238,136 @@ final class HrController extends Controller
             throw $error;
         }
         audit('hr', 'create', 'payroll_items', $id, 'Recorded payroll item for staff #' . $staffId . ' in period #' . $periodId);
-        $this->respond(true, 'Payroll item recorded. Statutory tax and contribution calculations are not included.', 'hr', ['period_id' => $periodId]);
+        $this->respond(
+            true,
+            'Payroll item recorded. PAYE ' . number_format($tax['paye'], 0) . ' and NSSF '
+                . number_format($tax['nssf_employee'], 0) . ' were calculated; net pay '
+                . number_format($net, 0) . '.',
+            'hr',
+            ['period_id' => $periodId]
+        );
+    }
+
+    /**
+     * Recalculate statutory deductions for every item in an open period.
+     */
+    public function recalculatePayroll(): void
+    {
+        if (!$this->allowed('edit')) {
+            return;
+        }
+        $periodId = (int)($_POST['payroll_period_id'] ?? 0);
+        $period = HrModule::payrollPeriod($periodId, school_id());
+        if (!$period || !in_array($period['status'], ['draft', 'processing'], true)) {
+            $this->respond(false, 'Only draft or processing payroll periods can be recalculated.', 'hr');
+        }
+        $updated = HrModule::recalculatePeriod($periodId, school_id());
+        audit('hr', 'update', 'payroll_periods', $periodId, 'Recalculated statutory deductions on ' . $updated . ' payroll item(s)');
+        $this->respond(true, $updated . ' payroll item(s) recalculated with current PAYE and NSSF rates.', 'hr', ['period_id' => $periodId]);
+    }
+
+    /**
+     * Finalise a processing period so its figures can no longer change.
+     */
+    public function approvePayrollPeriod(): void
+    {
+        if (!$this->allowed('approve')) {
+            return;
+        }
+        $periodId = (int)($_POST['payroll_period_id'] ?? 0);
+        $period = HrModule::payrollPeriod($periodId, school_id());
+        $itemCount = $period ? (int)HrModule::scalar(
+            'SELECT COUNT(*) FROM payroll_items WHERE payroll_period_id = ?',
+            [$periodId]
+        ) : 0;
+        if (!$period || $period['status'] !== 'processing' || $itemCount < 1) {
+            $this->respond(false, 'Only a processing period with payroll items can be approved.', 'hr');
+        }
+        HrModule::updateIn('payroll_periods', $periodId, [
+            'status' => 'approved',
+            'approved_by' => (int)Auth::user()['id'],
+            'approved_at' => date('Y-m-d H:i:s'),
+        ]);
+        audit('hr', 'approve', 'payroll_periods', $periodId, 'Approved payroll period ' . $period['period_label']);
+        $this->respond(true, 'Payroll period approved. Payslips can now be printed and paid.', 'hr', ['period_id' => $periodId]);
+    }
+
+    /**
+     * Mark every item in an approved period as paid.
+     */
+    public function payPayrollPeriod(): void
+    {
+        if (!$this->allowed('approve')) {
+            return;
+        }
+        $periodId = (int)($_POST['payroll_period_id'] ?? 0);
+        $method = (string)($_POST['payment_method'] ?? '');
+        if (!in_array($method, ['bank', 'cash', 'mobile_money'], true)) {
+            $this->respond(false, 'Choose a valid payment method.', 'hr');
+        }
+        $period = HrModule::payrollPeriod($periodId, school_id());
+        if (!$period || $period['status'] !== 'approved') {
+            $this->respond(false, 'Only an approved payroll period can be marked as paid.', 'hr');
+        }
+        $db = Database::conn();
+        $db->beginTransaction();
+        try {
+            $db->prepare(
+                "UPDATE payroll_items SET is_paid = 1, paid_at = ?, payment_method = ?
+                  WHERE payroll_period_id = ?"
+            )->execute([date('Y-m-d H:i:s'), $method, $periodId]);
+            HrModule::updateIn('payroll_periods', $periodId, ['status' => 'paid']);
+            $db->commit();
+        } catch (Throwable $error) {
+            $db->rollBack();
+            throw $error;
+        }
+        audit('hr', 'pay', 'payroll_periods', $periodId, 'Marked payroll period ' . $period['period_label'] . ' as paid by ' . $method);
+        $this->respond(true, 'Payroll period marked as paid.', 'hr', ['period_id' => $periodId]);
+    }
+
+    /**
+     * Printable payslip for one payroll item.
+     */
+    public function payrollPayslip(): void
+    {
+        if (!$this->allowed('view')) {
+            return;
+        }
+        $itemId = (int)($_GET['item_id'] ?? 0);
+        $item = HrModule::payrollItem($itemId, school_id());
+        if (!$item) {
+            flash_set('danger', 'Payslip not found.');
+            redirect('hr');
+        }
+        $school = school_row() ?? [];
+        $currency = (string)($school['currency_symbol'] ?? 'Ugx');
+        $name = trim($item['first_name'] . ' ' . ($item['middle_name'] ?? '') . ' ' . $item['last_name']);
+        $money = static fn (float $value): string => number_format($value, 2) . ' ' . e($currency);
+
+        $body = '<div class="stat-row">'
+            . '<div class="stat-col"><div class="stat-label">Staff</div><div class="stat-value">' . e($name) . '</div></div>'
+            . '<div class="stat-col"><div class="stat-label">Staff number</div><div class="stat-value">' . e($item['staff_number']) . '</div></div>'
+            . '<div class="stat-col"><div class="stat-label">Period</div><div class="stat-value">' . e($item['period_label']) . '</div></div>'
+            . '</div>'
+            . '<table class="pdf-table"><thead><tr><th>Description</th><th class="text-right">Amount (' . e($currency) . ')</th></tr></thead><tbody>'
+            . '<tr><td>Basic pay</td><td class="text-right">' . $money((float)$item['basic_pay']) . '</td></tr>'
+            . '<tr><td>Allowances</td><td class="text-right">' . $money((float)$item['allowances_total']) . '</td></tr>'
+            . '<tr><td><strong>Gross pay</strong></td><td class="text-right"><strong>' . $money((float)$item['gross_pay']) . '</strong></td></tr>'
+            . '<tr><td>NSSF employee (5%)</td><td class="text-right">' . $money((float)$item['nssf_employee']) . '</td></tr>'
+            . '<tr><td>PAYE</td><td class="text-right">' . $money((float)$item['paye']) . '</td></tr>'
+            . '<tr><td>Other deductions</td><td class="text-right">' . $money((float)$item['other_deductions']) . '</td></tr>'
+            . '<tr><td><strong>Total deductions</strong></td><td class="text-right"><strong>' . $money((float)$item['total_deductions']) . '</strong></td></tr>'
+            . '<tr><td><strong>Net pay</strong></td><td class="text-right"><strong>' . $money((float)$item['net_pay']) . '</strong></td></tr>'
+            . '</tbody></table>'
+            . '<div class="text-muted">Employer NSSF contribution: ' . $money((float)$item['nssf_employer'])
+            . ' &middot; Payment method: ' . e($item['payment_method'] ?? 'not paid')
+            . ' &middot; NSSF no. ' . e($item['nssf_number'] ?? '—')
+            . ' &middot; TIN ' . e($item['ura_tin'] ?? '—') . '</div>';
+
+        $html = PdfService::html('Payslip', $body, ['footer' => 'Payslip for ' . $name . ' &middot; ' . $item['period_label']]);
+        PdfService::output($html, 'payslip-' . $item['staff_number'] . '-' . $item['period_year'] . '-' . $item['period_month'] . '.pdf');
+        exit;
     }
 
     private function staffFields(array $input): array

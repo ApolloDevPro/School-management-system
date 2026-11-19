@@ -54,7 +54,7 @@ final class ReportCard extends Model
         return static::query($sql, $params);
     }
 
-    public static function studentResultCard(int $studentId, int $examId, int $schoolId): ?array
+    public static function studentResultCard(int $studentId, int $examId, int $schoolId, bool $withPromotion = true): ?array
     {
         $student = Student::findFull($studentId);
         if (!$student || (int)$student['school_id'] !== $schoolId) {
@@ -164,6 +164,135 @@ final class ReportCard extends Model
             'class_size' => $classSize,
             'stream_position' => $streamPosition,
             'stream_size' => $streamSize,
+            'promotion' => $withPromotion ? static::promotionAssessment($studentId, $exam, $schoolId) : null,
+        ];
+    }
+
+    /**
+     * Promotion rules currently in force for a school.
+     */
+    public static function promotionPolicy(int $schoolId): array
+    {
+        static $cache = [];
+        if (isset($cache[$schoolId])) {
+            return $cache[$schoolId];
+        }
+        return $cache[$schoolId] = [
+            'min_average' => (float)Setting::get($schoolId, 'academic.promotion_min_average', 50),
+            'min_attendance' => 75.0,
+            'fee_clearance_required' => (string)Setting::get($schoolId, 'fees.fee_clearance_required', '1') === '1',
+        ];
+    }
+
+    public static function promotionAssessment(int $studentId, array $exam, int $schoolId): array
+    {
+        $all = static::promotionAssessments([$studentId], $exam, $schoolId);
+        return $all[$studentId] ?? static::emptyPromotion();
+    }
+
+    /**
+     * Build promotion decisions for many students with three bulk queries.
+     * Attendance is only judged after five recorded school days, so a new
+     * term with light registers does not block promotion by accident.
+     */
+    public static function promotionAssessments(array $studentIds, array $exam, int $schoolId): array
+    {
+        $studentIds = array_values(array_unique(array_map('intval', $studentIds)));
+        if (!$studentIds) {
+            return [];
+        }
+        $policy = static::promotionPolicy($schoolId);
+        $yearId = (int)($exam['academic_year_id'] ?? 0);
+        $termId = (int)($exam['term_id'] ?? 0);
+        $attendance = [];
+        $balances = [];
+
+        $placeholders = implode(',', array_fill(0, count($studentIds), '?'));
+        if ($yearId > 0 && $termId > 0) {
+            $rows = static::query(
+                "SELECT student_id, COUNT(*) AS total_days,
+                        SUM(CASE WHEN status IN ('present','late') THEN 1 ELSE 0 END) AS attended_days
+                   FROM student_attendance
+                  WHERE school_id=? AND academic_year_id=? AND term_id=? AND record_scope='daily'
+                    AND student_id IN ($placeholders)
+                  GROUP BY student_id",
+                array_merge([$schoolId, $yearId, $termId], $studentIds)
+            );
+            foreach ($rows as $row) {
+                $attendance[(int)$row['student_id']] = $row;
+            }
+            $rows = static::query(
+                "SELECT student_id, COALESCE(SUM(balance),0) AS balance
+                   FROM fee_invoices
+                  WHERE school_id=? AND academic_year_id=? AND (term_id=? OR term_id IS NULL)
+                    AND status <> 'void' AND student_id IN ($placeholders)
+                  GROUP BY student_id",
+                array_merge([$schoolId, $yearId, $termId], $studentIds)
+            );
+            foreach ($rows as $row) {
+                $balances[(int)$row['student_id']] = (float)$row['balance'];
+            }
+        }
+
+        $summaries = static::query(
+            "SELECT student_id, average_percent FROM result_summaries
+              WHERE exam_id=? AND student_id IN ($placeholders)",
+            array_merge([(int)($exam['id'] ?? 0)], $studentIds)
+        );
+        $averages = [];
+        foreach ($summaries as $row) {
+            $averages[(int)$row['student_id']] = $row['average_percent'] !== null ? (float)$row['average_percent'] : 0.0;
+        }
+
+        $assessments = [];
+        foreach ($studentIds as $studentId) {
+            $average = $averages[$studentId] ?? 0.0;
+            $attendanceRow = $attendance[$studentId] ?? null;
+            $totalDays = (int)($attendanceRow['total_days'] ?? 0);
+            $attendedDays = (int)($attendanceRow['attended_days'] ?? 0);
+            $rate = $totalDays > 0 ? round(100 * $attendedDays / $totalDays, 1) : null;
+            $balance = (float)($balances[$studentId] ?? 0);
+            $status = 'Promoted';
+            $reasons = [];
+
+            if ($average < $policy['min_average']) {
+                $status = 'Repeat / review';
+                $reasons[] = 'Average below ' . number_format($policy['min_average'], 0) . '%';
+            } elseif ($totalDays >= 5 && $rate !== null && $rate < $policy['min_attendance']) {
+                $status = 'Review - attendance';
+                $reasons[] = 'Attendance below ' . number_format($policy['min_attendance'], 0) . '%';
+            } elseif ($policy['fee_clearance_required'] && $balance > 0) {
+                $status = 'Review - fee balance';
+                $reasons[] = 'Outstanding fees';
+            }
+
+            $assessments[$studentId] = [
+                'status' => $status,
+                'reason' => $reasons ? implode('; ', $reasons) : 'Meets promotion requirements',
+                'average' => $average,
+                'attendance_rate' => $rate,
+                'attendance_days' => $totalDays,
+                'fee_balance' => $balance,
+                'min_average' => $policy['min_average'],
+                'min_attendance' => $policy['min_attendance'],
+                'fee_clearance_required' => $policy['fee_clearance_required'],
+            ];
+        }
+        return $assessments;
+    }
+
+    private static function emptyPromotion(): array
+    {
+        return [
+            'status' => 'Review required',
+            'reason' => 'Results summary missing',
+            'average' => 0.0,
+            'attendance_rate' => null,
+            'attendance_days' => 0,
+            'fee_balance' => 0.0,
+            'min_average' => 50.0,
+            'min_attendance' => 75.0,
+            'fee_clearance_required' => false,
         ];
     }
 

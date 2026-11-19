@@ -5,6 +5,7 @@
     <p class="text-muted small mb-0">Create student invoices, record payments, verify funds and issue receipts.</p>
   </div>
   <div class="d-flex gap-2">
+    <a class="btn btn-outline-primary btn-sm" href="<?= url('finance/support') ?>">Bursaries &amp; waivers</a>
     <a class="btn btn-outline-primary btn-sm" href="<?= url('finance_online') ?>">Online payments</a>
     <a class="btn btn-outline-primary btn-sm" href="<?= url('compliance') ?>">Compliance &amp; grants</a>
     <?php if ($canAdd || $canEdit): ?>

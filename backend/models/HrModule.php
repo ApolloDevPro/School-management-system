@@ -136,4 +136,95 @@ final class HrModule extends Model
             [$periodId, $schoolId]
         );
     }
+
+    public static function payrollItem(int $id, int $schoolId): ?array
+    {
+        return static::one(
+            'SELECT i.*, s.staff_number, s.first_name, s.middle_name, s.last_name,
+                    s.position, s.bank_name, s.bank_account_number, s.nssf_number, s.ura_tin,
+                    p.period_label, p.period_year, p.period_month, p.start_date, p.end_date, p.status
+               FROM payroll_items i
+               JOIN payroll_periods p ON p.id = i.payroll_period_id
+               JOIN staff s ON s.id = i.staff_id
+              WHERE i.id = ? AND p.school_id = ?',
+            [$id, $schoolId]
+        );
+    }
+
+    /**
+     * Uganda PAYE for one month, on taxable pay after the employee NSSF
+     * contribution. Bands run in Uganda shillings.
+     */
+    public static function payeFor(float $taxable): float
+    {
+        $taxable = max(0.0, $taxable);
+        if ($taxable <= 235000) {
+            return 0.0;
+        }
+        if ($taxable <= 335000) {
+            return round(0.10 * ($taxable - 235000), 2);
+        }
+        if ($taxable <= 410000) {
+            return round(10000 + 0.20 * ($taxable - 335000), 2);
+        }
+        if ($taxable <= 10000000) {
+            return round(25000 + 0.30 * ($taxable - 410000), 2);
+        }
+        return round(2902000 + 0.40 * ($taxable - 10000000), 2);
+    }
+
+    /**
+     * NSSF and PAYE for a monthly gross. The employee contributes 5% and the
+     * employer 10%; only the employee share reduces taxable pay.
+     */
+    public static function statutory(float $gross): array
+    {
+        $gross = max(0.0, $gross);
+        $employee = round($gross * 0.05, 2);
+        $employer = round($gross * 0.10, 2);
+        $taxable = max(0.0, $gross - $employee);
+        return [
+            'nssf_employee' => $employee,
+            'nssf_employer' => $employer,
+            'taxable_pay' => round($taxable, 2),
+            'paye' => self::payeFor($taxable),
+        ];
+    }
+
+    /**
+     * Recalculate PAYE and NSSF for every item in an open period, keeping the
+     * basic pay, allowances and other deductions that were already entered.
+     */
+    public static function recalculatePeriod(int $periodId, int $schoolId): int
+    {
+        $items = static::query(
+            'SELECT i.id, i.gross_pay, i.other_deductions
+               FROM payroll_items i
+               JOIN payroll_periods p ON p.id = i.payroll_period_id
+              WHERE p.id = ? AND p.school_id = ?',
+            [$periodId, $schoolId]
+        );
+        $updated = 0;
+        foreach ($items as $item) {
+            $gross = (float)$item['gross_pay'];
+            $other = (float)$item['other_deductions'];
+            $tax = static::statutory($gross);
+            $total = round($tax['nssf_employee'] + $tax['paye'] + $other, 2);
+            if ($total > $gross) {
+                $other = max(0.0, round($gross - $tax['nssf_employee'] - $tax['paye'], 2));
+                $total = round($tax['nssf_employee'] + $tax['paye'] + $other, 2);
+            }
+            static::execute(
+                'UPDATE payroll_items SET nssf_employee = ?, nssf_employer = ?, paye = ?,
+                        other_deductions = ?, total_deductions = ?, net_pay = ?
+                  WHERE id = ?',
+                [
+                    $tax['nssf_employee'], $tax['nssf_employer'], $tax['paye'],
+                    $other, $total, round($gross - $total, 2), (int)$item['id'],
+                ]
+            );
+            $updated++;
+        }
+        return $updated;
+    }
 }

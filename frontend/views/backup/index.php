@@ -89,6 +89,10 @@ $last    = $backups ? e(date('d M Y', strtotime($backups[0]['started_at'] ?? '')
                 <td class="text-nowrap">
 <?php if ($b['status'] === 'success'): ?>
                   <a class="btn btn-outline-primary btn-sm" href="<?= url('security/backups/download', ['id' => (int)$b['id']]) ?>"><i class="bi bi-download"></i></a>
+<?php if ($canRestore): ?>
+                  <button class="btn btn-outline-warning btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#restoreBackupModal"
+                          data-backup-id="<?= (int)$b['id'] ?>" data-backup-name="<?= e(basename($b['file_path'] ?? '')) ?>"><i class="bi bi-arrow-counterclockwise"></i></button>
+<?php endif; ?>
 <?php endif; ?>
 <?php if ($canDelete): ?>
                   <form method="post" action="<?= url('security/backups/delete') ?>" class="d-inline" data-confirm="Delete this backup file?">
@@ -108,6 +112,51 @@ $last    = $backups ? e(date('d M Y', strtotime($backups[0]['started_at'] ?? '')
     </div>
   </div>
 </div>
+
+<?php if ($canRestore): ?>
+<div class="card app-card mt-3 border-warning">
+  <div class="card-header text-warning-emphasis"><i class="bi bi-arrow-counterclockwise me-2"></i>Restore from an SQL file</div>
+  <div class="card-body">
+    <p class="text-muted small mb-3">Restoring replaces current records with the contents of the file. Create a fresh backup before restoring. Type RESTORE to confirm.</p>
+    <form method="post" action="<?= url('security/backups/restore') ?>" enctype="multipart/form-data" class="row g-2 align-items-end" onsubmit="return confirm('Replace the live database with this file?');">
+      <?= csrf_field() ?>
+      <div class="col-md-5"><label class="form-label" for="sql_file">SQL file (.sql)</label><input class="form-control" id="sql_file" type="file" name="sql_file" accept=".sql" required></div>
+      <div class="col-md-3"><label class="form-label" for="restore_confirm">Type RESTORE</label><input class="form-control" id="restore_confirm" name="confirm" autocomplete="off" required></div>
+      <div class="col-md-2"><button class="btn btn-warning w-100" type="submit">Restore</button></div>
+    </form>
+  </div>
+</div>
+<?php endif; ?>
+
+<div class="modal fade" id="restoreBackupModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Restore database</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+      <form method="post" action="<?= url('security/backups/restore') ?>">
+        <?= csrf_field() ?>
+        <input type="hidden" name="id" id="restore_backup_id" value="0">
+        <div class="modal-body">
+          <p class="mb-2">Restoring <strong id="restore_backup_name">this backup</strong> replaces all current records.</p>
+          <label class="form-label" for="restore_backup_confirm">Type RESTORE to confirm</label>
+          <input class="form-control" id="restore_backup_confirm" name="confirm" autocomplete="off" required>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-warning" type="submit">Restore database</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('restoreBackupModal')?.addEventListener('show.bs.modal', function (event) {
+  var button = event.relatedTarget;
+  document.getElementById('restore_backup_id').value = button.getAttribute('data-backup-id') || '0';
+  document.getElementById('restore_backup_name').textContent = button.getAttribute('data-backup-name') || 'this backup';
+  document.getElementById('restore_backup_confirm').value = '';
+});
+</script>
 
 <div class="modal fade" id="createBackupModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">

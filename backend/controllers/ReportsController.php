@@ -34,7 +34,7 @@ final class ReportsController extends Controller
             'date'        => $date,
             'dateFrom'    => $dateFrom,
             'dateTo'      => $dateTo,
-            'data'        => $data,
+            'reportData'  => $data,
         ]);
     }
 
@@ -47,8 +47,9 @@ final class ReportsController extends Controller
         $examId     = (int)($_GET['exam_id'] ?? 0);
         $dateFrom   = (string)($_GET['date_from'] ?? date('Y-m-01'));
         $dateTo     = (string)($_GET['date_to'] ?? date('Y-m-d'));
+        $date       = (string)($_GET['date'] ?? date('Y-m-d'));
 
-        [$rows, $columns, $filename] = $this->exportData($report, $schoolId, $yearId, $examId, $dateFrom, $dateTo);
+        [$rows, $columns, $filename] = $this->exportData($report, $schoolId, $yearId, $examId, $dateFrom, $dateTo, $date);
 
         audit('reports', 'exported', 'reports', 0, 'CSV export: ' . $report);
 
@@ -91,6 +92,8 @@ final class ReportsController extends Controller
         $rows = [];
         $columns = [];
         $title = 'Report';
+        $periodFrom = $dateFrom;
+        $periodTo   = $dateTo;
 
         switch ($report) {
             case 'students':
@@ -107,6 +110,18 @@ final class ReportsController extends Controller
                 $title = 'Fee Collection Report';
                 $rows = ReportsModule::feeCollection($schoolId, $dateFrom, $dateTo);
                 $columns = ['Date', 'Channel', 'Method', 'Transactions', 'Amount collected'];
+                break;
+            case 'attendance':
+                $title = 'Daily Attendance Report';
+                $rows = ReportsModule::attendanceSummary($schoolId, $date);
+                $columns = ['Class', 'Stream', 'Marked', 'Present', 'Absent', 'Late', 'Excused', 'Attendance %'];
+                $periodFrom = $date;
+                $periodTo   = $date;
+                break;
+            case 'exams':
+                $title = 'Examination Performance Report';
+                $rows = $examId ? ReportsModule::examClassPerformance($schoolId, $examId) : [];
+                $columns = ['Exam', 'Class', 'Subject', 'Candidates', 'Average %', 'Highest %', 'Lowest %', 'Passed', 'Pass rate %'];
                 break;
             case 'library':
                 $title = 'Library Stock Report';
@@ -154,7 +169,7 @@ final class ReportsController extends Controller
                 $columns = [];
         }
 
-        $html = $this->buildReportPdfHtml($title, $school, $currency, $columns, $rows, $dateFrom, $dateTo);
+        $html = $this->buildReportPdfHtml($title, $school, $currency, $columns, $rows, $periodFrom, $periodTo);
         PdfService::output($html, strtolower(str_replace(' ', '_', $title)) . '_' . date('Ymd') . '.pdf');
     }
 
@@ -172,9 +187,12 @@ final class ReportsController extends Controller
             $head .= '</tr></thead>';
             $body = '<tbody>';
             foreach ($rows as $r) {
+                // Rows follow the SELECT order, so read values positionally to
+                // match the display columns used by the CSV export.
+                $values = array_values($r);
                 $body .= '<tr>';
-                foreach ($columns as $c) {
-                    $val = $r[$c] ?? '';
+                foreach ($columns as $i => $c) {
+                    $val = $values[$i] ?? '';
                     $body .= '<td style="padding:5px 8px;border:1px solid #e5e7eb;">'.e($val).'</td>';
                 }
                 $body .= '</tr>';
@@ -282,7 +300,7 @@ final class ReportsController extends Controller
 
     private function exportData(
         string $report, int $schoolId, int $yearId, int $examId,
-        string $dateFrom, string $dateTo
+        string $dateFrom, string $dateTo, string $date
     ): array {
         $db = Database::conn();
         $viewExists = function (string $view) use ($db): bool {
@@ -309,6 +327,16 @@ final class ReportsController extends Controller
                 ReportsModule::feeCollection($schoolId, $dateFrom, $dateTo),
                 ['Date', 'Channel', 'Method', 'Transactions', 'Amount collected'],
                 'fee_collection_' . $dateFrom . '_to_' . $dateTo . '.csv',
+            ],
+            'attendance'  => [
+                ReportsModule::attendanceSummary($schoolId, $date),
+                ['Class', 'Stream', 'Marked', 'Present', 'Absent', 'Late', 'Excused', 'Attendance %'],
+                'daily_attendance_' . $date . '.csv',
+            ],
+            'exams'       => [
+                $examId ? ReportsModule::examClassPerformance($schoolId, $examId) : [],
+                ['Exam', 'Class', 'Subject', 'Candidates', 'Average %', 'Highest %', 'Lowest %', 'Passed', 'Pass rate %'],
+                'exam_performance_' . date('Ymd') . '.csv',
             ],
             'library'     => [
                 ReportsModule::libraryStock($schoolId),

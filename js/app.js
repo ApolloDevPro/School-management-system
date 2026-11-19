@@ -456,10 +456,14 @@
       }
     }
 
+    // Views can request an initial sort with data-order-column / data-order-dir.
+    var orderColumn = parseInt(table.getAttribute('data-order-column') || '0', 10);
+    var orderDirection = (table.getAttribute('data-order-dir') || 'asc').toLowerCase() === 'desc' ? 'desc' : 'asc';
+
     new window.DataTable(table, {
       pageLength: 25,
       lengthMenu: [10, 25, 50, 100],
-      order: [[0, 'asc']],
+      order: [[isNaN(orderColumn) ? 0 : orderColumn, orderDirection]],
       responsive: true,
       language: {
         search: 'Search:',

@@ -16,8 +16,14 @@ final class CanteenController extends Controller
             'pageTitle' => 'Canteen & shop',
             'activeNav' => 'canteen',
             'products'  => CanteenModule::products($schoolId),
+            'students'  => CanteenModule::studentsWithWallet($schoolId),
+            'sales'     => CanteenModule::sales($schoolId),
+            'today'     => CanteenModule::todaySummary($schoolId),
+            'sellers'   => CanteenModule::sellers($schoolId),
+            'reconciliations' => CanteenModule::reconciliations($schoolId),
             'canAdd'    => Auth::can('canteen', 'add'),
             'canEdit'   => Auth::can('canteen', 'edit'),
+            'canApprove'=> Auth::can('canteen', 'approve'),
         ]);
     }
 
@@ -34,8 +40,9 @@ final class CanteenController extends Controller
         $errors = [];
         if ($name === '' || mb_strlen($name) > 160) { $errors['name']  = 'Enter a product name (max 160 chars).'; }
         if ($price < 0)  { $errors['selling_price'] = 'Price must be 0 or more.'; }
+        if ($cost < 0)   { $errors['cost_price']   = 'Cost must be 0 or more.'; }
         if ($stock < 0)  { $errors['current_stock'] = 'Stock must be 0 or more.'; }
-        if (!in_array($category, ['food', 'stationery', 'uniform', 'toiletries', 'other'], true)) { $category = 'food'; }
+        if (!in_array($category, CanteenModule::CATEGORIES, true)) { $category = 'snack'; }
         if ($errors) {
             $this->respond(false, 'Please correct the highlighted fields.', 'canteen', [], $errors);
         }
@@ -171,6 +178,144 @@ final class CanteenController extends Controller
             'transactions' => $transactions,
             'canAdd' => Auth::can('canteen', 'add'),
         ]);
+    }
+
+    public function recordSale(): void
+    {
+        $schoolId = school_id();
+        $buyerType = (string)($_POST['buyer_type'] ?? 'student');
+        $paymentMethod = (string)($_POST['payment_method'] ?? 'cash');
+        $studentId = (int)($_POST['student_id'] ?? 0);
+        $discountRaw = trim((string)($_POST['discount'] ?? '0'));
+        $amountRaw = trim((string)($_POST['amount_paid'] ?? '0'));
+        $notes = trim((string)($_POST['notes'] ?? ''));
+        $productIds = $_POST['product_id'] ?? [];
+        $quantities = $_POST['quantity'] ?? [];
+
+        if (!in_array($buyerType, ['student', 'staff', 'visitor', 'other'], true)) {
+            $this->respond(false, 'Choose a valid buyer type.', 'canteen');
+        }
+        if (!in_array($paymentMethod, ['cash', 'wallet'], true)) {
+            $this->respond(false, 'Choose cash or wallet payment.', 'canteen');
+        }
+        if (!is_array($productIds) || !is_array($quantities) || count($productIds) !== count($quantities)) {
+            $this->respond(false, 'Add at least one product line to the sale.', 'canteen');
+        }
+        if (!preg_match('/^\d{1,10}(?:\.\d{1,2})?$/', $discountRaw) || !preg_match('/^\d{1,10}(?:\.\d{1,2})?$/', $amountRaw)) {
+            $this->respond(false, 'Enter valid money amounts.', 'canteen');
+        }
+        if (mb_strlen($notes) > 255) {
+            $this->respond(false, 'Sale notes are too long.', 'canteen');
+        }
+
+        $lines = [];
+        foreach ($productIds as $index => $productId) {
+            $quantity = round((float)($quantities[$index] ?? 0), 2);
+            if ($quantity <= 0) {
+                continue;
+            }
+            $lines[] = ['product_id' => (int)$productId, 'quantity' => $quantity];
+        }
+        if (!$lines) {
+            $this->respond(false, 'Add at least one product line with a quantity.', 'canteen');
+        }
+        if (count($lines) > 50) {
+            $this->respond(false, 'A single sale cannot contain more than 50 lines.', 'canteen');
+        }
+        if ($buyerType === 'student' && $studentId < 1) {
+            $this->respond(false, 'Choose the student buying from the canteen.', 'canteen');
+        }
+
+        try {
+            $sale = CanteenModule::recordSale($schoolId, [
+                'buyer_type' => $buyerType,
+                'student_id' => $studentId,
+                'payment_method' => $paymentMethod,
+                'discount' => (float)$discountRaw,
+                'amount_paid' => (float)$amountRaw,
+                'notes' => $notes !== '' ? $notes : null,
+                'lines' => $lines,
+            ], (int)(Auth::user()['id'] ?? 0));
+        } catch (DomainException $error) {
+            $this->respond(false, $error->getMessage(), 'canteen');
+            return;
+        }
+
+        $message = 'Sale ' . $sale['sale_number'] . ' recorded: ' . number_format($sale['total'], 2) . ' UGX.';
+        if ($sale['change'] > 0) {
+            $message .= ' Change: ' . number_format($sale['change'], 2) . '.';
+        }
+        if ($sale['wallet_balance'] !== null) {
+            $message .= ' Wallet balance: ' . number_format($sale['wallet_balance'], 2) . '.';
+        }
+        $this->respond(true, $message, 'canteen');
+    }
+
+    public function voidSale(): void
+    {
+        if (!$this->allowed('canteen', 'approve')) {
+            return;
+        }
+        $saleId = (int)($_POST['id'] ?? 0);
+        $reason = trim((string)($_POST['void_reason'] ?? ''));
+        if ($saleId < 1 || mb_strlen($reason) < 3 || mb_strlen($reason) > 255) {
+            $this->respond(false, 'Choose a sale and give a reason of at least 3 characters.', 'canteen');
+        }
+        try {
+            CanteenModule::voidSale($saleId, school_id(), $reason, (int)(Auth::user()['id'] ?? 0));
+        } catch (DomainException $error) {
+            $this->respond(false, $error->getMessage(), 'canteen');
+            return;
+        }
+        $this->respond(true, 'Sale voided and stock restored.', 'canteen');
+    }
+
+    /**
+     * Count the till for one day and seller and compare with cash sales.
+     */
+    public function saveTillCount(): void
+    {
+        $date = trim((string)($_POST['recon_date'] ?? ''));
+        $sellerId = (int)($_POST['seller_staff_id'] ?? 0);
+        $counted = $_POST['counted_cash'] ?? '';
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || !strtotime($date)
+            || !is_numeric($counted) || (float)$counted < 0) {
+            $this->respond(false, 'Enter a valid date and a cash count of zero or more.', 'canteen');
+        }
+        try {
+            $result = CanteenModule::saveReconciliation(
+                school_id(),
+                $date,
+                $sellerId > 0 ? $sellerId : null,
+                round((float)$counted, 2),
+                $this->optionalText($_POST['remarks'] ?? '', 255),
+                (int)Auth::user()['id']
+            );
+        } catch (DomainException $error) {
+            $this->respond(false, $error->getMessage(), 'canteen');
+        }
+        audit('canteen', 'reconcile', 'shop_till_reconciliations', $result['id'], 'Counted till for ' . $date);
+        $this->respond(
+            true,
+            'Till counted. Expected ' . number_format($result['expected_cash'], 0)
+                . ', variance ' . number_format($result['difference'], 0) . '.',
+            'canteen'
+        );
+    }
+
+    public function approveTillCount(): void
+    {
+        if (!Auth::can('canteen', 'approve')) {
+            $this->respond(false, 'You are not allowed to approve till counts.', 'canteen');
+        }
+        $id = (int)($_POST['id'] ?? 0);
+        try {
+            CanteenModule::approveReconciliation($id, school_id(), (int)Auth::user()['id']);
+        } catch (DomainException $error) {
+            $this->respond(false, $error->getMessage(), 'canteen');
+        }
+        audit('canteen', 'approve', 'shop_till_reconciliations', $id, 'Approved till count #' . $id);
+        $this->respond(true, 'Till count approved.', 'canteen');
     }
 
     private function positiveInt(mixed $value, string $label): int

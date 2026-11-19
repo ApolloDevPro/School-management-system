@@ -43,7 +43,7 @@ final class ReportsModule extends Model
     public static function studentPlacement(int $schoolId): array
     {
         return self::safeQuery(
-            "SELECT student_id, admission_number, full_name, gender, class_name,
+            "SELECT admission_number, full_name, gender, class_name,
                     stream_name, house_name, status, student_type
                FROM vw_student_placement WHERE school_id=? AND status='active'
                ORDER BY class_name, full_name LIMIT 2000",

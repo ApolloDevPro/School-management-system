@@ -19,7 +19,10 @@ $isAdmin  = Auth::can('administration', 'view');
 <div class="card app-card mb-4">
   <div class="card-header d-flex justify-content-between align-items-center">
     <span><i class="bi bi-shield-lock me-1"></i> Account security</span>
-    <a class="btn btn-sm btn-outline-primary" href="<?= url('security/2fa-setup') ?>"><i class="bi bi-phone me-1"></i> 2FA setup</a>
+    <div class="d-flex gap-2">
+      <a class="btn btn-sm btn-outline-secondary" href="<?= url('security/sessions') ?>"><i class="bi bi-person-check me-1"></i> Active sessions</a>
+      <a class="btn btn-sm btn-outline-primary" href="<?= url('security/2fa-setup') ?>"><i class="bi bi-phone me-1"></i> 2FA setup</a>
+    </div>
   </div>
   <div class="card-body">
     <p class="small text-muted mb-3">Protect your account with two-factor authentication and keep your password up to date.</p>

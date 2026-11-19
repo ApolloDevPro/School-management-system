@@ -387,7 +387,29 @@ Backups are not scheduled automatically; create them before upgrades or bulk imp
 
 `cron_jobs` and `cron_job_logs` (module 23) support named jobs with a handler class, handler method, interval in minutes, active flag, and run history. Jobs are managed at **Support & security → Scheduled tasks** and can be run on demand from the same screen.
 
-There is no OS-level runner in the repository: `CronScheduler` provides `dueJobs()` and status helpers, but nothing invokes it automatically. To run jobs from the operating system, point an OS scheduler at a small PHP script that calls `CronScheduler::runDue()` (or call the job runner route with an authorised session). Until such a runner is added, treat the screen as a manual job console.
+`cron.php` in the project root is the OS-level runner. It only runs from the command line, takes a non-blocking lock so two runs cannot overlap, runs every due job through `CronScheduler::runDueJobs()`, prints one line per job and exits with status 1 when a job fails.
+
+Test it manually first:
+
+```bash
+C:\xampp\php\php.exe "C:\xampp\htdocs\school mgt system\cron.php"
+```
+
+**Windows Task Scheduler** — create a task that repeats every 5 minutes:
+
+| Field | Value |
+|---|---|
+| Program/script | `C:\xampp\php\php.exe` |
+| Add arguments | `"C:\xampp\htdocs\school mgt system\cron.php"` |
+| Start in | `C:\xampp\htdocs\school mgt system` |
+
+**Linux cron** — add to the web user's crontab:
+
+```bash
+*/5 * * * * /usr/bin/php "/var/www/school mgt system/cron.php" >> /var/log/ssms-cron.log 2>&1
+```
+
+The task runner must use the same PHP binary, `.env` file and database as the web application.
 
 ---
 
@@ -428,6 +450,7 @@ Before going live: set `APP_ENV=production`, use a dedicated database user with 
 ```
 school mgt system/
 ├── index.php                 Public entry point; bridges to backend/index.php
+├── cron.php                  Scheduled-task runner for Task Scheduler or cron
 ├── .htaccess                 Rewrite rules and path denials
 ├── .env.example              Environment template (copy to .env)
 ├── backend/
@@ -470,7 +493,7 @@ school mgt system/
 ## Known limitations
 
 - The UI assumes one school per installation. The schema is multi-tenant (`school_id`), but there is no school switcher.
-- Scheduled tasks have no automatic runner; jobs must be triggered manually or by an external runner you add.
+- Scheduled tasks run only when `cron.php` is triggered by the operating system; configure Task Scheduler or cron as described above.
 - Dompdf is optional, so PDF routes degrade to printable HTML when Composer dependencies are absent.
 - No automated test suite is bundled. Validate changes against a running environment.
 - SMS and email delivery depend on configured gateways and provider behaviour.

@@ -156,6 +156,7 @@ $section = function (string $title): void { ?>
     <?php $section('Reports & support');
       if (Auth::can('administration', 'view')) { $link('reports', 'reports', 'Reports & analytics', 'bi-bar-chart-line'); }
       if (Auth::can('security', 'view')) { $link('security', 'security', 'Support tickets', 'bi-life-preserver'); }
+      if (Auth::can('security', 'view')) { $link('security_sessions', 'security/sessions', 'Active sessions', 'bi-person-check'); }
     ?>
 <?php endif; ?>
   </ul>

@@ -3,10 +3,13 @@
     <h1 class="h4 mb-0">Report Cards</h1>
     <p class="text-muted small mb-0">Generate and view student report cards by term and exam.</p>
   </div>
-  <?php if ($examId > 0 && $classId > 0): ?>
-  <div class="d-flex gap-2">
-    <a class="btn btn-outline-primary" target="_blank" href="<?= url('report_cards/batch', ['class_id' => $classId, 'stream_id' => (int)$streamId, 'exam_id' => $examId]) ?>"><i class="bi bi-printer"></i> Print all cards</a>
+  <?php if ($examId > 0): ?>
+  <div class="d-flex flex-wrap gap-2">
+    <?php if ($classId > 0): ?>
+    <a class="btn btn-outline-primary" target="_blank" href="<?= url('report_cards/batch', ['class_id' => $classId, 'stream_id' => (int)$streamId, 'exam_id' => $examId]) ?>"><i class="bi bi-printer"></i> Print class cards</a>
     <a class="btn btn-outline-secondary" href="<?= url('report_cards', ['term_id' => $termId, 'class_id' => $classId, 'stream_id' => (int)$streamId, 'exam_id' => $examId, 'export' => 'csv']) ?>"><i class="bi bi-file-earmark-excel"></i> Export CSV</a>
+    <?php endif; ?>
+    <a class="btn btn-primary" target="_blank" href="<?= url('report_cards/batch-all', ['exam_id' => $examId]) ?>"><i class="bi bi-printer-fill"></i> Print whole school</a>
   </div>
   <?php endif; ?>
 </div>

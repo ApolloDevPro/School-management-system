@@ -3,6 +3,9 @@ $catColor = fn(string $c): string => match($c) { 'academic'=>'primary','financia
 ?>
 <div class="page-head">
   <div><h1 class="h4 mb-0">Communication</h1><p class="text-muted small mb-0">Post announcements and notices to staff, students and parents.</p></div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-primary btn-sm" href="<?= url('communication/center') ?>">Campaigns, templates &amp; PTA</a>
+  </div>
 </div>
 
 <div class="row g-3">

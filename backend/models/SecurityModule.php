@@ -48,4 +48,82 @@ final class SecurityModule extends Model
     {
         return (bool)static::scalar('SELECT COUNT(*) FROM support_tickets WHERE id=? AND school_id=? AND user_id=?',[$id,$schoolId,$userId]);
     }
+
+    /**
+     * Active sign-ins for the school. Overdue rows are closed first so the
+     * list only shows sessions that can still be used.
+     */
+    public static function sessions(int $schoolId): array
+    {
+        static::execute(
+            "UPDATE portal_sessions s
+               JOIN users u ON u.id = s.user_id
+                SET s.is_active = 0, s.logout_at = NOW(), s.logout_reason = 'timeout'
+              WHERE u.school_id = ? AND s.is_active = 1 AND s.expires_at <= NOW()",
+            [$schoolId]
+        );
+
+        // Keep the table small: ended rows older than 30 days are no longer useful.
+        static::execute(
+            'DELETE FROM portal_sessions WHERE started_at < DATE_SUB(NOW(), INTERVAL 30 DAY)'
+        );
+
+        return static::query(
+            'SELECT s.id, s.session_token_hash, s.ip_address, s.user_agent, s.device_type,
+                    s.portal_type, s.started_at, s.last_activity_at, s.expires_at,
+                    u.id AS user_id, u.full_name, u.username, u.user_type,
+                    r.name AS role_name
+               FROM portal_sessions s
+               JOIN users u ON u.id = s.user_id
+          LEFT JOIN roles r ON r.id = u.role_id
+              WHERE u.school_id = ? AND s.is_active = 1
+           ORDER BY s.last_activity_at DESC, s.id DESC
+              LIMIT 500',
+            [$schoolId]
+        );
+    }
+
+    /**
+     * One active session scoped to the school, for the revoke action.
+     */
+    public static function session(int $id, int $schoolId): ?array
+    {
+        return static::one(
+            'SELECT s.id, s.session_token_hash, s.user_id, u.full_name
+               FROM portal_sessions s
+               JOIN users u ON u.id = s.user_id
+              WHERE s.id = ? AND u.school_id = ? AND s.is_active = 1',
+            [$id, $schoolId]
+        );
+    }
+
+    /**
+     * End a session; the owner is signed out on their next request.
+     */
+    public static function revoke(int $id, int $schoolId): bool
+    {
+        return static::execute(
+            "UPDATE portal_sessions s
+               JOIN users u ON u.id = s.user_id
+                SET s.is_active = 0, s.logout_at = NOW(), s.logout_reason = 'admin'
+              WHERE s.id = ? AND u.school_id = ? AND s.is_active = 1",
+            [$id, $schoolId]
+        ) > 0;
+    }
+
+    /**
+     * End every other active session belonging to one user on this school,
+     * keeping the browser that pressed the button signed in.
+     */
+    public static function revokeOthers(int $userId, int $schoolId, string $keepTokenHash): int
+    {
+        return static::execute(
+            "UPDATE portal_sessions s
+               JOIN users u ON u.id = s.user_id
+                SET s.is_active = 0, s.logout_at = NOW(), s.logout_reason = 'admin'
+              WHERE s.user_id = ? AND u.school_id = ? AND s.is_active = 1
+                AND s.session_token_hash <> ?",
+            [$userId, $schoolId, $keepTokenHash]
+        );
+    }
 }

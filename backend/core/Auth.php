@@ -9,6 +9,9 @@ declare(strict_types=1);
  */
 final class Auth
 {
+    /** Session lifetime in seconds, matching the cookie set in index.php. */
+    private const SESSION_LIFETIME = 14400;
+
     /**
      * Verify credentials for a username.
      *
@@ -86,6 +89,167 @@ final class Auth
     }
 
     /**
+     * Create the server-side record for this sign-in and remember its token.
+     *
+     * The raw token stays in the PHP session; only a SHA-256 hash is stored, so
+     * the session list can identify a device without exposing usable tokens.
+     */
+    private static function registerSession(array $user, string $roleSlug = ''): void
+    {
+        try {
+            self::closeTrackedSession('concurrent');
+
+            $token = bin2hex(random_bytes(32));
+            $agent = (string)($_SERVER['HTTP_USER_AGENT'] ?? '');
+            $lifetime = (int)(ini_get('session.gc_maxlifetime') ?: self::SESSION_LIFETIME);
+            Database::conn()->prepare(
+                'INSERT INTO portal_sessions
+                    (user_id, session_token_hash, ip_address, user_agent, device_type,
+                     portal_type, started_at, last_activity_at, expires_at, is_active)
+                 VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW(), DATE_ADD(NOW(), INTERVAL ? SECOND), 1)'
+            )->execute([
+                (int)$user['id'],
+                hash('sha256', $token),
+                mb_substr(client_ip(), 0, 45),
+                mb_substr($agent, 0, 255),
+                self::deviceType($agent),
+                self::portalType((string)($user['user_type'] ?? 'staff'), $roleSlug),
+                $lifetime,
+            ]);
+            $_SESSION['session_token'] = $token;
+        } catch (Throwable) {
+            // Tracking is best effort; a missing table must never block sign-in.
+            unset($_SESSION['session_token']);
+        }
+    }
+
+    /**
+     * Mark the record held by this browser as closed.
+     */
+    private static function closeTrackedSession(string $reason): void
+    {
+        $token = (string)($_SESSION['session_token'] ?? '');
+        if ($token === '') {
+            return;
+        }
+        Database::conn()->prepare(
+            'UPDATE portal_sessions
+                SET is_active = 0, logout_at = NOW(), logout_reason = ?
+              WHERE session_token_hash = ? AND is_active = 1'
+        )->execute([$reason, hash('sha256', $token)]);
+        unset($_SESSION['session_token']);
+    }
+
+    /**
+     * Check the signed-in session against the server-side record and refresh
+     * its activity stamp. Returns null while the session is valid, or the
+     * message to show before sending the user back to the login page.
+     */
+    public static function guardSession(): ?string
+    {
+        $user = self::user();
+        if (!$user) {
+            return null;
+        }
+
+        try {
+            $token = (string)($_SESSION['session_token'] ?? '');
+            if ($token === '') {
+                // Adopt sessions started before tracking existed.
+                self::registerSession($user, (string)($user['role_slug'] ?? ''));
+                return null;
+            }
+
+            $statement = Database::conn()->prepare(
+                'SELECT id, is_active, expires_at, logout_reason
+                   FROM portal_sessions
+                  WHERE session_token_hash = ?
+                  ORDER BY id DESC LIMIT 1'
+            );
+            $statement->execute([hash('sha256', $token)]);
+            $row = $statement->fetch();
+
+            if (!$row) {
+                // The record was pruned; recreate it rather than lock the user out.
+                self::registerSession($user, (string)($user['role_slug'] ?? ''));
+                return null;
+            }
+
+            if (!(int)$row['is_active']) {
+                $message = match ((string)$row['logout_reason']) {
+                    'admin'           => 'An administrator ended your session. Sign in again.',
+                    'password_change' => 'Your password changed. Sign in again.',
+                    'concurrent'      => 'This session was replaced by a newer sign-in.',
+                    default           => 'Your session ended. Sign in again.',
+                };
+                self::clearIdentity();
+                return $message;
+            }
+
+            if (strtotime((string)$row['expires_at']) <= time()) {
+                Database::conn()->prepare(
+                    "UPDATE portal_sessions
+                        SET is_active = 0, logout_at = NOW(), logout_reason = 'timeout'
+                      WHERE id = ?"
+                )->execute([(int)$row['id']]);
+                self::clearIdentity();
+                return 'Your session expired. Sign in again.';
+            }
+
+            // Refresh the activity stamp at most once a minute.
+            Database::conn()->prepare(
+                'UPDATE portal_sessions SET last_activity_at = NOW()
+                  WHERE id = ? AND last_activity_at < DATE_SUB(NOW(), INTERVAL 60 SECOND)'
+            )->execute([(int)$row['id']]);
+        } catch (Throwable) {
+            // Never lock people out because the tracking table is unavailable.
+        }
+
+        return null;
+    }
+
+    /**
+     * Drop the signed-in identity but keep the PHP session alive so the login
+     * page can show the reason for the ending.
+     */
+    private static function clearIdentity(): void
+    {
+        unset($_SESSION['user'], $_SESSION['session_token'], $_SESSION['pending_2fa'], $_SESSION['pending_2fa_attempts']);
+        session_regenerate_id(true);
+        $_SESSION['_csrf'] = bin2hex(random_bytes(32));
+    }
+
+    /**
+     * Coarse device class from the browser's user agent string.
+     */
+    private static function deviceType(string $agent): string
+    {
+        $agent = strtolower($agent);
+        if ($agent === '') {
+            return 'unknown';
+        }
+        if (preg_match('/ipad|tablet|kindle|playbook|silk|android(?!.*mobile)/', $agent)) {
+            return 'tablet';
+        }
+        if (preg_match('/mobile|iphone|ipod|android|blackberry|opera mini|iemobile/', $agent)) {
+            return 'mobile';
+        }
+        return 'desktop';
+    }
+
+    /**
+     * Portal type stored with the session: admin, staff, parent or student.
+     */
+    private static function portalType(string $userType, string $roleSlug): string
+    {
+        return match ($userType) {
+            'parent'  => 'parent',
+            'student' => 'student',
+            default   => $roleSlug === 'administrator' ? 'admin' : 'staff',
+        };
+    }
+
+    /**
      * True when the user has a verified authenticator app enrolled.
      */
     public static function hasTwoFactor(int $userId): bool
@@ -143,6 +307,8 @@ final class Auth
 
         // Regenerate CSRF token to prevent session fixation
         $_SESSION['_csrf'] = bin2hex(random_bytes(32));
+
+        self::registerSession($user, (string)($role['slug'] ?? ''));
 
         $_SESSION['user'] = [
             'id'                   => (int)$user['id'],
@@ -206,6 +372,11 @@ final class Auth
     {
         if (self::check()) {
             audit('security', 'logout', 'users', (int)$_SESSION['user']['id'], 'Signed out of the system');
+            try {
+                self::closeTrackedSession('user');
+            } catch (Throwable) {
+                // Tracking table unavailable; the local session is still cleared.
+            }
         }
         // Regenerate CSRF token before destroying session
         $_SESSION['_csrf'] = bin2hex(random_bytes(32));

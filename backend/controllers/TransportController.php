@@ -12,13 +12,201 @@ final class TransportController extends Controller
     public function index(): void
     {
         $schoolId = school_id();
+        $years = TransportModule::years($schoolId);
+        $yearId = (int)($_GET['year_id'] ?? 0);
+        $yearIds = array_map(static fn (array $row): int => (int)$row['id'], $years);
+        if (!in_array($yearId, $yearIds, true)) {
+            $yearId = 0;
+            foreach ($years as $year) {
+                if ((int)$year['is_active'] === 1) {
+                    $yearId = (int)$year['id'];
+                    break;
+                }
+            }
+            $yearId = $yearId ?: (int)($years[0]['id'] ?? 0);
+        }
+
+        $terms = $yearId > 0 ? TransportModule::terms($schoolId, $yearId) : [];
+        $termId = (int)($_GET['term_id'] ?? 0);
+        $termIds = array_map(static fn (array $row): int => (int)$row['id'], $terms);
+        if (!in_array($termId, $termIds, true)) {
+            $termId = 0;
+            foreach ($terms as $term) {
+                if ((int)$term['is_active'] === 1) {
+                    $termId = (int)$term['id'];
+                    break;
+                }
+            }
+            $termId = $termId ?: (int)($terms[0]['id'] ?? 0);
+        }
+
         $this->render('transport/index', [
-            'pageTitle' => 'Transport',
-            'activeNav' => 'transport',
-            'routes'    => TransportModule::routes($schoolId),
-            'canAdd'    => Auth::can('transport', 'add'),
-            'canEdit'   => Auth::can('transport', 'edit'),
+            'pageTitle'    => 'Transport',
+            'activeNav'    => 'transport',
+            'routes'       => TransportModule::routes($schoolId),
+            'years'        => $years,
+            'terms'        => $terms,
+            'yearId'       => $yearId,
+            'termId'       => $termId,
+            'students'     => TransportModule::students($schoolId),
+            'stops'        => TransportModule::stops($schoolId),
+            'classes'      => TransportModule::classes($schoolId),
+            'allocations'  => $yearId > 0 ? TransportModule::allocations($schoolId, $yearId, $termId) : [],
+            'charges'      => $yearId > 0 ? TransportModule::charges($schoolId, $yearId, $termId) : [],
+            'canAdd'       => Auth::can('transport', 'add'),
+            'canEdit'      => Auth::can('transport', 'edit'),
+            'canApprove'   => Auth::can('transport', 'approve'),
         ]);
+    }
+
+    public function allocate(): void
+    {
+        $schoolId = school_id();
+        $studentId = (int)($_POST['student_id'] ?? 0);
+        $routeId = (int)($_POST['route_id'] ?? 0);
+        $yearId = (int)($_POST['year_id'] ?? 0);
+        $termId = (int)($_POST['term_id'] ?? 0);
+        $stopId = (int)($_POST['stop_id'] ?? 0);
+        $pickup = trim((string)($_POST['pickup_point'] ?? ''));
+        $notes = trim((string)($_POST['notes'] ?? ''));
+
+        if (mb_strlen($pickup) > 160 || mb_strlen($notes) > 255) {
+            $this->respond(false, 'Pickup point or notes are too long.', 'transport', ['year_id' => $yearId, 'term_id' => $termId]);
+        }
+
+        $student = Database::query(
+            'SELECT id FROM students WHERE id=? AND school_id=? AND status=\'active\'',
+            [$studentId, $schoolId]
+        )->fetch();
+        $route = Database::query(
+            'SELECT id FROM routes WHERE id=? AND school_id=? AND status=\'active\'',
+            [$routeId, $schoolId]
+        )->fetch();
+        $term = Database::query(
+            'SELECT t.id FROM terms t JOIN academic_years y ON y.id=t.academic_year_id
+              WHERE t.id=? AND y.id=? AND y.school_id=?',
+            [$termId, $yearId, $schoolId]
+        )->fetch();
+        if (!$student || !$route || !$term) {
+            $this->respond(false, 'Choose a student, route, year and term from this school.', 'transport', ['year_id' => $yearId, 'term_id' => $termId]);
+        }
+
+        $stopIdValue = null;
+        if ($stopId > 0) {
+            $stop = Database::query(
+                'SELECT rs.id FROM route_stops rs JOIN routes r ON r.id=rs.route_id
+                  WHERE rs.id=? AND rs.route_id=? AND r.school_id=? AND rs.is_active=1',
+                [$stopId, $routeId, $schoolId]
+            )->fetch();
+            if (!$stop) {
+                $this->respond(false, 'The chosen stop does not belong to that route.', 'transport', ['year_id' => $yearId, 'term_id' => $termId]);
+            }
+            $stopIdValue = $stopId;
+        }
+
+        $id = TransportModule::saveAllocation([
+            'student_id' => $studentId,
+            'route_id' => $routeId,
+            'stop_id' => $stopIdValue,
+            'academic_year_id' => $yearId,
+            'term_id' => $termId,
+            'pickup_point' => $pickup !== '' ? $pickup : null,
+            'allocated_by' => (int)(Auth::user()['id'] ?? 0),
+            'notes' => $notes !== '' ? $notes : null,
+        ]);
+        audit('transport', 'allocate_student', 'student_route_allocations', $id, 'Student ' . $studentId . ' allocated to route ' . $routeId);
+        $this->respond(true, 'Student transport allocation saved.', 'transport', ['year_id' => $yearId, 'term_id' => $termId]);
+    }
+
+    public function allocationStatus(): void
+    {
+        $id = (int)($_POST['id'] ?? 0);
+        $status = (string)($_POST['status'] ?? '');
+        if (!in_array($status, ['active', 'inactive', 'suspended'], true)) {
+            $this->respond(false, 'Invalid allocation status.', 'transport');
+        }
+        $ok = TransportModule::setAllocationStatus($id, school_id(), $status);
+        $this->respond($ok, $ok ? 'Allocation status updated.' : 'Could not update allocation.', 'transport');
+    }
+
+    public function saveCharge(): void
+    {
+        $schoolId = school_id();
+        $routeId = (int)($_POST['route_id'] ?? 0);
+        $yearId = (int)($_POST['year_id'] ?? 0);
+        $termId = (int)($_POST['term_id'] ?? 0);
+        $classId = (int)($_POST['class_id'] ?? 0);
+        $basis = (string)($_POST['charge_basis'] ?? 'per_term');
+        $amountRaw = trim((string)($_POST['amount'] ?? ''));
+        $isActive = isset($_POST['is_active']) ? 1 : 0;
+
+        if (!preg_match('/^\d{1,10}(?:\.\d{1,2})?$/', $amountRaw)) {
+            $this->respond(false, 'Enter a valid charge amount.', 'transport', ['year_id' => $yearId, 'term_id' => $termId]);
+        }
+        if (!in_array($basis, ['per_term', 'per_trip', 'per_distance', 'annual'], true)) {
+            $basis = 'per_term';
+        }
+        $route = Database::query('SELECT id FROM routes WHERE id=? AND school_id=?', [$routeId, $schoolId])->fetch();
+        $year = Database::query('SELECT id FROM academic_years WHERE id=? AND school_id=?', [$yearId, $schoolId])->fetch();
+        $term = $termId > 0 ? Database::query(
+            'SELECT id FROM terms WHERE id=? AND academic_year_id=?',
+            [$termId, $yearId]
+        )->fetch() : true;
+        $class = $classId > 0 ? Database::query(
+            'SELECT id FROM classes WHERE id=? AND school_id=?',
+            [$classId, $schoolId]
+        )->fetch() : true;
+        if (!$route || !$year || !$term || !$class) {
+            $this->respond(false, 'Choose valid route, year, term and class values.', 'transport', ['year_id' => $yearId, 'term_id' => $termId]);
+        }
+
+        $id = TransportModule::saveCharge([
+            'school_id' => $schoolId,
+            'route_id' => $routeId,
+            'class_id' => $classId > 0 ? $classId : null,
+            'academic_year_id' => $yearId,
+            'term_id' => $termId > 0 ? $termId : null,
+            'charge_basis' => $basis,
+            'amount' => round((float)$amountRaw, 2),
+            'account_id' => null,
+            'is_active' => $isActive,
+        ]);
+        audit('transport', 'save_charge', 'transport_charges', $id, 'Transport charge saved for route ' . $routeId);
+        $this->respond(true, 'Transport charge saved.', 'transport', ['year_id' => $yearId, 'term_id' => $termId]);
+    }
+
+    public function billTransport(): void
+    {
+        if (!$this->allowed('transport', 'approve')) {
+            return;
+        }
+        $schoolId = school_id();
+        $yearId = (int)($_POST['year_id'] ?? 0);
+        $termId = (int)($_POST['term_id'] ?? 0);
+        $dueDate = trim((string)($_POST['due_date'] ?? ''));
+        if ($dueDate !== '' && !$this->validDateOpt($dueDate)) {
+            $this->respond(false, 'Enter a valid due date.', 'transport', ['year_id' => $yearId, 'term_id' => $termId]);
+        }
+        $term = Database::query(
+            'SELECT t.id FROM terms t JOIN academic_years y ON y.id=t.academic_year_id
+              WHERE t.id=? AND y.id=? AND y.school_id=?',
+            [$termId, $yearId, $schoolId]
+        )->fetch();
+        if (!$term) {
+            $this->respond(false, 'Choose a valid year and term to bill.', 'transport', ['year_id' => $yearId, 'term_id' => $termId]);
+        }
+
+        $result = TransportModule::billTerm(
+            $schoolId,
+            $yearId,
+            $termId,
+            date('Y-m-d'),
+            $dueDate !== '' ? $dueDate : null,
+            (int)(Auth::user()['id'] ?? 0)
+        );
+        $message = $result['created'] . ' transport invoice(s) raised for ' . number_format($result['total'], 2)
+            . ($result['skipped'] > 0 ? '; ' . $result['skipped'] . ' skipped.' : '.');
+        $this->respond(true, $message, 'transport', ['year_id' => $yearId, 'term_id' => $termId]);
     }
 
     public function storeRoute(): void

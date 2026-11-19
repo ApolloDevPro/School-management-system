@@ -174,10 +174,12 @@ final class ReportCardController extends Controller
 
         $students = ReportCard::studentsForReportCard($classId, $streamId > 0 ? $streamId : null, $schoolId);
         $cards = [];
+        $studentIds = [];
         foreach ($students as $student) {
-            $card = ReportCard::studentResultCard((int)$student['id'], $examId, $schoolId);
+            $card = ReportCard::studentResultCard((int)$student['id'], $examId, $schoolId, false);
             if ($card && $card['summary']) {
                 $cards[] = $card;
+                $studentIds[] = (int)$student['id'];
             }
         }
 
@@ -186,9 +188,66 @@ final class ReportCardController extends Controller
             redirect('report_cards', ['term_id' => (int)$exam['term_id'], 'class_id' => $classId, 'exam_id' => $examId]);
         }
 
+        $promotion = ReportCard::promotionAssessments($studentIds, $exam, $schoolId);
+        foreach ($cards as &$card) {
+            $card['promotion'] = $promotion[(int)$card['student']['id']] ?? null;
+        }
+        unset($card);
+
         security_headers();
         header('Content-Type: text/html; charset=utf-8');
         echo $this->renderBatchHtml($cards, $exam, $classId, $streamId);
+        exit;
+    }
+
+    /**
+     * Printable cards for every active class in one exam. The whole school is
+     * loaded class by class so memory stays flat on large rolls.
+     */
+    public function batchAll(): void
+    {
+        if (!$this->allowed('academics', 'view')) {
+            return;
+        }
+
+        $schoolId = school_id();
+        $examId = (int)($_GET['exam_id'] ?? 0);
+        if ($examId < 1) {
+            flash_set('danger', 'Choose an exam before printing the whole school.');
+            redirect('report_cards');
+        }
+        $exam = Examination::examInSchool($examId, $schoolId);
+        if (!$exam) {
+            flash_set('danger', 'Exam not found.');
+            redirect('report_cards');
+        }
+
+        $cards = [];
+        $studentIds = [];
+        foreach (Examination::classes($schoolId) as $class) {
+            foreach (ReportCard::studentsForReportCard((int)$class['id'], null, $schoolId) as $student) {
+                $card = ReportCard::studentResultCard((int)$student['id'], $examId, $schoolId, false);
+                if ($card && $card['summary']) {
+                    $cards[] = $card;
+                    $studentIds[] = (int)$student['id'];
+                }
+            }
+        }
+
+        if (!$cards) {
+            flash_set('danger', 'No processed results were found for this exam. Process class results first.');
+            redirect('report_cards', ['term_id' => (int)$exam['term_id'], 'exam_id' => $examId]);
+        }
+
+        $promotion = ReportCard::promotionAssessments($studentIds, $exam, $schoolId);
+        foreach ($cards as &$card) {
+            $card['promotion'] = $promotion[(int)$card['student']['id']] ?? null;
+        }
+        unset($card);
+
+        security_headers();
+        header('Content-Type: text/html; charset=utf-8');
+        echo $this->renderBatchHtml($cards, $exam, 0, 0);
         exit;
     }
 
@@ -262,7 +321,13 @@ final class ReportCardController extends Controller
 
     private function renderBatchHtml(array $cards, array $exam, int $classId, int $streamId): string
     {
-        $back = url('report_cards', ['class_id' => $classId, 'stream_id' => $streamId, 'exam_id' => (int)$exam['id']]);
+        $back = url('report_cards', [
+            'term_id' => (int)($exam['term_id'] ?? 0),
+            'class_id' => $classId,
+            'stream_id' => $streamId,
+            'exam_id' => (int)$exam['id'],
+        ]);
+        $scope = $classId > 0 ? '' : ' &middot; whole school';
 
         $html = '<!doctype html><html><head><meta charset="utf-8"><title>Report Cards - ' . e((string)$exam['name']) . '</title>'
             . '<style>' . PdfService::CSS . '</style>'
@@ -288,7 +353,7 @@ final class ReportCardController extends Controller
             </style>'
             . '</head><body>'
             . '<div class="print-toolbar no-print">'
-            . '<h1>' . e((string)$exam['name']) . ' &middot; ' . count($cards) . ' report card(s)</h1>'
+            . '<h1>' . e((string)$exam['name']) . $scope . ' &middot; ' . count($cards) . ' report card(s)</h1>'
             . '<div class="spacer"></div>'
             . '<button type="button" onclick="window.print()">Print all</button>'
             . '<a href="' . e($back) . '">Back to list</a>'
@@ -337,10 +402,10 @@ final class ReportCardController extends Controller
         $guardianName = $guardian ? e($guardian['full_name'] ?? ($guardian['first_name'] . ' ' . $guardian['last_name'])) : '—';
         $guardianPhone = $guardian ? e($guardian['phone'] ?? '') : '—';
 
-        $promotionStatus = 'Promoted';
-        if ($summary && (float)($summary['average_percent'] ?? 0) < 50) {
-            $promotionStatus = 'Review required';
-        }
+        // Promotion follows the school policy: average, attendance and fee clearance.
+        $promotion = $card['promotion'] ?? null;
+        $promotionStatus = $promotion['status'] ?? 'Review required';
+        $promotionReason = $promotion['reason'] ?? 'Results summary missing';
 
         $position = $card['position'] ?? null;
         $classSize = $card['class_size'] ?? null;
@@ -400,7 +465,8 @@ final class ReportCardController extends Controller
             . '<td colspan="4"><strong>Average</strong></td>'
             . '<td class="text-right"><strong>' . number_format($average, 1) . '%</strong></td>'
             . '<td class="text-center"><strong>' . ($totalPoints !== null ? number_format($totalPoints, 1) : '—') . '</strong></td>'
-            . '<td colspan="2">' . e($promotionStatus) . '</td>'
+            . '<td colspan="2"><strong>' . e($promotionStatus) . '</strong>'
+            . '<div style="font-size:7.5pt;color:#555">' . e($promotionReason) . '</div></td>'
             . '</tr></tfoot></table>'
 
             . '<div class="stat-row" style="margin-top:20px">'

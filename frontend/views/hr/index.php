@@ -132,8 +132,42 @@
             </select></div><button class="btn btn-outline-secondary">View</button>
           </form>
         </div>
-        <div class="small text-muted mt-2">Payroll entry records manually supplied base pay, allowances and other deductions. PAYE and NSSF are left at zero; no statutory calculation is performed.</div>
+        <div class="small text-muted mt-2">PAYE is calculated on monthly pay after the 5% employee NSSF contribution, using Uganda Revenue Authority bands. The employer adds 10% NSSF, and the school's other deductions are entered manually.</div>
       </div>
+<?php if ($selectedPeriod): ?>
+      <div class="card-body border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+          <strong><?= e($selectedPeriod['period_label']) ?></strong>
+          <span class="badge text-bg-secondary ms-2"><?= e($selectedPeriod['status']) ?></span>
+          <span class="text-muted small ms-2"><?= count($payrollItems) ?> pay item(s)</span>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+<?php if ($canEdit && in_array($selectedPeriod['status'], ['draft', 'processing'], true)): ?>
+          <form method="post" action="<?= url('hr/payroll/recalculate') ?>">
+            <?= csrf_field() ?><input type="hidden" name="payroll_period_id" value="<?= (int)$selectedPeriod['id'] ?>">
+            <button class="btn btn-sm btn-outline-secondary" type="submit" onclick="return confirm('Recalculate PAYE and NSSF for every item in this period?')">Recalculate tax</button>
+          </form>
+<?php endif; ?>
+<?php if ($canApprove && $selectedPeriod['status'] === 'processing'): ?>
+          <form method="post" action="<?= url('hr/payroll/periods/approve') ?>">
+            <?= csrf_field() ?><input type="hidden" name="payroll_period_id" value="<?= (int)$selectedPeriod['id'] ?>">
+            <button class="btn btn-sm btn-primary" type="submit" onclick="return confirm('Approve this payroll period? Figures will be locked.')">Approve period</button>
+          </form>
+<?php endif; ?>
+<?php if ($canApprove && $selectedPeriod['status'] === 'approved'): ?>
+          <form method="post" action="<?= url('hr/payroll/periods/pay') ?>" class="d-flex gap-2">
+            <?= csrf_field() ?><input type="hidden" name="payroll_period_id" value="<?= (int)$selectedPeriod['id'] ?>">
+            <select class="form-select form-select-sm" name="payment_method" aria-label="Payment method">
+              <option value="bank">Bank</option>
+              <option value="mobile_money">Mobile money</option>
+              <option value="cash">Cash</option>
+            </select>
+            <button class="btn btn-sm btn-success" type="submit" onclick="return confirm('Mark every payslip in this period as paid?')">Mark paid</button>
+          </form>
+<?php endif; ?>
+        </div>
+      </div>
+<?php endif; ?>
 <?php if ($selectedPeriod && $canEdit && in_array($selectedPeriod['status'], ['draft', 'processing'], true)): ?>
       <div class="card-body border-bottom">
         <form method="post" action="<?= url('hr/payroll/items/add') ?>" class="row g-2 align-items-end">
@@ -149,13 +183,13 @@
       </div>
 <?php endif; ?>
       <div class="table-responsive"><table class="table table-sm align-middle mb-0">
-        <thead><tr><th>Period</th><th>Status</th><th>Staff</th><th>Basic</th><th>Gross</th><th>Deductions</th><th>Net</th></tr></thead><tbody>
-<?php if (!$periods): ?><tr><td colspan="7" class="text-center text-muted py-4">No payroll periods created.</td></tr><?php endif; ?>
+        <thead><tr><th>Period</th><th>Status</th><th>Staff</th><th class="text-end">Basic</th><th class="text-end">Gross</th><th class="text-end">PAYE</th><th class="text-end">NSSF</th><th class="text-end">Net</th><th></th></tr></thead><tbody>
+<?php if (!$periods): ?><tr><td colspan="9" class="text-center text-muted py-4">No payroll periods created.</td></tr><?php endif; ?>
 <?php foreach ($periods as $period): ?>
-        <tr><td><a href="<?= url('hr', ['period_id' => (int)$period['id']]) ?>"><?= e($period['period_label']) ?></a></td><td><?= e($period['status']) ?></td><td colspan="5"><?= (int)$period['item_count'] ?> pay item(s)</td></tr>
+        <tr class="table-light"><td><a href="<?= url('hr', ['period_id' => (int)$period['id']]) ?>"><?= e($period['period_label']) ?></a></td><td><?= e($period['status']) ?></td><td colspan="7"><?= (int)$period['item_count'] ?> pay item(s)</td></tr>
 <?php endforeach; ?>
 <?php foreach ($payrollItems as $item): ?>
-        <tr><td><?= e($selectedPeriod['period_label']) ?></td><td>—</td><td><?= e($item['last_name'] . ' ' . $item['first_name']) ?></td><td><?= e(number_format((float)$item['basic_pay'], 2)) ?></td><td><?= e(number_format((float)$item['gross_pay'], 2)) ?></td><td><?= e(number_format((float)$item['total_deductions'], 2)) ?></td><td><?= e(number_format((float)$item['net_pay'], 2)) ?></td></tr>
+        <tr><td><?= e($selectedPeriod['period_label']) ?></td><td>—</td><td><?= e($item['last_name'] . ' ' . $item['first_name']) ?></td><td class="text-end"><?= e(number_format((float)$item['basic_pay'], 2)) ?></td><td class="text-end"><?= e(number_format((float)$item['gross_pay'], 2)) ?></td><td class="text-end"><?= e(number_format((float)$item['paye'], 2)) ?></td><td class="text-end"><?= e(number_format((float)$item['nssf_employee'], 2)) ?></td><td class="text-end fw-semibold"><?= e(number_format((float)$item['net_pay'], 2)) ?></td><td class="text-end"><a class="btn btn-sm btn-outline-secondary" target="_blank" href="<?= url('hr/payroll/payslip', ['item_id' => (int)$item['id']]) ?>">Payslip</a></td></tr>
 <?php endforeach; ?>
         </tbody>
       </table></div>

@@ -57,6 +57,19 @@ final class Router
             redirect('login');
         }
 
+        // Session records can be revoked from the admin screen, so every
+        // signed-in request is checked against the server-side row.
+        if (Auth::check()) {
+            $ended = Auth::guardSession();
+            if ($ended !== null) {
+                if (expects_json()) {
+                    json_out(['ok' => false, 'message' => $ended], 401);
+                }
+                flash_set('warning', $ended);
+                redirect('login');
+            }
+        }
+
         if (Auth::mustChangePassword() && !in_array($name, $allowWhenMustChange, true)) {
             if (expects_json()) {
                 json_out(['ok' => false, 'message' => 'You must change your password before continuing.', 'redirect' => url('change-password')], 403);
