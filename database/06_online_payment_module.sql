@@ -1,17 +1,6 @@
--- ==========================================================================
--- SSMS - File : 06_online_payment_module.sql
--- Module      : 2.6 Online Payment Integration
--- Depends on  : 00 - 05 (students, fee_invoices, payments, receipts)
--- Note        : Provider credentials are stored as encrypted text in
---               gateway_configs.credential_value and never in code.
--- ==========================================================================
-
 USE ssms;
 SET NAMES utf8mb4;
 
--- --------------------------------------------------------------------------
--- Mobile Money / Bank gateway configuration
--- --------------------------------------------------------------------------
 CREATE TABLE gateway_configs (
   id                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id          INT UNSIGNED NOT NULL,
@@ -37,9 +26,6 @@ CREATE TABLE gateway_configs (
   CONSTRAINT fk_gateway_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Payment Reference Generation (one stable reference per student)
--- --------------------------------------------------------------------------
 CREATE TABLE payment_references (
   id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id     INT UNSIGNED NOT NULL,
@@ -56,9 +42,6 @@ CREATE TABLE payment_references (
   CONSTRAINT fk_reference_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Transaction Logs / Automatic Payment Posting
--- --------------------------------------------------------------------------
 CREATE TABLE gateway_transactions (
   id                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id          INT UNSIGNED NOT NULL,
@@ -121,9 +104,6 @@ CREATE TABLE gateway_events (
   CONSTRAINT fk_event_txn FOREIGN KEY (related_txn_id) REFERENCES gateway_transactions (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Failed and Pending Payment Handling
--- --------------------------------------------------------------------------
 CREATE TABLE failed_payment_cases (
   id                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
   gateway_txn_id      INT UNSIGNED NOT NULL,
@@ -147,9 +127,6 @@ CREATE TABLE failed_payment_cases (
   CONSTRAINT fk_case_txn FOREIGN KEY (gateway_txn_id) REFERENCES gateway_transactions (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Bank integration matching (bank statement line -> student payment)
--- --------------------------------------------------------------------------
 CREATE TABLE bank_payment_matches (
   id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
   bank_txn_id     INT UNSIGNED NOT NULL,
@@ -168,4 +145,3 @@ CREATE TABLE bank_payment_matches (
   CONSTRAINT fk_match_payment FOREIGN KEY (payment_id) REFERENCES payments (id) ON DELETE SET NULL,
   CONSTRAINT fk_match_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE SET NULL
 );
-

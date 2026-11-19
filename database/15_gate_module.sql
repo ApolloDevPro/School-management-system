@@ -1,15 +1,6 @@
--- ==========================================================================
--- SSMS - File : 15_gate_module.sql
--- Module      : 2.17 Visitor and Gate Management
--- Depends on  : 00 - 14 (students, staff, exeats, gate passes)
--- ==========================================================================
-
 USE ssms;
 SET NAMES utf8mb4;
 
--- --------------------------------------------------------------------------
--- Visitor Registration
--- --------------------------------------------------------------------------
 CREATE TABLE visitors (
   id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -44,9 +35,6 @@ CREATE TABLE visitors (
   CONSTRAINT fk_visitor_host_student FOREIGN KEY (host_student_id) REFERENCES students (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Gate Passes (students, staff or goods leaving the school)
--- --------------------------------------------------------------------------
 CREATE TABLE gate_passes (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   pass_number      VARCHAR(40)  NOT NULL,
@@ -85,9 +73,6 @@ CREATE TABLE gate_passes (
   CONSTRAINT fk_pass_staff FOREIGN KEY (staff_id) REFERENCES staff (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Exeat Verification at the gate (writes back to boarding exeats)
--- --------------------------------------------------------------------------
 CREATE TABLE exeat_verifications (
   id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   exeat_id         INT UNSIGNED NOT NULL,
@@ -106,9 +91,6 @@ CREATE TABLE exeat_verifications (
   CONSTRAINT fk_exv_staff FOREIGN KEY (verified_by) REFERENCES staff (id) ON DELETE RESTRICT
 );
 
--- --------------------------------------------------------------------------
--- Vehicle Log
--- --------------------------------------------------------------------------
 CREATE TABLE vehicle_entries (
   id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -136,9 +118,6 @@ CREATE TABLE vehicle_entries (
   CONSTRAINT fk_ve_host_staff FOREIGN KEY (host_staff_id) REFERENCES staff (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Security Incident Log
--- --------------------------------------------------------------------------
 CREATE TABLE security_incidents (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   incident_number  VARCHAR(40)  NOT NULL,
@@ -167,4 +146,3 @@ CREATE TABLE security_incidents (
   KEY idx_security_date (incident_date),
   CONSTRAINT fk_security_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE
 );
-

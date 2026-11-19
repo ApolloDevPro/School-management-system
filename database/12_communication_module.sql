@@ -1,17 +1,6 @@
--- ==========================================================================
--- SSMS - File : 12_communication_module.sql
--- Module      : 2.13 Communication Management
--- Depends on  : 00 - 11 (users, students, guardians, staff, announcements)
--- Note        : Event notifications are produced from academic_events
---               (module 2.3) through the notifications table below.
--- ==========================================================================
-
 USE ssms;
 SET NAMES utf8mb4;
 
--- --------------------------------------------------------------------------
--- Notification Templates (SMS, email, portal)
--- --------------------------------------------------------------------------
 CREATE TABLE notification_templates (
   id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id    INT UNSIGNED NOT NULL,
@@ -31,9 +20,6 @@ CREATE TABLE notification_templates (
   CONSTRAINT fk_template_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Announcements (notices for parents, students, staff or a class)
--- --------------------------------------------------------------------------
 CREATE TABLE announcements (
   id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id      INT UNSIGNED NOT NULL,
@@ -67,9 +53,6 @@ CREATE TABLE announcements (
   CONSTRAINT fk_announcement_house FOREIGN KEY (house_id) REFERENCES houses (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Notifications and Message History (single outbox for SMS/email/portal)
--- --------------------------------------------------------------------------
 CREATE TABLE notifications (
   id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -136,9 +119,6 @@ CREATE TABLE notification_recipients (
 ALTER TABLE attendance_notifications
   ADD CONSTRAINT fk_att_notif_notification FOREIGN KEY (notification_id) REFERENCES notifications (id) ON DELETE SET NULL;
 
--- --------------------------------------------------------------------------
--- Parent / Student / Teacher Messaging
--- --------------------------------------------------------------------------
 CREATE TABLE messages (
   id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -182,9 +162,6 @@ CREATE TABLE messages (
   CONSTRAINT fk_message_recipient_role FOREIGN KEY (recipient_role_id) REFERENCES roles (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- PTA Management
--- --------------------------------------------------------------------------
 CREATE TABLE pta_meetings (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -229,4 +206,3 @@ CREATE TABLE pta_attendance (
   CONSTRAINT fk_pta_att_guardian FOREIGN KEY (guardian_id) REFERENCES guardians (id) ON DELETE CASCADE,
   CONSTRAINT fk_pta_att_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
 );
-

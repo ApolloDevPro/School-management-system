@@ -1,16 +1,6 @@
--- ==========================================================================
--- SSMS - File : 09_boarding_module.sql
--- Module      : 2.10 Boarding Management
--- Depends on  : 00 - 03 (schools, students, houses, staff)
--- Note        : exeat verification columns are filled by the gate module.
--- ==========================================================================
-
 USE ssms;
 SET NAMES utf8mb4;
 
--- --------------------------------------------------------------------------
--- Dormitory Management
--- --------------------------------------------------------------------------
 CREATE TABLE dormitories (
   id                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id           INT UNSIGNED NOT NULL,
@@ -35,9 +25,6 @@ CREATE TABLE dormitories (
   CONSTRAINT fk_dorm_assistant FOREIGN KEY (assistant_warden_staff_id) REFERENCES staff (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Room and Bed Management
--- --------------------------------------------------------------------------
 CREATE TABLE dorm_rooms (
   id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
   dormitory_id  INT UNSIGNED NOT NULL,
@@ -68,9 +55,6 @@ CREATE TABLE beds (
   CONSTRAINT fk_bed_student FOREIGN KEY (last_occupied_student_id) REFERENCES students (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Boarding Registration
--- --------------------------------------------------------------------------
 CREATE TABLE boarding_registrations (
   id                INT UNSIGNED NOT NULL AUTO_INCREMENT,
   student_id        INT UNSIGNED NOT NULL,
@@ -94,9 +78,6 @@ CREATE TABLE boarding_registrations (
   CONSTRAINT fk_boarding_dorm FOREIGN KEY (dormitory_id) REFERENCES dormitories (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Student Bed Allocation
--- --------------------------------------------------------------------------
 CREATE TABLE bed_allocations (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   student_id       INT UNSIGNED NOT NULL,
@@ -125,9 +106,6 @@ CREATE TABLE bed_allocations (
   CONSTRAINT fk_bed_alloc_term FOREIGN KEY (term_id) REFERENCES terms (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Room Transfers
--- --------------------------------------------------------------------------
 CREATE TABLE room_transfers (
   id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
   student_id     INT UNSIGNED NOT NULL,
@@ -154,9 +132,6 @@ CREATE TABLE room_transfers (
   CONSTRAINT fk_rt_to_dorm FOREIGN KEY (to_dorm_id) REFERENCES dormitories (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Boarding Attendance (roll calls)
--- --------------------------------------------------------------------------
 CREATE TABLE boarding_roll_calls (
   id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
   dormitory_id  INT UNSIGNED NOT NULL,
@@ -190,9 +165,6 @@ CREATE TABLE roll_call_entries (
   CONSTRAINT fk_roll_entry_bed FOREIGN KEY (bed_id) REFERENCES beds (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Exeat and Leave-out Management
--- --------------------------------------------------------------------------
 CREATE TABLE exeats (
   id                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
   student_id         INT UNSIGNED NOT NULL,
@@ -226,9 +198,6 @@ CREATE TABLE exeats (
   CONSTRAINT fk_exeat_guardian FOREIGN KEY (guardian_id) REFERENCES guardians (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Maintenance Requests (dormitory faults)
--- --------------------------------------------------------------------------
 CREATE TABLE maintenance_requests (
   id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id     INT UNSIGNED NOT NULL,
@@ -255,4 +224,3 @@ CREATE TABLE maintenance_requests (
   CONSTRAINT fk_maint_dorm FOREIGN KEY (dormitory_id) REFERENCES dormitories (id) ON DELETE CASCADE,
   CONSTRAINT fk_maint_dorm_room FOREIGN KEY (dorm_room_id) REFERENCES dorm_rooms (id) ON DELETE CASCADE
 );
-

@@ -1,15 +1,6 @@
--- ==========================================================================
--- SSMS - File : 16_canteen_module.sql
--- Module      : 2.18 Canteen and School Shop Management (Optional)
--- Depends on  : 00 - 05 (schools, students, staff, receipts, gl_accounts)
--- ==========================================================================
-
 USE ssms;
 SET NAMES utf8mb4;
 
--- --------------------------------------------------------------------------
--- Product Catalogue
--- --------------------------------------------------------------------------
 CREATE TABLE products (
   id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id       INT UNSIGNED NOT NULL,
@@ -37,9 +28,6 @@ CREATE TABLE products (
   CONSTRAINT fk_product_account FOREIGN KEY (account_id) REFERENCES gl_accounts (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Shop / Canteen Stock Control
--- --------------------------------------------------------------------------
 CREATE TABLE product_stock_movements (
   id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id     INT UNSIGNED NOT NULL,
@@ -59,9 +47,6 @@ CREATE TABLE product_stock_movements (
   CONSTRAINT fk_psm_product FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Student Wallet / Account
--- --------------------------------------------------------------------------
 CREATE TABLE student_wallets (
   id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
   student_id     INT UNSIGNED NOT NULL,
@@ -103,9 +88,6 @@ CREATE TABLE wallet_transactions (
   CONSTRAINT fk_wallet_txn_guardian FOREIGN KEY (guardian_id) REFERENCES guardians (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Sales Recording
--- --------------------------------------------------------------------------
 CREATE TABLE sales (
   id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   sale_number        VARCHAR(40)  NOT NULL,
@@ -162,9 +144,6 @@ CREATE TABLE sale_items (
 ALTER TABLE wallet_transactions
   ADD CONSTRAINT fk_wallet_txn_sale FOREIGN KEY (sale_id) REFERENCES sales (id) ON DELETE SET NULL;
 
--- --------------------------------------------------------------------------
--- Shop cash reconciliation (end-of-day till)
--- --------------------------------------------------------------------------
 CREATE TABLE shop_till_reconciliations (
   id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id      INT UNSIGNED NOT NULL,
@@ -184,4 +163,3 @@ CREATE TABLE shop_till_reconciliations (
   CONSTRAINT fk_till_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
   CONSTRAINT fk_till_seller FOREIGN KEY (seller_staff_id) REFERENCES staff (id) ON DELETE SET NULL
 );
-

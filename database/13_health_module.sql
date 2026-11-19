@@ -1,17 +1,6 @@
--- ==========================================================================
--- SSMS - File : 13_health_module.sql
--- Module      : 2.14 Health and Student Welfare Management
--- Depends on  : 00 - 02 (schools, students, staff)
--- Sensitive data: access is restricted by role permissions; sensitive text
--- columns should be encrypted at application level (Data Protection Act 2019).
--- ==========================================================================
-
 USE ssms;
 SET NAMES utf8mb4;
 
--- --------------------------------------------------------------------------
--- Student Medical Records (one profile per student)
--- --------------------------------------------------------------------------
 CREATE TABLE medical_records (
   id                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
   student_id         INT UNSIGNED NOT NULL,
@@ -38,9 +27,6 @@ CREATE TABLE medical_records (
   CONSTRAINT fk_medical_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Emergency Contacts
--- --------------------------------------------------------------------------
 CREATE TABLE emergency_contacts (
   id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
   student_id     INT UNSIGNED NOT NULL,
@@ -57,9 +43,6 @@ CREATE TABLE emergency_contacts (
   CONSTRAINT fk_emergency_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Sick Bay Management
--- --------------------------------------------------------------------------
 CREATE TABLE sickbay_visits (
   id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -90,9 +73,6 @@ CREATE TABLE sickbay_visits (
   CONSTRAINT fk_sickbay_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Medication Records
--- --------------------------------------------------------------------------
 CREATE TABLE medication_records (
   id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -118,9 +98,6 @@ CREATE TABLE medication_records (
   CONSTRAINT fk_medication_visit FOREIGN KEY (visit_id) REFERENCES sickbay_visits (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Medical Incident Management
--- --------------------------------------------------------------------------
 CREATE TABLE medical_incidents (
   id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -155,9 +132,6 @@ CREATE TABLE medical_incidents (
   CONSTRAINT fk_incident_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Counselling Management (confidential)
--- --------------------------------------------------------------------------
 CREATE TABLE counselling_sessions (
   id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id         INT UNSIGNED NOT NULL,
@@ -189,9 +163,6 @@ CREATE TABLE counselling_sessions (
   CONSTRAINT fk_counselling_staff FOREIGN KEY (counsellor_staff_id) REFERENCES staff (id) ON DELETE RESTRICT
 );
 
--- --------------------------------------------------------------------------
--- Welfare Records (vulnerable learners and support given)
--- --------------------------------------------------------------------------
 CREATE TABLE welfare_records (
   id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id         INT UNSIGNED NOT NULL,
@@ -219,4 +190,3 @@ CREATE TABLE welfare_records (
   CONSTRAINT fk_welfare_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
   CONSTRAINT fk_welfare_staff FOREIGN KEY (responsible_staff) REFERENCES staff (id) ON DELETE SET NULL
 );
-

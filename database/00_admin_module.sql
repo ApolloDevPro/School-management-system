@@ -1,14 +1,9 @@
-
-
 CREATE DATABASE IF NOT EXISTS ssms;
 
 USE ssms;
 
 SET NAMES utf8mb4;
 
--- --------------------------------------------------------------------------
--- School Profile
--- --------------------------------------------------------------------------
 CREATE TABLE schools (
   id                INT UNSIGNED NOT NULL AUTO_INCREMENT,
   name              VARCHAR(160)  NOT NULL,
@@ -37,9 +32,6 @@ CREATE TABLE schools (
   PRIMARY KEY (id)
 );
 
--- --------------------------------------------------------------------------
--- Role Management
--- --------------------------------------------------------------------------
 CREATE TABLE roles (
   id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id   INT UNSIGNED NOT NULL,
@@ -55,11 +47,6 @@ CREATE TABLE roles (
   CONSTRAINT fk_roles_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Permission Management (one row per controlled module / sensitive area)
--- The action level (view, add, edit, approve, print, delete) is held on
--- role_permissions, so a role can be given view-only access to a module.
--- --------------------------------------------------------------------------
 CREATE TABLE permissions (
   id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
   module_code  VARCHAR(40)  NOT NULL,
@@ -88,11 +75,6 @@ CREATE TABLE role_permissions (
   CONSTRAINT fk_rp_permission FOREIGN KEY (permission_id) REFERENCES permissions (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- User Management
--- staff_id / guardian_id / student_id are linked later (FKs added after the
--- referenced tables are created, to avoid circular dependencies).
--- --------------------------------------------------------------------------
 CREATE TABLE users (
   id                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id          INT UNSIGNED NOT NULL,
@@ -134,9 +116,6 @@ CREATE TABLE user_roles (
   CONSTRAINT fk_ur_role FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Academic Year Management
--- --------------------------------------------------------------------------
 CREATE TABLE academic_years (
   id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id   INT UNSIGNED NOT NULL,
@@ -153,9 +132,6 @@ CREATE TABLE academic_years (
   CONSTRAINT fk_academic_years_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Term Management
--- --------------------------------------------------------------------------
 CREATE TABLE terms (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   academic_year_id INT UNSIGNED NOT NULL,
@@ -173,9 +149,6 @@ CREATE TABLE terms (
   CONSTRAINT fk_terms_year FOREIGN KEY (academic_year_id) REFERENCES academic_years (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Class Management (S1 - S6)
--- --------------------------------------------------------------------------
 CREATE TABLE classes (
   id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id   INT UNSIGNED NOT NULL,
@@ -190,10 +163,6 @@ CREATE TABLE classes (
   CONSTRAINT fk_classes_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Stream Management
--- class_teacher_id is added in 01_hr_module.sql (staff table created there).
--- --------------------------------------------------------------------------
 CREATE TABLE streams (
   id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
   class_id       INT UNSIGNED NOT NULL,
@@ -208,10 +177,6 @@ CREATE TABLE streams (
   CONSTRAINT fk_streams_class FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Department Management (single source for Academic and HR)
--- head_staff_id is added in 01_hr_module.sql
--- --------------------------------------------------------------------------
 CREATE TABLE departments (
   id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id   INT UNSIGNED NOT NULL,
@@ -226,10 +191,6 @@ CREATE TABLE departments (
   CONSTRAINT fk_departments_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- House Management
--- house_master_staff_id is added in 01_hr_module.sql
--- --------------------------------------------------------------------------
 CREATE TABLE houses (
   id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id  INT UNSIGNED NOT NULL,
@@ -244,9 +205,6 @@ CREATE TABLE houses (
   CONSTRAINT fk_houses_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- System Settings (general configuration, no code changes needed)
--- --------------------------------------------------------------------------
 CREATE TABLE settings (
   id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id      INT UNSIGNED NOT NULL,
@@ -262,9 +220,6 @@ CREATE TABLE settings (
   CONSTRAINT fk_settings_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Number sequences (admission numbers, receipts, invoices, gate passes...)
--- --------------------------------------------------------------------------
 CREATE TABLE sequences (
   id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id   INT UNSIGNED NOT NULL,
@@ -280,9 +235,6 @@ CREATE TABLE sequences (
   CONSTRAINT fk_sequences_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Audit Logs (who did what, when)
--- --------------------------------------------------------------------------
 CREATE TABLE audit_logs (
   id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id   INT UNSIGNED NOT NULL,

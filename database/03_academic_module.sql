@@ -1,11 +1,6 @@
-
-
 USE ssms;
 SET NAMES utf8mb4;
 
--- --------------------------------------------------------------------------
--- Curriculum Management (Lower Secondary CBC and A-Level)
--- --------------------------------------------------------------------------
 CREATE TABLE curricula (
   id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id   INT UNSIGNED NOT NULL,
@@ -21,10 +16,6 @@ CREATE TABLE curricula (
   CONSTRAINT fk_curriculum_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Subject Management
--- uneb_subject_code is left for the school to fill from the UNEB subject list.
--- --------------------------------------------------------------------------
 CREATE TABLE subjects (
   id                INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id         INT UNSIGNED NOT NULL,
@@ -48,9 +39,6 @@ CREATE TABLE subjects (
   CONSTRAINT fk_subject_department FOREIGN KEY (department_id) REFERENCES departments (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Subject Allocation (subject -> class / stream)
--- --------------------------------------------------------------------------
 CREATE TABLE subject_allocations (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   subject_id       INT UNSIGNED NOT NULL,
@@ -72,9 +60,6 @@ CREATE TABLE subject_allocations (
   CONSTRAINT fk_alloc_term FOREIGN KEY (term_id) REFERENCES terms (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- A-Level Combination Management
--- --------------------------------------------------------------------------
 CREATE TABLE alevel_combinations (
   id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id    INT UNSIGNED NOT NULL,
@@ -103,9 +88,6 @@ CREATE TABLE combination_subjects (
   CONSTRAINT fk_cs_subject FOREIGN KEY (subject_id) REFERENCES subjects (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Student Subject Registration (module 2.2)
--- --------------------------------------------------------------------------
 CREATE TABLE student_subjects (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   student_id       INT UNSIGNED NOT NULL,
@@ -126,9 +108,6 @@ CREATE TABLE student_subjects (
   CONSTRAINT fk_ss_term FOREIGN KEY (term_id) REFERENCES terms (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Student Combination Allocation (module 2.2)
--- --------------------------------------------------------------------------
 CREATE TABLE student_combinations (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   student_id       INT UNSIGNED NOT NULL,
@@ -146,9 +125,6 @@ CREATE TABLE student_combinations (
   CONSTRAINT fk_scombo_year FOREIGN KEY (academic_year_id) REFERENCES academic_years (id) ON DELETE RESTRICT
 );
 
--- --------------------------------------------------------------------------
--- Teacher Allocation (teacher -> subject / class / stream)
--- --------------------------------------------------------------------------
 CREATE TABLE teacher_allocations (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   staff_id         INT UNSIGNED NOT NULL,
@@ -172,9 +148,6 @@ CREATE TABLE teacher_allocations (
   CONSTRAINT fk_ta_term FOREIGN KEY (term_id) REFERENCES terms (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Rooms (used by timetabling and the examination timetable)
--- --------------------------------------------------------------------------
 CREATE TABLE rooms (
   id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id  INT UNSIGNED NOT NULL,
@@ -188,11 +161,6 @@ CREATE TABLE rooms (
   CONSTRAINT fk_room_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Timetable Management
--- The unique keys prevent a teacher or a stream being booked twice in the
--- same period of the same timetable (clash detection at database level).
--- --------------------------------------------------------------------------
 CREATE TABLE timetables (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -243,9 +211,6 @@ CREATE TABLE timetable_slots (
   CONSTRAINT fk_slot_room FOREIGN KEY (room_id) REFERENCES rooms (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Schemes of Work
--- --------------------------------------------------------------------------
 CREATE TABLE schemes_of_work (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   staff_id         INT UNSIGNED NOT NULL,
@@ -282,9 +247,6 @@ CREATE TABLE schemes_of_work (
   CONSTRAINT fk_scheme_term FOREIGN KEY (term_id) REFERENCES terms (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Lesson Planning
--- --------------------------------------------------------------------------
 CREATE TABLE lesson_plans (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   staff_id         INT UNSIGNED NOT NULL,
@@ -320,9 +282,6 @@ CREATE TABLE lesson_plans (
   CONSTRAINT fk_lesson_term FOREIGN KEY (term_id) REFERENCES terms (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Syllabus Management and Syllabus Coverage
--- --------------------------------------------------------------------------
 CREATE TABLE syllabuses (
   id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
   subject_id    INT UNSIGNED NOT NULL,
@@ -379,9 +338,6 @@ CREATE TABLE syllabus_coverage (
   CONSTRAINT fk_coverage_term FOREIGN KEY (term_id) REFERENCES terms (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Generic Skills (competency-based curriculum) and Integrated Activities
--- --------------------------------------------------------------------------
 CREATE TABLE generic_skills (
   id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id   INT UNSIGNED NOT NULL,
@@ -432,9 +388,6 @@ CREATE TABLE activity_skills (
   CONSTRAINT fk_as_skill FOREIGN KEY (skill_id) REFERENCES generic_skills (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Homework Management
--- --------------------------------------------------------------------------
 CREATE TABLE homework (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   staff_id         INT UNSIGNED NOT NULL,
@@ -480,9 +433,6 @@ CREATE TABLE homework_submissions (
   CONSTRAINT fk_submission_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Academic Calendar
--- --------------------------------------------------------------------------
 CREATE TABLE academic_events (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -507,4 +457,3 @@ CREATE TABLE academic_events (
   CONSTRAINT fk_event_year FOREIGN KEY (academic_year_id) REFERENCES academic_years (id) ON DELETE CASCADE,
   CONSTRAINT fk_event_term FOREIGN KEY (term_id) REFERENCES terms (id) ON DELETE CASCADE
 );
-

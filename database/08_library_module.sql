@@ -1,15 +1,6 @@
--- ==========================================================================
--- SSMS - File : 08_library_module.sql
--- Module      : 2.9 Library Management
--- Depends on  : 00 - 02 (schools, students, staff, subjects)
--- ==========================================================================
-
 USE ssms;
 SET NAMES utf8mb4;
 
--- --------------------------------------------------------------------------
--- Book Categories
--- --------------------------------------------------------------------------
 CREATE TABLE book_categories (
   id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id   INT UNSIGNED NOT NULL,
@@ -24,9 +15,6 @@ CREATE TABLE book_categories (
   CONSTRAINT fk_book_cat_parent FOREIGN KEY (parent_id) REFERENCES book_categories (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Book Registration (bibliographic record)
--- --------------------------------------------------------------------------
 CREATE TABLE books (
   id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id      INT UNSIGNED NOT NULL,
@@ -58,9 +46,6 @@ CREATE TABLE books (
   CONSTRAINT fk_book_subject FOREIGN KEY (subject_id) REFERENCES subjects (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Book Inventory (individual copies / accession numbers)
--- --------------------------------------------------------------------------
 CREATE TABLE book_copies (
   id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
   book_id         INT UNSIGNED NOT NULL,
@@ -78,9 +63,6 @@ CREATE TABLE book_copies (
   CONSTRAINT fk_copy_book FOREIGN KEY (book_id) REFERENCES books (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Book Borrowing and Returns
--- --------------------------------------------------------------------------
 CREATE TABLE borrowings (
   id                INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id         INT UNSIGNED NOT NULL,
@@ -111,9 +93,6 @@ CREATE TABLE borrowings (
   CONSTRAINT fk_borrow_staff FOREIGN KEY (staff_id) REFERENCES staff (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Overdue Management (reminders sent to borrowers)
--- --------------------------------------------------------------------------
 CREATE TABLE library_notices (
   id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
   borrowing_id INT UNSIGNED NOT NULL,
@@ -129,9 +108,6 @@ CREATE TABLE library_notices (
   CONSTRAINT fk_lib_notice_borrowing FOREIGN KEY (borrowing_id) REFERENCES borrowings (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Fine Management (overdue, damaged, lost)
--- --------------------------------------------------------------------------
 CREATE TABLE library_fines (
   id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id     INT UNSIGNED NOT NULL,
@@ -162,4 +138,3 @@ CREATE TABLE library_fines (
   CONSTRAINT fk_fine_invoice_item FOREIGN KEY (invoice_item_id) REFERENCES fee_invoice_items (id) ON DELETE SET NULL,
   CONSTRAINT fk_fine_payment FOREIGN KEY (payment_id) REFERENCES payments (id) ON DELETE SET NULL
 );
-

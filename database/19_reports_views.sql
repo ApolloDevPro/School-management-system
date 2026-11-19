@@ -1,16 +1,6 @@
--- ==========================================================================
--- SSMS - File : 19_reports_views.sql
--- Module      : 2.20 Reports and Analytics (operational reports live here
---               instead of being duplicated inside each module)
--- Depends on  : all module files (00 - 18)
--- ==========================================================================
-
 USE ssms;
 SET NAMES utf8mb4;
 
--- --------------------------------------------------------------------------
--- Active academic year / term
--- --------------------------------------------------------------------------
 CREATE OR REPLACE VIEW vw_current_term AS
 SELECT
   ay.school_id,
@@ -25,9 +15,6 @@ FROM academic_years ay
 JOIN terms t ON t.academic_year_id = ay.id AND t.is_active = 1
 WHERE ay.is_active = 1;
 
--- --------------------------------------------------------------------------
--- Student placement and contacts
--- --------------------------------------------------------------------------
 CREATE OR REPLACE VIEW vw_student_placement AS
 SELECT
   s.id                AS student_id,
@@ -74,9 +61,6 @@ SELECT
 FROM student_guardians sg
 JOIN guardians g ON g.id = sg.guardian_id;
 
--- --------------------------------------------------------------------------
--- Finance : balances, debtors and collection
--- --------------------------------------------------------------------------
 CREATE OR REPLACE VIEW vw_fee_balances AS
 SELECT
   i.school_id,
@@ -152,9 +136,6 @@ SELECT
        ELSE 'Unpaid' END AS ageing_status
 FROM fee_invoices i;
 
--- --------------------------------------------------------------------------
--- Attendance reports
--- --------------------------------------------------------------------------
 CREATE OR REPLACE VIEW vw_attendance_daily_summary AS
 SELECT
   a.school_id,
@@ -206,9 +187,6 @@ FROM staff_attendance sa
 JOIN staff st ON st.id = sa.staff_id
 GROUP BY sa.school_id, sa.staff_id, st.first_name, st.last_name;
 
--- --------------------------------------------------------------------------
--- Examination and assessment reports
--- --------------------------------------------------------------------------
 CREATE OR REPLACE VIEW vw_subject_results_with_grades AS
 SELECT
   r.exam_id,
@@ -342,9 +320,6 @@ JOIN subjects sub ON sub.id = p.subject_id
 WHERE p.status IN ('pending','missing')
    OR p.score IS NULL;
 
--- --------------------------------------------------------------------------
--- Academic operations
--- --------------------------------------------------------------------------
 CREATE OR REPLACE VIEW vw_teaching_workload AS
 SELECT
   st.school_id,
@@ -408,9 +383,6 @@ LEFT JOIN homework_submissions hs ON hs.homework_id = h.id
 GROUP BY h.id, h.title, h.subject_id, sub.name, h.class_id, c.name,
          h.staff_id, st.first_name, st.last_name, h.assigned_date, h.due_date, h.status;
 
--- --------------------------------------------------------------------------
--- Library, boarding, transport and inventory reports
--- --------------------------------------------------------------------------
 CREATE OR REPLACE VIEW vw_overdue_books AS
 SELECT
   b.id AS borrowing_id,
@@ -498,9 +470,6 @@ WHERE i.current_stock <= i.reorder_level
   AND i.is_stocked = 1
   AND i.status = 'active';
 
--- --------------------------------------------------------------------------
--- Finance : budgeting, income and expenditure
--- --------------------------------------------------------------------------
 CREATE OR REPLACE VIEW vw_budget_vs_actual AS
 SELECT
   b.school_id,
@@ -538,9 +507,6 @@ JOIN gl_accounts a ON a.id = le.account_id
 WHERE le.is_posted = 1
 GROUP BY le.school_id, le.entry_date, a.account_code, a.account_name, a.account_type;
 
--- --------------------------------------------------------------------------
--- HR reports
--- --------------------------------------------------------------------------
 CREATE OR REPLACE VIEW vw_leave_balance AS
 SELECT
   st.school_id,
@@ -597,9 +563,6 @@ WHERE ct.status = 'active'
   AND ct.end_date IS NOT NULL
   AND DATEDIFF(ct.end_date, CURRENT_DATE) <= 90;
 
--- --------------------------------------------------------------------------
--- Compliance and support
--- --------------------------------------------------------------------------
 CREATE OR REPLACE VIEW vw_licence_expiry_alerts AS
 SELECT
   l.school_id,
@@ -640,9 +603,6 @@ SELECT
 FROM support_tickets st
 GROUP BY st.school_id, st.status, st.priority;
 
--- --------------------------------------------------------------------------
--- Role dashboard : key figures per school
--- --------------------------------------------------------------------------
 CREATE OR REPLACE VIEW vw_school_dashboard AS
 SELECT
   sc.id AS school_id,
@@ -656,4 +616,3 @@ SELECT
   (SELECT COUNT(*) FROM student_attendance a WHERE a.school_id = sc.id AND a.attendance_date = CURRENT_DATE AND a.status = 'absent') AS absent_today,
   (SELECT COUNT(*) FROM support_tickets t WHERE t.school_id = sc.id AND t.status IN ('open','in_progress')) AS open_tickets
 FROM schools sc;
-

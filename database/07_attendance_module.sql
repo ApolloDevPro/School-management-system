@@ -1,17 +1,6 @@
--- ==========================================================================
--- SSMS - File : 07_attendance_module.sql
--- Module      : 2.8 Attendance Management (single home for all attendance)
--- Depends on  : 00 - 04 (students, staff, subjects, terms)
--- Note        : attendance_notifications.notification_id is linked to the
---               communication module in 12_communication_module.sql.
--- ==========================================================================
-
 USE ssms;
 SET NAMES utf8mb4;
 
--- --------------------------------------------------------------------------
--- Daily Student Attendance and Subject (lesson) Attendance
--- --------------------------------------------------------------------------
 CREATE TABLE student_attendance (
   id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -48,9 +37,6 @@ CREATE TABLE student_attendance (
   CONSTRAINT fk_attendance_term FOREIGN KEY (term_id) REFERENCES terms (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Staff Attendance
--- --------------------------------------------------------------------------
 CREATE TABLE staff_attendance (
   id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -72,9 +58,6 @@ CREATE TABLE staff_attendance (
   CONSTRAINT fk_staff_att_staff FOREIGN KEY (staff_id) REFERENCES staff (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Late Arrival Management
--- --------------------------------------------------------------------------
 CREATE TABLE late_arrivals (
   id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -97,9 +80,6 @@ CREATE TABLE late_arrivals (
   CONSTRAINT fk_late_staff FOREIGN KEY (staff_id) REFERENCES staff (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Absentee Management (follow-up before dropout)
--- --------------------------------------------------------------------------
 CREATE TABLE absentee_followups (
   id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -124,9 +104,6 @@ CREATE TABLE absentee_followups (
   CONSTRAINT fk_followup_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Attendance Notifications
--- --------------------------------------------------------------------------
 CREATE TABLE attendance_notifications (
   id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -150,4 +127,3 @@ CREATE TABLE attendance_notifications (
   CONSTRAINT fk_att_notif_guardian FOREIGN KEY (guardian_id) REFERENCES guardians (id) ON DELETE SET NULL,
   CONSTRAINT fk_att_notif_attendance FOREIGN KEY (attendance_id) REFERENCES student_attendance (id) ON DELETE SET NULL
 );
-

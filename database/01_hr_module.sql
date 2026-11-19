@@ -1,10 +1,6 @@
-
 USE ssms;
 SET NAMES utf8mb4;
 
--- --------------------------------------------------------------------------
--- Staff Registration / Staff Profiles
--- --------------------------------------------------------------------------
 CREATE TABLE staff (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -52,7 +48,6 @@ CREATE TABLE staff (
   CONSTRAINT fk_staff_department FOREIGN KEY (department_id) REFERENCES departments (id) ON DELETE SET NULL
 );
 
--- Link administration tables that need a staff member ----------------------
 ALTER TABLE users
   ADD CONSTRAINT fk_users_staff FOREIGN KEY (staff_id) REFERENCES staff (id) ON DELETE SET NULL;
 
@@ -68,9 +63,6 @@ ALTER TABLE houses
   ADD COLUMN house_master_staff_id INT UNSIGNED AFTER motto,
   ADD CONSTRAINT fk_houses_master FOREIGN KEY (house_master_staff_id) REFERENCES staff (id) ON DELETE SET NULL;
 
--- --------------------------------------------------------------------------
--- Recruitment : Vacancies
--- --------------------------------------------------------------------------
 CREATE TABLE vacancies (
   id                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id           INT UNSIGNED NOT NULL,
@@ -124,9 +116,6 @@ CREATE TABLE job_applications (
   CONSTRAINT fk_application_staff FOREIGN KEY (appointed_staff_id) REFERENCES staff (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Staff Documents
--- --------------------------------------------------------------------------
 CREATE TABLE staff_documents (
   id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   staff_id    INT UNSIGNED NOT NULL,
@@ -142,9 +131,6 @@ CREATE TABLE staff_documents (
   CONSTRAINT fk_staff_doc_staff FOREIGN KEY (staff_id) REFERENCES staff (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Contract Management
--- --------------------------------------------------------------------------
 CREATE TABLE contracts (
   id                INT UNSIGNED NOT NULL AUTO_INCREMENT,
   staff_id          INT UNSIGNED NOT NULL,
@@ -167,9 +153,6 @@ CREATE TABLE contracts (
   CONSTRAINT fk_contract_staff FOREIGN KEY (staff_id) REFERENCES staff (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Leave Management
--- --------------------------------------------------------------------------
 CREATE TABLE leave_types (
   id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id       INT UNSIGNED NOT NULL,
@@ -209,10 +192,6 @@ CREATE TABLE leave_requests (
   CONSTRAINT fk_leave_reviewer FOREIGN KEY (reviewed_by) REFERENCES staff (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Allowances and statutory rules (PAYE / NSSF)
--- Statutory rates are settings the school can update when URA/NSSF change them.
--- --------------------------------------------------------------------------
 CREATE TABLE allowances (
   id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id      INT UNSIGNED NOT NULL,
@@ -249,9 +228,6 @@ CREATE TABLE statutory_rates (
   CONSTRAINT fk_statutory_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Payroll Management
--- --------------------------------------------------------------------------
 CREATE TABLE payroll_periods (
   id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id     INT UNSIGNED NOT NULL,
@@ -326,9 +302,6 @@ CREATE TABLE payroll_deductions (
   CONSTRAINT fk_deduction_item FOREIGN KEY (payroll_item_id) REFERENCES payroll_items (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Staff Appraisal
--- --------------------------------------------------------------------------
 CREATE TABLE staff_appraisals (
   id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
   staff_id      INT UNSIGNED NOT NULL,
@@ -351,9 +324,6 @@ CREATE TABLE staff_appraisals (
   CONSTRAINT fk_appraisal_reviewer FOREIGN KEY (appraised_by) REFERENCES staff (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Staff Termination
--- --------------------------------------------------------------------------
 CREATE TABLE staff_terminations (
   id                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
   staff_id           INT UNSIGNED NOT NULL,
@@ -373,4 +343,3 @@ CREATE TABLE staff_terminations (
   CONSTRAINT fk_termination_staff FOREIGN KEY (staff_id) REFERENCES staff (id) ON DELETE CASCADE,
   CONSTRAINT fk_termination_by FOREIGN KEY (decided_by) REFERENCES staff (id) ON DELETE SET NULL
 );
-

@@ -1,15 +1,6 @@
--- ==========================================================================
--- SSMS - File : 11_inventory_module.sql
--- Module      : 2.12 Inventory and Procurement Management
--- Depends on  : 00 - 02 (schools, departments, staff, gl_accounts)
--- ==========================================================================
-
 USE ssms;
 SET NAMES utf8mb4;
 
--- --------------------------------------------------------------------------
--- Item Categories
--- --------------------------------------------------------------------------
 CREATE TABLE item_categories (
   id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id   INT UNSIGNED NOT NULL,
@@ -26,9 +17,6 @@ CREATE TABLE item_categories (
   CONSTRAINT fk_item_cat_account FOREIGN KEY (default_account_id) REFERENCES gl_accounts (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Item Registration (stock items)
--- --------------------------------------------------------------------------
 CREATE TABLE items (
   id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id       INT UNSIGNED NOT NULL,
@@ -59,9 +47,6 @@ CREATE TABLE items (
   CONSTRAINT fk_item_account FOREIGN KEY (account_id) REFERENCES gl_accounts (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Supplier Management
--- --------------------------------------------------------------------------
 CREATE TABLE suppliers (
   id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id       INT UNSIGNED NOT NULL,
@@ -86,9 +71,6 @@ CREATE TABLE suppliers (
   CONSTRAINT fk_supplier_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Stock Management (receipts, issues, returns, adjustments)
--- --------------------------------------------------------------------------
 CREATE TABLE stock_movements (
   id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -118,9 +100,6 @@ CREATE TABLE stock_movements (
   CONSTRAINT fk_stock_staff FOREIGN KEY (issued_to_staff_id) REFERENCES staff (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Purchase Requests and Requisition Approval
--- --------------------------------------------------------------------------
 CREATE TABLE purchase_requests (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   request_number   VARCHAR(40)  NOT NULL,
@@ -182,9 +161,6 @@ CREATE TABLE purchase_request_approvals (
   CONSTRAINT fk_pra_staff FOREIGN KEY (approver_staff_id) REFERENCES staff (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Purchase Orders
--- --------------------------------------------------------------------------
 CREATE TABLE purchase_orders (
   id                INT UNSIGNED NOT NULL AUTO_INCREMENT,
   po_number         VARCHAR(40)  NOT NULL,
@@ -238,9 +214,6 @@ CREATE TABLE purchase_order_items (
   CONSTRAINT fk_poi_item FOREIGN KEY (item_id) REFERENCES items (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Asset Management (fixed assets)
--- --------------------------------------------------------------------------
 CREATE TABLE assets (
   id                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id          INT UNSIGNED NOT NULL,
@@ -276,4 +249,3 @@ CREATE TABLE assets (
   CONSTRAINT fk_asset_department FOREIGN KEY (department_id) REFERENCES departments (id) ON DELETE SET NULL,
   CONSTRAINT fk_asset_staff FOREIGN KEY (assigned_to_staff_id) REFERENCES staff (id) ON DELETE SET NULL
 );
-

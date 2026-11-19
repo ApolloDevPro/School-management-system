@@ -1,15 +1,6 @@
--- ==========================================================================
--- SSMS - File : 17_compliance_module.sql
--- Module      : 2.19 Government Compliance and Capitation
--- Depends on  : 00 - 05 (schools, students, staff, academic years, expenses)
--- ==========================================================================
-
 USE ssms;
 SET NAMES utf8mb4;
 
--- --------------------------------------------------------------------------
--- EMIS Data Management (MoES returns)
--- --------------------------------------------------------------------------
 CREATE TABLE emis_returns (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -59,9 +50,6 @@ CREATE TABLE emis_return_items (
   CONSTRAINT fk_emis_item_class FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Enrolment Returns
--- --------------------------------------------------------------------------
 CREATE TABLE enrolment_returns (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -110,9 +98,6 @@ CREATE TABLE enrolment_return_lines (
   CONSTRAINT fk_enrol_line_stream FOREIGN KEY (stream_id) REFERENCES streams (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- UPE / USE Capitation Grants
--- --------------------------------------------------------------------------
 CREATE TABLE capitation_grants (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -164,9 +149,6 @@ CREATE TABLE grant_expenditures (
   CONSTRAINT fk_grant_exp_expense FOREIGN KEY (expense_id) REFERENCES expenses (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Inspection Records
--- --------------------------------------------------------------------------
 CREATE TABLE inspections (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -193,9 +175,6 @@ CREATE TABLE inspections (
   CONSTRAINT fk_inspection_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Licensing and Registration Records
--- --------------------------------------------------------------------------
 CREATE TABLE licences (
   id                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id          INT UNSIGNED NOT NULL,
@@ -222,4 +201,3 @@ CREATE TABLE licences (
   CONSTRAINT fk_licence_person FOREIGN KEY (responsible_person) REFERENCES staff (id) ON DELETE SET NULL,
   CONSTRAINT fk_licence_renewed FOREIGN KEY (renewed_from_id) REFERENCES licences (id) ON DELETE SET NULL
 );
-

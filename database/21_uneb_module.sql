@@ -1,15 +1,6 @@
--- ==========================================================================
--- SSMS - File : 21_uneb_module.sql
--- Module      : 2.4 Examination and Assessment Management (UNEB)
--- Depends on  : 00 - 04 (schools, students, subjects, academic_years, terms)
--- ==========================================================================
-
 USE ssms;
 SET NAMES utf8mb4;
 
--- --------------------------------------------------------------------------
--- UNEB Levels (UCE / UACE)
--- --------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS uneb_levels (
   id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id   INT UNSIGNED NOT NULL,
@@ -22,17 +13,11 @@ CREATE TABLE IF NOT EXISTS uneb_levels (
   CONSTRAINT fk_uneb_level_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE
 );
 
--- Make the two UNEB cycles available as soon as a school exists. The
--- application also creates them on first use, so this is only a convenience
--- for fresh installations where the seed data has already been imported.
 INSERT IGNORE INTO uneb_levels (school_id, name, code)
 SELECT id, 'UCE', 'UCE' FROM schools
 UNION ALL
 SELECT id, 'UACE', 'UACE' FROM schools;
 
--- --------------------------------------------------------------------------
--- UNEB Candidates (candidate registration for UCE/UACE)
--- --------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS uneb_candidates (
   id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id       INT UNSIGNED NOT NULL,
@@ -55,9 +40,6 @@ CREATE TABLE IF NOT EXISTS uneb_candidates (
   CONSTRAINT fk_uneb_cand_level FOREIGN KEY (level_id) REFERENCES uneb_levels (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- UNEB Candidate Subjects (subjects each candidate is entered for)
--- --------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS uneb_candidate_subjects (
   id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
   candidate_id  INT UNSIGNED NOT NULL,
@@ -68,9 +50,6 @@ CREATE TABLE IF NOT EXISTS uneb_candidate_subjects (
   CONSTRAINT fk_uneb_subj_subject FOREIGN KEY (subject_id) REFERENCES subjects (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- UNEB Continuous Assessment Submission
--- --------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS uneb_ca_submission (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -91,9 +70,6 @@ CREATE TABLE IF NOT EXISTS uneb_ca_submission (
   CONSTRAINT fk_uneb_ca_term FOREIGN KEY (term_id) REFERENCES terms (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- UNEB CA Subject Scores
--- --------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS uneb_ca_subject_scores (
   id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
   submission_id  INT UNSIGNED NOT NULL,
@@ -110,9 +86,6 @@ CREATE TABLE IF NOT EXISTS uneb_ca_subject_scores (
   CONSTRAINT fk_uneb_ca_score_subj FOREIGN KEY (subject_id) REFERENCES subjects (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- UNEB National Results (stored after release by UNEB)
--- --------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS uneb_results (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,

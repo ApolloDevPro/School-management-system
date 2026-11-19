@@ -1,15 +1,6 @@
--- ==========================================================================
--- SSMS - File : 05_finance_module.sql
--- Module      : 2.5 Finance and Fees Management
--- Depends on  : 00 - 02 (schools, students, staff, departments)
--- ==========================================================================
-
 USE ssms;
 SET NAMES utf8mb4;
 
--- --------------------------------------------------------------------------
--- Chart of Accounts
--- --------------------------------------------------------------------------
 CREATE TABLE gl_accounts (
   id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id     INT UNSIGNED NOT NULL,
@@ -27,9 +18,6 @@ CREATE TABLE gl_accounts (
   CONSTRAINT fk_account_parent FOREIGN KEY (parent_id) REFERENCES gl_accounts (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Fees Structure
--- --------------------------------------------------------------------------
 CREATE TABLE fee_structures (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -70,9 +58,6 @@ CREATE TABLE fee_structure_items (
   CONSTRAINT fk_fee_item_account FOREIGN KEY (account_id) REFERENCES gl_accounts (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Payment Methods
--- --------------------------------------------------------------------------
 CREATE TABLE payment_methods (
   id                    INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id             INT UNSIGNED NOT NULL,
@@ -89,9 +74,6 @@ CREATE TABLE payment_methods (
   CONSTRAINT fk_payment_method_account FOREIGN KEY (account_id) REFERENCES gl_accounts (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Student Invoicing
--- --------------------------------------------------------------------------
 CREATE TABLE fee_invoices (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   invoice_number   VARCHAR(40)  NOT NULL,
@@ -142,9 +124,6 @@ CREATE TABLE fee_invoice_items (
   CONSTRAINT fk_invoice_item_account FOREIGN KEY (account_id) REFERENCES gl_accounts (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Fee Payments and Verification
--- --------------------------------------------------------------------------
 CREATE TABLE payments (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   payment_reference VARCHAR(40) NOT NULL,
@@ -195,9 +174,6 @@ CREATE TABLE payment_verifications (
   CONSTRAINT fk_verification_payment FOREIGN KEY (payment_id) REFERENCES payments (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Receipt Generation
--- --------------------------------------------------------------------------
 CREATE TABLE receipts (
   id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
   receipt_number  VARCHAR(40)  NOT NULL,
@@ -224,9 +200,6 @@ CREATE TABLE receipts (
   CONSTRAINT fk_receipt_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Fee Balances, Reminders and Clearance
--- --------------------------------------------------------------------------
 CREATE TABLE fee_reminders (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   student_id       INT UNSIGNED NOT NULL,
@@ -277,9 +250,6 @@ CREATE TABLE clearances (
   CONSTRAINT fk_clearance_term FOREIGN KEY (term_id) REFERENCES terms (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Discounts and Waivers
--- --------------------------------------------------------------------------
 CREATE TABLE discounts_waivers (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -309,9 +279,6 @@ CREATE TABLE discounts_waivers (
   CONSTRAINT fk_discount_invoice FOREIGN KEY (invoice_id) REFERENCES fee_invoices (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Sponsors, Bursaries and Scholarships
--- --------------------------------------------------------------------------
 CREATE TABLE sponsors (
   id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id       INT UNSIGNED NOT NULL,
@@ -378,9 +345,6 @@ CREATE TABLE bursary_awards (
   CONSTRAINT fk_award_term FOREIGN KEY (term_id) REFERENCES terms (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Sponsor Billing
--- --------------------------------------------------------------------------
 CREATE TABLE sponsor_billings (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   billing_number   VARCHAR(40)  NOT NULL,
@@ -423,9 +387,6 @@ CREATE TABLE sponsor_billing_items (
   CONSTRAINT fk_billing_item_invoice FOREIGN KEY (invoice_id) REFERENCES fee_invoices (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Budgeting
--- --------------------------------------------------------------------------
 CREATE TABLE budgets (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -464,9 +425,6 @@ CREATE TABLE budget_lines (
   CONSTRAINT fk_budget_line_account FOREIGN KEY (account_id) REFERENCES gl_accounts (id) ON DELETE RESTRICT
 );
 
--- --------------------------------------------------------------------------
--- Expense Management
--- --------------------------------------------------------------------------
 CREATE TABLE expenses (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   voucher_number   VARCHAR(40)  NOT NULL,
@@ -502,9 +460,6 @@ CREATE TABLE expenses (
   CONSTRAINT fk_expense_term FOREIGN KEY (term_id) REFERENCES terms (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Petty Cash Management
--- --------------------------------------------------------------------------
 CREATE TABLE petty_cash_funds (
   id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id       INT UNSIGNED NOT NULL,
@@ -544,9 +499,6 @@ CREATE TABLE petty_cash_vouchers (
   CONSTRAINT fk_petty_voucher_account FOREIGN KEY (account_id) REFERENCES gl_accounts (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Bank Accounts, Transactions and Reconciliation
--- --------------------------------------------------------------------------
 CREATE TABLE bank_accounts (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -613,9 +565,6 @@ CREATE TABLE bank_reconciliations (
   CONSTRAINT fk_recon_account FOREIGN KEY (bank_account_id) REFERENCES bank_accounts (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Double-entry ledger (feeds the financial statements)
--- --------------------------------------------------------------------------
 CREATE TABLE ledger_entries (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -639,4 +588,3 @@ CREATE TABLE ledger_entries (
   CONSTRAINT fk_ledger_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
   CONSTRAINT fk_ledger_account FOREIGN KEY (account_id) REFERENCES gl_accounts (id) ON DELETE RESTRICT
 );
-

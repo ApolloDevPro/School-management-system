@@ -1,8 +1,6 @@
-
 USE ssms;
 SET NAMES utf8mb4;
 
--- Student Admission (applications intake)
 CREATE TABLE admission_applications (
   id                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id          INT UNSIGNED NOT NULL,
@@ -39,9 +37,6 @@ CREATE TABLE admission_applications (
   CONSTRAINT fk_admission_term FOREIGN KEY (term_id) REFERENCES terms (id) ON DELETE SET NULL,
   CONSTRAINT fk_admission_class FOREIGN KEY (applied_class_id) REFERENCES classes (id) ON DELETE SET NULL
 );
-
-
--- Student Registration / Student Profiles
 
 CREATE TABLE students (
   id                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -94,8 +89,6 @@ CREATE TABLE students (
 ALTER TABLE admission_applications
   ADD CONSTRAINT fk_admission_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE SET NULL;
 
-
--- Parent / Guardian Management
 CREATE TABLE guardians (
   id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id    INT UNSIGNED NOT NULL,
@@ -143,8 +136,6 @@ ALTER TABLE users
   ADD CONSTRAINT fk_users_guardian FOREIGN KEY (guardian_id) REFERENCES guardians (id) ON DELETE SET NULL,
   ADD CONSTRAINT fk_users_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE SET NULL;
 
-
--- Class and Stream Allocation (history of placements)
 CREATE TABLE student_class_history (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   student_id       INT UNSIGNED NOT NULL,
@@ -168,8 +159,6 @@ CREATE TABLE student_class_history (
   CONSTRAINT fk_sch_term FOREIGN KEY (term_id) REFERENCES terms (id) ON DELETE SET NULL
 );
 
-
--- Student Promotion
 CREATE TABLE promotion_batches (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -215,8 +204,6 @@ CREATE TABLE promotion_records (
   CONSTRAINT fk_promotion_to_stream FOREIGN KEY (to_stream_id) REFERENCES streams (id) ON DELETE SET NULL
 );
 
-
--- Student Transfer (in / out)
 CREATE TABLE transfers (
   id                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
   student_id         INT UNSIGNED NOT NULL,
@@ -240,8 +227,6 @@ CREATE TABLE transfers (
   CONSTRAINT fk_transfer_class FOREIGN KEY (receiving_class_id) REFERENCES classes (id) ON DELETE SET NULL
 );
 
-
--- Student Discipline
 CREATE TABLE discipline_incidents (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   student_id       INT UNSIGNED NOT NULL,
@@ -271,8 +256,6 @@ CREATE TABLE discipline_incidents (
   CONSTRAINT fk_discipline_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
 );
 
--- Student Documents
-
 CREATE TABLE student_documents (
   id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   student_id  INT UNSIGNED NOT NULL,
@@ -290,9 +273,6 @@ CREATE TABLE student_documents (
   CONSTRAINT fk_student_doc FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Student Withdrawal
--- --------------------------------------------------------------------------
 CREATE TABLE withdrawals (
   id                INT UNSIGNED NOT NULL AUTO_INCREMENT,
   student_id        INT UNSIGNED NOT NULL,
@@ -311,9 +291,6 @@ CREATE TABLE withdrawals (
   CONSTRAINT fk_withdrawal_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Alumni Management
--- --------------------------------------------------------------------------
 CREATE TABLE alumni (
   id                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
   student_id         INT UNSIGNED NOT NULL,
@@ -336,4 +313,3 @@ CREATE TABLE alumni (
   KEY idx_alumni_year (completion_year),
   CONSTRAINT fk_alumni_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
 );
-

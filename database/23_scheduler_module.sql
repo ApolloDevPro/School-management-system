@@ -1,15 +1,6 @@
--- ==========================================================================
--- SSMS - File : 23_scheduler_module.sql
--- Module      : System Cron / Scheduled Task Scheduler
--- Depends on  : 00 (schools, users)
--- ==========================================================================
-
 USE ssms;
 SET NAMES utf8mb4;
 
--- --------------------------------------------------------------------------
--- Scheduled cron jobs
--- --------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS cron_jobs (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED,
@@ -34,9 +25,6 @@ CREATE TABLE IF NOT EXISTS cron_jobs (
   CONSTRAINT fk_cron_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Cron job execution log
--- --------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS cron_job_logs (
   id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   job_id      INT UNSIGNED NOT NULL,

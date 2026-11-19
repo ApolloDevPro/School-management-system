@@ -1,15 +1,6 @@
--- ==========================================================================
--- SSMS - File : 10_transport_module.sql
--- Module      : 2.11 Transport Management
--- Depends on  : 00 - 02 (schools, students, staff)
--- ==========================================================================
-
 USE ssms;
 SET NAMES utf8mb4;
 
--- --------------------------------------------------------------------------
--- Vehicle Registration
--- --------------------------------------------------------------------------
 CREATE TABLE vehicles (
   id                INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id         INT UNSIGNED NOT NULL,
@@ -39,9 +30,6 @@ CREATE TABLE vehicles (
   CONSTRAINT fk_vehicle_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Driver Management
--- --------------------------------------------------------------------------
 CREATE TABLE drivers (
   id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id      INT UNSIGNED NOT NULL,
@@ -69,9 +57,6 @@ CREATE TABLE drivers (
 ALTER TABLE vehicles
   ADD CONSTRAINT fk_vehicle_driver FOREIGN KEY (assigned_driver_id) REFERENCES drivers (id) ON DELETE SET NULL;
 
--- --------------------------------------------------------------------------
--- Route Management
--- --------------------------------------------------------------------------
 CREATE TABLE routes (
   id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id       INT UNSIGNED NOT NULL,
@@ -110,9 +95,6 @@ CREATE TABLE route_stops (
   CONSTRAINT fk_stop_route FOREIGN KEY (route_id) REFERENCES routes (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Student Route Allocation
--- --------------------------------------------------------------------------
 CREATE TABLE student_route_allocations (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   student_id       INT UNSIGNED NOT NULL,
@@ -135,9 +117,6 @@ CREATE TABLE student_route_allocations (
   CONSTRAINT fk_sra_term FOREIGN KEY (term_id) REFERENCES terms (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Transport Fees (posted to the student fee account as an invoice item)
--- --------------------------------------------------------------------------
 CREATE TABLE transport_charges (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -160,9 +139,6 @@ CREATE TABLE transport_charges (
   CONSTRAINT fk_tc_account FOREIGN KEY (account_id) REFERENCES gl_accounts (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Vehicle Maintenance
--- --------------------------------------------------------------------------
 CREATE TABLE vehicle_maintenance (
   id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
   vehicle_id      INT UNSIGNED NOT NULL,
@@ -185,9 +161,6 @@ CREATE TABLE vehicle_maintenance (
   CONSTRAINT fk_maintenance_vehicle FOREIGN KEY (vehicle_id) REFERENCES vehicles (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Fuel Management
--- --------------------------------------------------------------------------
 CREATE TABLE fuel_records (
   id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
   vehicle_id      INT UNSIGNED NOT NULL,
@@ -209,4 +182,3 @@ CREATE TABLE fuel_records (
   CONSTRAINT fk_fuel_vehicle FOREIGN KEY (vehicle_id) REFERENCES vehicles (id) ON DELETE CASCADE,
   CONSTRAINT fk_fuel_driver FOREIGN KEY (driver_id) REFERENCES drivers (id) ON DELETE SET NULL
 );
-

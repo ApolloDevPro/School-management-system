@@ -1,18 +1,6 @@
--- ==========================================================================
--- SSMS - File : 18_portal_security_module.sql
--- Module      : 2.15 Parent and Student Portal (activity tables)
---               2.21 System Security, Data Management and Support
--- Depends on  : 00 - 17
--- Multi-school : every business table carries school_id, so one installation
---                can serve several schools with separate data (2.21).
--- ==========================================================================
-
 USE ssms;
 SET NAMES utf8mb4;
 
--- --------------------------------------------------------------------------
--- Portal / application sessions (automatic logout, single active session)
--- --------------------------------------------------------------------------
 CREATE TABLE portal_sessions (
   id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   user_id         INT UNSIGNED NOT NULL,
@@ -33,9 +21,6 @@ CREATE TABLE portal_sessions (
   CONSTRAINT fk_session_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Login attempts (lockout after repeated failures)
--- --------------------------------------------------------------------------
 CREATE TABLE login_attempts (
   id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id    INT UNSIGNED,
@@ -53,9 +38,6 @@ CREATE TABLE login_attempts (
   CONSTRAINT fk_attempt_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Password reset and password history (password policy)
--- --------------------------------------------------------------------------
 CREATE TABLE password_resets (
   id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   user_id       INT UNSIGNED NOT NULL,
@@ -84,9 +66,6 @@ CREATE TABLE password_history (
   CONSTRAINT fk_password_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Two-Factor Authentication (optional, sensitive roles)
--- --------------------------------------------------------------------------
 CREATE TABLE two_factor_codes (
   id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   user_id      INT UNSIGNED NOT NULL,
@@ -104,9 +83,6 @@ CREATE TABLE two_factor_codes (
   CONSTRAINT fk_2fa_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Data Backup and Recovery
--- --------------------------------------------------------------------------
 CREATE TABLE data_backups (
   id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id      INT UNSIGNED,
@@ -131,9 +107,6 @@ CREATE TABLE data_backups (
   CONSTRAINT fk_backup_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Data Import (Excel / CSV with validation)
--- --------------------------------------------------------------------------
 CREATE TABLE data_import_jobs (
   id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id      INT UNSIGNED NOT NULL,
@@ -161,9 +134,6 @@ CREATE TABLE data_import_jobs (
   CONSTRAINT fk_import_year FOREIGN KEY (academic_year_id) REFERENCES academic_years (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Data Export (Excel / CSV / PDF)
--- --------------------------------------------------------------------------
 CREATE TABLE data_export_jobs (
   id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id      INT UNSIGNED NOT NULL,
@@ -186,9 +156,6 @@ CREATE TABLE data_export_jobs (
   CONSTRAINT fk_export_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Data Protection Compliance (Uganda Data Protection and Privacy Act, 2019)
--- --------------------------------------------------------------------------
 CREATE TABLE consent_records (
   id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -242,9 +209,6 @@ CREATE TABLE data_subject_requests (
   CONSTRAINT fk_dsr_staff FOREIGN KEY (staff_id) REFERENCES staff (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Help and Support Tickets
--- --------------------------------------------------------------------------
 CREATE TABLE support_tickets (
   id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   ticket_number  VARCHAR(40)  NOT NULL,
@@ -287,9 +251,6 @@ CREATE TABLE ticket_replies (
   CONSTRAINT fk_reply_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Global Search log (improves search relevance and audits lookups)
--- --------------------------------------------------------------------------
 CREATE TABLE search_logs (
   id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id      INT UNSIGNED NOT NULL,
@@ -307,4 +268,3 @@ CREATE TABLE search_logs (
   CONSTRAINT fk_search_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE,
   CONSTRAINT fk_search_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
 );
-

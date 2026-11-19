@@ -1,11 +1,6 @@
-
-
 USE ssms;
 SET NAMES utf8mb4;
 
--- --------------------------------------------------------------------------
--- Examination Setup
--- --------------------------------------------------------------------------
 CREATE TABLE exams (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -30,9 +25,6 @@ CREATE TABLE exams (
   CONSTRAINT fk_exam_term FOREIGN KEY (term_id) REFERENCES terms (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Examination Timetable and Invigilation
--- --------------------------------------------------------------------------
 CREATE TABLE exam_schedule (
   id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   exam_id     INT UNSIGNED NOT NULL,
@@ -68,10 +60,6 @@ CREATE TABLE exam_invigilators (
   CONSTRAINT fk_invig_staff FOREIGN KEY (staff_id) REFERENCES staff (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Assessment Setup (component weights)
--- S1-S4 default: school based CA 20% + UNEB end-of-cycle examination 80%.
--- --------------------------------------------------------------------------
 CREATE TABLE assessment_components (
   id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id      INT UNSIGNED NOT NULL,
@@ -92,9 +80,6 @@ CREATE TABLE assessment_components (
   CONSTRAINT fk_component_school FOREIGN KEY (school_id) REFERENCES schools (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Continuous Assessment Recording (S1-S4, 1 to 3 scale)
--- --------------------------------------------------------------------------
 CREATE TABLE ca_records (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -129,9 +114,6 @@ CREATE TABLE ca_records (
   CONSTRAINT fk_ca_activity FOREIGN KEY (activity_id) REFERENCES integrated_activities (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Project Work Recording (mandatory for UCE under the new curriculum)
--- --------------------------------------------------------------------------
 CREATE TABLE project_work_records (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -161,9 +143,6 @@ CREATE TABLE project_work_records (
   CONSTRAINT fk_project_year FOREIGN KEY (academic_year_id) REFERENCES academic_years (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- UNEB Continuous Assessment Submission
--- --------------------------------------------------------------------------
 CREATE TABLE ca_submissions (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -207,9 +186,6 @@ CREATE TABLE ca_submission_items (
   CONSTRAINT fk_csi_subject FOREIGN KEY (subject_id) REFERENCES subjects (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Marks Entry and Marks Verification
--- --------------------------------------------------------------------------
 CREATE TABLE marks (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   exam_id          INT UNSIGNED NOT NULL,
@@ -260,12 +236,6 @@ CREATE TABLE marks_verification_log (
   CONSTRAINT fk_mvl_mark FOREIGN KEY (mark_id) REFERENCES marks (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Grading Systems
--- Three scales are expected: CBC achievement levels (A-E), UACE points and
--- the legacy D1-F9 scale kept for historical records.
--- Boundaries are provisional settings and must be confirmed with UNEB/NCDC.
--- --------------------------------------------------------------------------
 CREATE TABLE grading_scales (
   id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id    INT UNSIGNED NOT NULL,
@@ -302,9 +272,6 @@ CREATE TABLE grade_bands (
   CONSTRAINT fk_band_scale FOREIGN KEY (grading_scale_id) REFERENCES grading_scales (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Results Processing
--- --------------------------------------------------------------------------
 CREATE TABLE subject_results (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   exam_id          INT UNSIGNED NOT NULL,
@@ -366,9 +333,6 @@ CREATE TABLE result_summaries (
   CONSTRAINT fk_summary_stream FOREIGN KEY (stream_id) REFERENCES streams (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Performance Ranking (off by default for S1-S4)
--- --------------------------------------------------------------------------
 CREATE TABLE rankings (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   exam_id          INT UNSIGNED NOT NULL,
@@ -392,9 +356,6 @@ CREATE TABLE rankings (
   CONSTRAINT fk_ranking_stream FOREIGN KEY (stream_id) REFERENCES streams (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- UCE Certificate Eligibility and Result Codes
--- --------------------------------------------------------------------------
 CREATE TABLE certificate_eligibility (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   student_id       INT UNSIGNED NOT NULL,
@@ -421,9 +382,6 @@ CREATE TABLE certificate_eligibility (
   CONSTRAINT fk_cert_year FOREIGN KEY (academic_year_id) REFERENCES academic_years (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Report Card Generation
--- --------------------------------------------------------------------------
 CREATE TABLE report_cards (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   student_id       INT UNSIGNED NOT NULL,
@@ -451,9 +409,6 @@ CREATE TABLE report_cards (
   CONSTRAINT fk_report_summary FOREIGN KEY (summary_id) REFERENCES result_summaries (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Transcript Management
--- --------------------------------------------------------------------------
 CREATE TABLE transcripts (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   student_id       INT UNSIGNED NOT NULL,
@@ -477,9 +432,6 @@ CREATE TABLE transcripts (
   CONSTRAINT fk_transcript_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Remedial and Retake Records
--- --------------------------------------------------------------------------
 CREATE TABLE remedial_records (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   student_id       INT UNSIGNED NOT NULL,
@@ -506,11 +458,6 @@ CREATE TABLE remedial_records (
   CONSTRAINT fk_remedial_year FOREIGN KEY (academic_year_id) REFERENCES academic_years (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- UNEB candidate, subject-entry and results tables (canonical definition
--- lives in 21_uneb_module.sql; repeated here so that the 19_reports_views
--- readiness view can be created in installations that run this file first).
--- --------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS uneb_levels (
   id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id   INT UNSIGNED NOT NULL,
@@ -579,9 +526,6 @@ CREATE TABLE IF NOT EXISTS uneb_results (
   CONSTRAINT fk_uneb_res_year FOREIGN KEY (academic_year_id) REFERENCES academic_years (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Question Bank (Optional)
--- --------------------------------------------------------------------------
 CREATE TABLE question_banks (
   id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id   INT UNSIGNED NOT NULL,
@@ -617,4 +561,3 @@ CREATE TABLE questions (
   CONSTRAINT fk_question_bank FOREIGN KEY (bank_id) REFERENCES question_banks (id) ON DELETE CASCADE,
   CONSTRAINT fk_question_topic FOREIGN KEY (syllabus_topic_id) REFERENCES syllabus_topics (id) ON DELETE SET NULL
 );
-

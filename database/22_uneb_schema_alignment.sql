@@ -1,22 +1,3 @@
--- ==========================================================================
--- SSMS - File : 22_uneb_schema_alignment.sql
--- Purpose     : Repair installations created before the UNEB schema was
---               unified in 21_uneb_module.sql.
---
--- Background
---   Older copies of 04_examination_module.sql created uneb_candidates and
---   uneb_results with a different layout (per-student, per-subject rows with
---   a "cycle" column). Because 21_uneb_module.sql uses CREATE TABLE IF NOT
---   EXISTS, those legacy tables survived and the UNEB module failed with
---   "Unknown column 'school_id'" and "Unknown column 'c.school_id'".
---
---   The legacy tables were unusable by the UNEB screens, so no data could
---   be entered through the application. This script replaces them with the
---   canonical layout from 21_uneb_module.sql. Run it once on an existing
---   database; fresh installations created with the updated 04/21 files do
---   not need it (every statement below is then a no-op).
--- ==========================================================================
-
 USE ssms;
 SET NAMES utf8mb4;
 
@@ -43,9 +24,6 @@ DELIMITER ;
 CALL ssms_uneb_align();
 DROP PROCEDURE ssms_uneb_align;
 
--- --------------------------------------------------------------------------
--- Canonical UNEB schema (same definitions as 21_uneb_module.sql)
--- --------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS uneb_levels (
   id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id   INT UNSIGNED NOT NULL,

@@ -1,15 +1,6 @@
--- ==========================================================================
--- SSMS - File : 14_cocurricular_module.sql
--- Module      : 2.16 Co-curricular Activities Management
--- Depends on  : 00 - 03 (schools, students, staff, houses)
--- ==========================================================================
-
 USE ssms;
 SET NAMES utf8mb4;
 
--- --------------------------------------------------------------------------
--- Clubs and Societies
--- --------------------------------------------------------------------------
 CREATE TABLE clubs (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -56,9 +47,6 @@ CREATE TABLE club_memberships (
   CONSTRAINT fk_cm_year FOREIGN KEY (academic_year_id) REFERENCES academic_years (id) ON DELETE CASCADE
 );
 
--- --------------------------------------------------------------------------
--- Sports and Games
--- --------------------------------------------------------------------------
 CREATE TABLE sports_teams (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -144,9 +132,6 @@ CREATE TABLE fixture_results (
   CONSTRAINT fk_fr_student FOREIGN KEY (mvp_student_id) REFERENCES students (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- House Competitions
--- --------------------------------------------------------------------------
 CREATE TABLE house_competition_points (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   house_id         INT UNSIGNED NOT NULL,
@@ -170,9 +155,6 @@ CREATE TABLE house_competition_points (
   CONSTRAINT fk_hcp_fixture FOREIGN KEY (source_fixture_id) REFERENCES fixtures (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Competitions and Events (inter-school / national)
--- --------------------------------------------------------------------------
 CREATE TABLE competitions (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   school_id        INT UNSIGNED NOT NULL,
@@ -224,9 +206,6 @@ CREATE TABLE competition_entries (
   CONSTRAINT fk_entry_team FOREIGN KEY (team_id) REFERENCES sports_teams (id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------------------------
--- Talent and Achievement Records
--- --------------------------------------------------------------------------
 CREATE TABLE talent_records (
   id               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   student_id       INT UNSIGNED NOT NULL,
@@ -250,4 +229,3 @@ CREATE TABLE talent_records (
   KEY idx_talent_level (level,award_date),
   CONSTRAINT fk_talent_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
 );
-
