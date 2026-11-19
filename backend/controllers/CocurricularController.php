@@ -115,7 +115,7 @@ final class CocurricularController extends Controller
 
     public function saveTeam(): void
     {
-        if (!$this->allowed('add')) {
+        if (!$this->requirePermission('add')) {
             return;
         }
         $schoolId = school_id();
@@ -173,7 +173,7 @@ final class CocurricularController extends Controller
 
     public function addMember(): void
     {
-        if (!$this->allowed('add')) {
+        if (!$this->requirePermission('add')) {
             return;
         }
         $schoolId = school_id();
@@ -205,7 +205,7 @@ final class CocurricularController extends Controller
 
     public function removeMember(): void
     {
-        if (!$this->allowed('edit')) {
+        if (!$this->requirePermission('edit')) {
             return;
         }
         $id = (int)($_POST['id'] ?? 0);
@@ -222,7 +222,7 @@ final class CocurricularController extends Controller
 
     public function saveFixture(): void
     {
-        if (!$this->allowed('add')) {
+        if (!$this->requirePermission('add')) {
             return;
         }
         $schoolId = school_id();
@@ -273,7 +273,7 @@ final class CocurricularController extends Controller
 
     public function saveResult(): void
     {
-        if (!$this->allowed('edit')) {
+        if (!$this->requirePermission('edit')) {
             return;
         }
         $schoolId = school_id();
@@ -317,7 +317,7 @@ final class CocurricularController extends Controller
 
     public function saveCompetition(): void
     {
-        if (!$this->allowed('add')) {
+        if (!$this->requirePermission('add')) {
             return;
         }
         $id = (int)($_POST['id'] ?? 0);
@@ -365,7 +365,7 @@ final class CocurricularController extends Controller
 
     public function saveEntry(): void
     {
-        if (!$this->allowed('add')) {
+        if (!$this->requirePermission('add')) {
             return;
         }
         $schoolId = school_id();
@@ -428,7 +428,7 @@ final class CocurricularController extends Controller
 
     public function saveTalent(): void
     {
-        if (!$this->allowed('add')) {
+        if (!$this->requirePermission('add')) {
             return;
         }
         $schoolId = school_id();
@@ -466,7 +466,7 @@ final class CocurricularController extends Controller
 
     public function saveHousePoints(): void
     {
-        if (!$this->allowed('add')) {
+        if (!$this->requirePermission('add')) {
             return;
         }
         $schoolId = school_id();
@@ -505,7 +505,7 @@ final class CocurricularController extends Controller
     // Helpers
     // ------------------------------------------------------------------
 
-    private function allowed(string $action): bool
+    private function requirePermission(string $action): bool
     {
         if (Auth::can('cocurricular', $action)) {
             return true;
