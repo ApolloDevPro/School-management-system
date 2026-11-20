@@ -20,7 +20,18 @@
     if (!sidebar) { return; }
     sidebar.classList.toggle('open', open);
     if (backdrop) { backdrop.classList.toggle('show', open); }
+    /* Stop the page behind the drawer from scrolling on phones. */
+    var narrow = window.matchMedia('(max-width: 991.98px)').matches;
+    document.body.classList.toggle('sidebar-open', open && narrow);
   }
+
+  /* Escape closes the drawer, and resizing to desktop never leaves it open. */
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') { setSidebar(false); }
+  });
+  window.addEventListener('resize', function () {
+    if (window.matchMedia('(min-width: 992px)').matches) { setSidebar(false); }
+  });
 
   document.addEventListener('click', function (event) {
     var toggle = event.target.closest('#sidebarToggle');
@@ -477,6 +488,36 @@
         paginate: { previous: 'Previous', next: 'Next' }
       }
     });
+  });
+
+  /* Tables inside a hidden Bootstrap tab are measured at zero width, which
+     leaves their headers and responsive columns misaligned. Recalculate the
+     moment the tab becomes visible. */
+  document.addEventListener('shown.bs.tab', function (event) {
+    var target = event.target && (event.target.getAttribute('data-bs-target') || event.target.getAttribute('href'));
+    var pane = target ? document.querySelector(target) : null;
+    if (!pane || !window.DataTable) { return; }
+    pane.querySelectorAll('table[data-table]').forEach(function (table) {
+      if (!window.jQuery || !window.DataTable.isDataTable(table)) { return; }
+      try {
+        var api = window.jQuery(table).DataTable();
+        api.columns.adjust();
+        if (api.responsive) { api.responsive.recalc(); }
+      } catch (error) { /* leave the table as it is */ }
+    });
+  });
+
+  /* Any plain table that is not wrapped yet gets its own scroll container so
+     wide content never pushes the page sideways on small screens. */
+  document.querySelectorAll('.app-content table.table').forEach(function (table) {
+    if (table.classList.contains('dataTable')
+      || table.closest('.table-responsive')
+      || table.closest('.dt-container')
+      || table.closest('td, th')) { return; }
+    var wrapper = document.createElement('div');
+    wrapper.className = 'table-responsive';
+    table.parentNode.insertBefore(wrapper, table);
+    wrapper.appendChild(table);
   });
 
   var chartCanvas = document.getElementById('classChart');

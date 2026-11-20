@@ -130,7 +130,7 @@ $outcomeBadge = static fn(?string $s): string => match ($s) { 'win' => 'success'
                 <div class="col-6"><label class="form-label">Season</label><input class="form-control" name="season" maxlength="30" placeholder="e.g. 2026 league"></div>
               </div>
               <div class="row g-2 mb-3">
-                <div class="col-7"><label class="form-label">Academic year</label><select class="form-select" name="academic_year_id"><option value="0">—</option><?php foreach ($years as $year): ?><option value="<?= (int)$year['id'] ?>" <?= (int)$year['is_current'] === 1 ? 'selected' : '' ?>><?= e($year['name']) ?></option><?php endforeach; ?></select></div>
+                <div class="col-7"><label class="form-label">Academic year</label><select class="form-select" name="academic_year_id"><option value="0">—</option><?php foreach ($years as $year): ?><option value="<?= (int)$year['id'] ?>" <?= (int)$year['is_active'] === 1 ? 'selected' : '' ?>><?= e($year['name']) ?></option><?php endforeach; ?></select></div>
                 <div class="col-5"><label class="form-label">Status</label><select class="form-select" name="status"><option value="active">Active</option><option value="inactive">Inactive</option><option value="archived">Archived</option></select></div>
               </div>
               <button class="btn btn-primary">Save team</button>

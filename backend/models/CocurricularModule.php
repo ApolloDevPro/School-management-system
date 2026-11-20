@@ -105,7 +105,7 @@ final class CocurricularModule extends Model
     public static function years(int $schoolId): array
     {
         return static::query(
-            'SELECT id, name, is_current FROM academic_years WHERE school_id = ? ORDER BY start_date DESC',
+            'SELECT id, name, is_active FROM academic_years WHERE school_id = ? ORDER BY start_date DESC',
             [$schoolId]
         );
     }

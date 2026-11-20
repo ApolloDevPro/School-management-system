@@ -499,6 +499,8 @@ img.brand-mark.brand-logo {
     position: fixed;
     left: 0;
     top: 0;
+    width: min(82vw, 300px);
+    height: 100dvh;
     transform: translateX(-100%);
     transition: transform .2s ease;
     box-shadow: 0 0 40px rgba(15, 23, 42, .35);
@@ -506,6 +508,7 @@ img.brand-mark.brand-logo {
 
   .app-sidebar.open { transform: translateX(0); }
   .sidebar-backdrop.show { display: block; }
+  body.sidebar-open { overflow: hidden; }
 
   .sidebar-toggle { display: inline-flex; align-items: center; justify-content: center; }
   .topbar-account { padding: 3px; }
@@ -830,8 +833,8 @@ img.brand-mark.brand-logo {
 .form-section:not(:first-child) { margin-top: 1.25rem; }
 
 .form-grid { display: grid; gap: 1rem; }
-.form-grid-2 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
-.form-grid-3 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.form-grid-2 { grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); }
+.form-grid-3 { grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); }
 
 .field-group { margin-bottom: 1rem; }
 .field-label {
@@ -1075,6 +1078,19 @@ button:focus-visible,
 .table-responsive { border-radius: .75rem; }
 .table .btn-sm { white-space: nowrap; }
 .table td .btn + .btn, .table td form + form { margin-left: .25rem; }
+/* Checkboxes placed directly in table cells (bulk selection) sit flush in the cell. */
+.table td > .form-check-input,
+.table th > .form-check-input { margin-left: 0; }
+.form-check-input:disabled { opacity: .55; }
+.form-check-input:disabled:checked { opacity: .9; }
+
+/* Subject registration: drop the category column on small phones so the
+   status badge stays visible without sideways scrolling. */
+@media (max-width: 575.98px) {
+  .subject-reg-table th, .subject-reg-table td { padding: .45rem .35rem; }
+  .subject-reg-table th:nth-child(4), .subject-reg-table td:nth-child(4) { display: none; }
+  .subject-reg-table .badge { font-size: .66rem; }
+}
 .dataTables_wrapper .form-control, .dataTables_wrapper .form-select { padding-left: .75rem; }
 .dataTables_wrapper .dataTables_info,
 .dataTables_wrapper .dataTables_length,
@@ -1274,4 +1290,192 @@ button:focus-visible,
 }
 @media print {
   .report-tabs, .report-filter-card { display: none !important; }
+}
+
+/* ==========================================================================
+   RESPONSIVE LAYOUT
+   Makes every screen usable from small phones to wide desktops: the shell,
+   tab bars, tables, toolbars, modals and forms all adapt to the space left
+   after the sidebar, and wide tables collapse into expandable rows.
+   ========================================================================== */
+
+/* A stray wide element should never make the whole page scroll sideways. */
+html, body { max-width: 100%; }
+body { overflow-x: clip; }
+.app-content { margin-inline: auto; }
+.app-content img { max-width: 100%; }
+.card-body canvas { max-width: 100%; }
+.app-content pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.app-shell { min-height: 100dvh; }
+
+/* ---- Module tab bars ----------------------------------------------------- */
+.app-pills {
+  gap: .4rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.app-pills .nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .5rem .85rem;
+  font-size: .85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: #475569;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: .65rem;
+  transition: color .15s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.app-pills .nav-link:hover { color: #1d4ed8; background: #f8fbff; border-color: #bfdbfe; }
+.app-pills .nav-link.active {
+  color: #fff;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border-color: #1d4ed8;
+  box-shadow: 0 10px 22px -14px rgba(37, 99, 235, .85);
+}
+.app-pills .nav-link .badge { font-weight: 600; }
+.app-pills .nav-link:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+
+/* On tablets and phones the pills become one swipeable row. */
+@media (max-width: 767.98px) {
+  .app-pills {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: .35rem;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+  .app-pills .nav-link { scroll-snap-align: start; }
+}
+
+/* ---- Tables and DataTables ---------------------------------------------- */
+.table-responsive { -webkit-overflow-scrolling: touch; }
+.table-responsive > .table { margin-bottom: 0; }
+.table td, .table th { overflow-wrap: break-word; }
+
+/* DataTables 2 layout containers */
+.dt-container { width: 100%; }
+.dt-layout-row { align-items: center; gap: .5rem .75rem; }
+.dt-layout-row > .dt-layout-cell { min-width: 0; }
+.dt-paging .pagination { flex-wrap: wrap; gap: .25rem; margin-bottom: 0; }
+
+/* Expanded (responsive) rows stay readable */
+table.dataTable > tbody > tr.child ul.dtr-details { display: block; width: 100%; }
+table.dataTable > tbody > tr.child ul.dtr-details > li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .15rem .5rem;
+  padding: .45rem 0;
+  border-bottom: 1px solid #eef2f7;
+}
+table.dataTable > tbody > tr.child ul.dtr-details > li:last-child { border-bottom: 0; }
+table.dataTable > tbody > tr.child span.dtr-title { min-width: 8.5rem; font-weight: 600; color: #475569; }
+table.dataTable > tbody > tr.child span.dtr-data { min-width: 0; overflow-wrap: anywhere; }
+table.dataTable > tbody > tr > td.dtr-control { cursor: pointer; }
+
+@media (max-width: 767.98px) {
+  .dt-layout-row { flex-direction: column; align-items: stretch; }
+  .dt-layout-row > .dt-layout-cell { width: 100%; text-align: left !important; }
+  .dt-search input,
+  .dt-length select { width: 100%; }
+  .dt-paging .pagination { justify-content: center; }
+  .dt-info { font-size: .78rem; }
+  .table > :not(caption) > * > * { padding: .55rem .6rem; }
+}
+
+/* ---- Page headers and toolbars ------------------------------------------ */
+@media (max-width: 575.98px) {
+  .page-head { gap: 10px; }
+  .page-head > * { width: 100%; }
+  .page-head .btn { width: auto; }
+  .page-head .d-flex,
+  .card-header .d-flex,
+  .filter-bar .d-flex { flex-wrap: wrap; }
+  .filter-bar .form-label { margin-bottom: .2rem; }
+}
+
+/* ---- Stat cards on narrow phones ---------------------------------------- */
+@media (max-width: 575.98px) {
+  .stat-card { padding: .95rem 1rem .9rem; border-radius: .9rem; }
+  .stat-card.stat-with-icon { padding: .9rem 1rem; gap: .75rem; }
+  .stat-label { font-size: .64rem; letter-spacing: .07em; }
+  .stat-value { font-size: 1.32rem; overflow-wrap: anywhere; }
+  .stat-money { font-size: 1.05rem; }
+  .stat-note { font-size: .7rem; }
+  .stat-glyph { top: .85rem; right: .85rem; font-size: 1.4rem; }
+  .stat-card.stat-with-icon .stat-icon { flex-basis: 40px; width: 40px; height: 40px; font-size: 1.05rem; }
+}
+
+/* ---- Cards and content spacing ------------------------------------------ */
+@media (max-width: 575.98px) {
+  .app-content { padding: 14px 12px 22px; }
+  .app-card > .card-header { padding: .8rem .95rem; font-size: .88rem; }
+  .app-card > .card-body { padding: .95rem; }
+  .card.form-surface > .card-body { padding: .95rem; }
+  .activity-list li { padding: .75rem .9rem .75rem 2.5rem; }
+  .activity-list li::before { left: .95rem; }
+  .activity-line { flex-wrap: wrap; }
+  .app-footer { padding: 12px; }
+}
+
+@media (max-width: 359.98px) {
+  .app-content { padding: 12px 10px 20px; }
+  .stat-value { font-size: 1.18rem; }
+  .stat-note { display: none; }
+}
+
+/* ---- Modals on small screens -------------------------------------------- */
+@media (max-width: 575.98px) {
+  .modal-dialog { margin: .5rem; }
+  .modal-header, .modal-footer { padding-left: .95rem; padding-right: .95rem; }
+  .modal-body { max-height: calc(100dvh - 190px); padding: 1rem; }
+  .modal-footer { flex-wrap: wrap; }
+  .modal-footer > * { flex: 1 1 auto; }
+  .modal-footer .btn { min-width: 0; }
+}
+
+/* ---- Forms -------------------------------------------------------------- */
+@media (max-width: 767.98px) {
+  /* 16px stops iOS from zooming the page when a field gets focus. */
+  .form-control,
+  .form-select,
+  .form-control-sm,
+  .form-select-sm { font-size: 16px; }
+  .input-group > .form-control,
+  .input-group > .form-select { min-width: 0; }
+}
+@media (max-width: 575.98px) {
+  .form-actions .btn { min-width: 0; }
+}
+
+/* ---- Top bar ------------------------------------------------------------ */
+@media (max-width: 767.98px) {
+  .app-topbar { gap: 10px; }
+  .topbar-school { max-width: 40vw; }
+}
+@media (max-width: 575.98px) {
+  .topbar-identity { gap: .35rem; }
+  .topbar-school { max-width: 52vw; }
+  .app-topbar { padding: 8px 10px; }
+}
+@media (max-width: 359.98px) {
+  .topbar-school { max-width: 44vw; }
+  .topbar-term { display: none; }
+}
+
+/* ---- Sign-in screens ---------------------------------------------------- */
+.auth-body { min-height: 100dvh; }
+@media (max-width: 575.98px) {
+  .auth-body { padding: 18px 12px; }
+  .auth-wrap { max-width: 100%; }
+}
+
+/* Very small phones: a pair of stat tiles is too tight, so let them stack. */
+@media (max-width: 359.98px) {
+  .row > .col-6:has(.stat-card) { flex: 0 0 100%; max-width: 100%; }
+  .stat-label { letter-spacing: .04em; }
 }

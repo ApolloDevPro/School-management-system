@@ -47,7 +47,7 @@ final class FinanceSupportModule extends Model
     public static function years(int $schoolId): array
     {
         return static::query(
-            'SELECT id, name, start_date, end_date, is_current
+            'SELECT id, name, start_date, end_date, is_active
                FROM academic_years WHERE school_id = ? ORDER BY start_date DESC',
             [$schoolId]
         );

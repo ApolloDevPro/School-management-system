@@ -35,7 +35,7 @@ final class CocurricularController extends Controller
         $yearId = (int)($_GET['year_id'] ?? 0);
         if ($yearId === 0) {
             foreach (CocurricularModule::years($schoolId) as $year) {
-                if ((int)$year['is_current'] === 1) {
+                if ((int)$year['is_active'] === 1) {
                     $yearId = (int)$year['id'];
                     break;
                 }

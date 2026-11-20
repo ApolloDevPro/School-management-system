@@ -5,10 +5,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="csrf-token" content="<?= e(Csrf::token()) ?>">
+<?php /* Shared config must exist before module views render their own inline scripts. */ ?>
+<script>window.APP = <?= json_encode(['csrf' => Csrf::token(), 'base' => BASE_URL, 'urls' => ['store' => url('users/store'), 'update' => url('users/update')]], JSON_UNESCAPED_SLASHES) ?>;</script>
 <title><?= e($pageTitle ?? 'Dashboard') ?> &middot; <?= APP_NAME ?></title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/2.1.8/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/3.0.3/css/responsive.bootstrap5.min.css">
 <link rel="stylesheet" href="<?= asset('css/app.css') ?>">
 <link rel="stylesheet" href="<?= asset('css/forms.css') ?>">
 </head>
@@ -101,12 +104,14 @@
 <div class="toast-container" id="toastWrap" aria-live="polite" aria-atomic="true"></div>
 <button class="scroll-top" id="scrollTop" type="button" aria-label="Back to top" title="Back to top"><i class="bi bi-arrow-up"></i></button>
 
-<script>window.APP = <?= json_encode(['csrf' => Csrf::token(), 'base' => BASE_URL, 'urls' => ['store' => url('users/store'), 'update' => url('users/update')]], JSON_UNESCAPED_SLASHES) ?>;</script>
 <?php /* Vendor scripts first, then js/app.js for modals, AJAX forms, tables and niceties. */ ?>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/2.1.8/js/dataTables.bootstrap5.min.js"></script>
+<?php /* Responsive extension: collapses wide tables into expandable rows on small screens. */ ?>
+<script src="https://cdn.datatables.net/responsive/3.0.3/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/3.0.3/js/responsive.bootstrap5.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="<?= asset('js/app.js') ?>"></script>
 </body>

@@ -101,11 +101,11 @@ final class Student extends Model
     public static function subjectsOf(int $studentId, int $yearId): array
     {
         return static::query(
-            'SELECT ss.*, sub.code, sub.name, sub.short_name, sub.category, sub.level
+            "SELECT ss.*, sub.code, sub.name, sub.short_name, sub.category, sub.level
                FROM student_subjects ss
                JOIN subjects sub ON sub.id = ss.subject_id
-              WHERE ss.student_id = ? AND ss.academic_year_id = ?
-              ORDER BY sub.order_index, sub.name',
+              WHERE ss.student_id = ? AND ss.academic_year_id = ? AND ss.status = 'registered'
+              ORDER BY sub.order_index, sub.name",
             [$studentId, $yearId]
         );
     }
